@@ -1,10 +1,25 @@
-// components/ClientOnlyChart.jsx
 'use client';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
-// now this is in a Client Component, so ssr: false is allowed
-const Chart = dynamic(() => import('@/components/Chart'), { ssr: false });
+const Chart = dynamic(() => import('./Chart'), { ssr: false });
 
 export default function ClientOnlyChart() {
-    return <Chart />;
+    const [size, setSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        function onResize() {
+            setSize({ width: window.innerWidth, height: window.innerHeight });
+        }
+        onResize();
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    if (size.width === 0) return null;
+    return (
+        <div style={{ width: '100vw', height: '100vh' }}>
+            <Chart containerWidth={size.width} containerHeight={size.height} />
+        </div>
+    );
 }

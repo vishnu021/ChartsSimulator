@@ -1,7 +1,7 @@
 // components/Chart.jsx
 'use client';
-import React, { useEffect, useState, useMemo } from 'react';
-import axios from 'axios';
+
+import React, { useState, useEffect } from 'react';
 import {
     ChartCanvas,
     Chart,
@@ -15,48 +15,44 @@ import {
     MouseCoordinateX,
     MouseCoordinateY,
     OHLCTooltip,
-    discontinuousTimeScaleProvider
+    discontinuousTimeScaleProvider,
 } from 'react-financial-charts';
 import { timeFormat } from 'd3-time-format';
+import { format as formatNumber } from 'd3-format';
 
-export default function ChartComponent() {
-    const [data, setData] = useState([]);
-    const [error, setError] = useState(null);
-
-    // Fetch Candle data
+export default function ChartComponent({ containerWidth, containerHeight }) {
+    // 1) load data from your Spring Boot backend
+    const [rawData, setRawData] = useState(null);
     useEffect(() => {
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/ohlc`)
-            .then(res => setData(
-                res.data.candles.map(d => ({ ...d, time: new Date(d.time) }))
-            ))
-            .catch(err => setError(err.message));
+        fetch('http://localhost:8080/api/ohlc')
+            .then((res) => res.json())
+            .then(setRawData)
+            .catch(console.error);
     }, []);
 
-    // Compute extrema
-    const { maxima, minima } = useMemo(() => {
-        const closes = data.map(d => d.close);
-        const maxMask = closes.map((v, i) => i > 0 && i < closes.length - 1 && v > closes[i - 1] && v > closes[i + 1]);
-        const minMask = closes.map((v, i) => i > 0 && i < closes.length - 1 && v < closes[i - 1] && v < closes[i + 1]);
-        return {
-            maxima: data.filter((_, i) => maxMask[i]),
-            minima: data.filter((_, i) => minMask[i])
-        };
-    }, [data]);
+    // 2) show a loader until we have data
+    if (!rawData) {
+        return <div className="flex items-center justify-center h-full">Loading…</div>;
+    }
 
-    if (error) return <div className="text-red-600">Error: {error}</div>;
-    if (!data.length) return <div>Loading…</div>;
+    // 3) unpack the response
+    const { candles, maxima, minima } = rawData;
 
-    const xScaleProvider = discontinuousTimeScaleProvider.inputDateAccessor(d => d.time);
-    const { data: chartData, xScale, xAccessor, displayXAccessor } = xScaleProvider(data);
+    // 4) prepare the X scale
+    const xScaleProvider = discontinuousTimeScaleProvider.inputDateAccessor(
+        d => new Date(d.time)
+    );
+    const { data: chartData, xScale, xAccessor, displayXAccessor } =
+        xScaleProvider(candles);
 
+    // 5) render the chart full-screen
     return (
         <ChartCanvas
-            type="svg"
-            height={400}
-            width={800}
+            width={containerWidth}
+            height={containerHeight}
             ratio={window.devicePixelRatio}
             margin={{ left: 50, right: 50, top: 10, bottom: 30 }}
-            seriesName="Candle"
+            seriesName="Candles"
             data={chartData}
             xScale={xScale}
             xAccessor={xAccessor}
@@ -64,44 +60,38 @@ export default function ChartComponent() {
             panEvent
             zoomEvent
             clamp={false}
+            type="svg"
         >
             <Chart id={1} yExtents={d => [d.high, d.low]}>
                 <XAxis />
                 <YAxis />
+
                 <MouseCoordinateX displayFormat={timeFormat('%H:%M')} />
-                <MouseCoordinateY />
+                <MouseCoordinateY displayFormat={formatNumber('.2f')} />
 
                 <CandlestickSeries />
+
                 <LineSeries yAccessor={d => d.close} stroke="#4CAF50" />
 
-                {/* Local maxima markers */}
+                {/* local maxima */}
                 <ScatterSeries
                     data={maxima}
                     yAccessor={d => d.close}
-                    marker={CircleMarker}            // use the built-in marker class
-                    markerProps={{                   // these merge into CircleMarker.defaultProps
-                        fill:   '#00C853',
-                        stroke: '#00C853',
-                        radius: 4,
-                        opacity: 1
-                    }}
+                    marker={CircleMarker}
+                    markerProps={{ fill: '#00C853', stroke: '#00C853', radius: 4 }}
                 />
 
-                {/* Local minima markers */}
+                {/* local minima */}
                 <ScatterSeries
                     data={minima}
                     yAccessor={d => d.close}
                     marker={CircleMarker}
-                    markerProps={{
-                        fill:   '#D50000',
-                        stroke: '#D50000',
-                        radius: 4,
-                        opacity: 1
-                    }}
+                    markerProps={{ fill: '#D50000', stroke: '#D50000', radius: 4 }}
                 />
 
                 <OHLCTooltip origin={[0, -15]} />
             </Chart>
+
             <CrossHairCursor />
         </ChartCanvas>
     );
