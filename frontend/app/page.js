@@ -1,10 +1,9 @@
-'use client';
-import Chart from '@/components/Chart';
+import ClientOnlyChart from '@/components/ClientOnlyChart';
 
-export default function Home() {
-  return (
-      <main className="min-h-screen bg-gray-50 flex justify-center items-center p-4">
-        <Chart />
-      </main>
-  );
+export default function Page() {
+    return (
+        <main>
+            <ClientOnlyChart />
+        </main>
+    );
 }
