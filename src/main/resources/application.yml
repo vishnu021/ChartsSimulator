@@ -10,3 +10,8 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+app:
+  websocket:
+    endpoint: /ws
+    allowed-origins: http://localhost:3000

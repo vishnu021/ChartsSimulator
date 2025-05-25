@@ -1,21 +1,40 @@
-const API_BASE_URL = 'http://localhost:9090/api';
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+
+let stompClient = null;
 
 export const chartService = {
-    async fetchOHLC(symbol, date, lookbackPeriod = 5) {
-        try {
-            const response = await fetch(
-                `${API_BASE_URL}/ohlc?symbol=${encodeURIComponent(symbol)}&date=${encodeURIComponent(date)}&lookbackPeriod=${lookbackPeriod}`
-            );
+    connectAndStream(symbol, date, lookbackPeriod, onData, onError) {
+        if (stompClient) stompClient.deactivate();
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        stompClient = new Client({
+            webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_WS_URL),
+            reconnectDelay: 5000,
+        });
 
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error fetching OHLC data:', error);
-            throw error;
+        stompClient.onConnect = () => {
+            // subscribe to the minute-by-minute feed
+            stompClient.subscribe("/topic/candles", (msg) => {
+                onData(JSON.parse(msg.body));
+            });
+            // kick it off
+            stompClient.publish({
+                destination: "/app/loadCandles",
+                body: JSON.stringify({ symbol, date, lookbackPeriod }),
+            });
+        };
+
+        stompClient.onStompError = (frame) => {
+            onError(frame.headers["message"] || "WebSocket error");
+        };
+
+        stompClient.activate();
+    },
+
+    disconnect() {
+        if (stompClient) {
+            stompClient.deactivate();
+            stompClient = null;
         }
-    }
+    },
 };

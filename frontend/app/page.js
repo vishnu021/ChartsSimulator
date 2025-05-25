@@ -22,16 +22,21 @@ export default function Page() {
     const [error, setError] = useState(null);
     const [theme, setTheme] = useState('dark');
 
-    const handleLoadChart = async ({ symbol, date, lookbackPeriod }) => {
-        try {
+      const handleLoadChart = ({ symbol, date, lookbackPeriod }) => {
             setError(null);
-            const data = await chartService.fetchOHLC(symbol, date, lookbackPeriod);
-            setChartData({ ...data, symbol });
-        } catch (err) {
-            setError(err.message);
-            console.error('Failed to load chart:', err);
-        }
-    };
+            setChartData(null);
+            chartService.connectAndStream(
+                  symbol,
+                  date,
+                  lookbackPeriod,
+                  (data) => setChartData({ ...data, symbol }),
+                  (err) => setError(err)
+            );
+          };
+
+    React.useEffect(() => {
+        return () => chartService.disconnect();
+    }, []);
 
     const toggleTheme = () => {
         setTheme(prev => prev === 'dark' ? 'light' : 'dark');
