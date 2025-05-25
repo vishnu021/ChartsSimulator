@@ -1,25 +1,19 @@
 'use client';
-import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
-const Chart = dynamic(() => import('./Chart'), { ssr: false });
+// Import with no SSR to avoid hydration errors
+const Chart = dynamic(() => import('./Chart'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                Loading chart...
+            </div>
+        </div>
+    )
+});
 
 export default function ClientOnlyChart() {
-    const [size, setSize] = useState({ width: 0, height: 0 });
-
-    useEffect(() => {
-        function onResize() {
-            setSize({ width: window.innerWidth, height: window.innerHeight });
-        }
-        onResize();
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
-
-    if (size.width === 0) return null;
-    return (
-        <div style={{ width: '100vw', height: '100vh' }}>
-            <Chart containerWidth={size.width} containerHeight={size.height} />
-        </div>
-    );
+    return <Chart />;
 }

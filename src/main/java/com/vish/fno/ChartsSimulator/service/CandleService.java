@@ -12,43 +12,123 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Service
 public class CandleService {
     private List<Candle> candles;
     private List<Candle> maxima;
     private List<Candle> minima;
 
+    private static final int LOOKBACK_PERIOD = 10; // Configurable lookback period
+
     @PostConstruct
     public void init() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        // Load file from classpath
         ClassPathResource resource = new ClassPathResource("NIFTY_50.txt");
         try (InputStream is = resource.getInputStream()) {
-            // Read entire content as a List<Candle>
             candles = mapper.readValue(is, new TypeReference<List<Candle>>(){});
         }
-        // Ensure sorted by time
+
         candles = candles.stream()
                 .sorted(Comparator.comparing(Candle::time))
                 .collect(Collectors.toList());
 
-        // Compute extrema
-        maxima = findExtrema(candles, true);
-        minima = findExtrema(candles, false);
+        // Use improved extrema detection
+        maxima = findExtremaImproved(candles, true);
+        minima = findExtremaImproved(candles, false);
     }
 
-    private List<Candle> findExtrema(List<Candle> data, boolean high) {
-        List<Candle> out = new ArrayList<>();
-        for (int i = 1; i < data.size() - 1; i++) {
-            double v    = data.get(i).close();
-            double prev = data.get(i - 1).close();
-            double next = data.get(i + 1).close();
-            if (high ? (v > prev && v > next) : (v < prev && v < next)) {
-                out.add(data.get(i));
+    /**
+     * Improved extrema detection using a configurable lookback period
+     * A point is considered a local maximum if it's the highest point
+     * within LOOKBACK_PERIOD candles on both sides
+     */
+    private List<Candle> findExtremaImproved(List<Candle> data, boolean findMaxima) {
+        List<Candle> extrema = new ArrayList<>();
+
+        for (int i = LOOKBACK_PERIOD; i < data.size() - LOOKBACK_PERIOD; i++) {
+            double currentValue = data.get(i).close();
+            boolean isExtremum = true;
+
+            // Check left side
+            for (int j = i - LOOKBACK_PERIOD; j < i; j++) {
+                if (findMaxima) {
+                    if (data.get(j).close() >= currentValue) {
+                        isExtremum = false;
+                        break;
+                    }
+                } else {
+                    if (data.get(j).close() <= currentValue) {
+                        isExtremum = false;
+                        break;
+                    }
+                }
+            }
+
+            // Check right side
+            if (isExtremum) {
+                for (int j = i + 1; j <= i + LOOKBACK_PERIOD; j++) {
+                    if (findMaxima) {
+                        if (data.get(j).close() >= currentValue) {
+                            isExtremum = false;
+                            break;
+                        }
+                    } else {
+                        if (data.get(j).close() <= currentValue) {
+                            isExtremum = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (isExtremum) {
+                extrema.add(data.get(i));
             }
         }
-        return out;
+
+        // Optional: Filter out minor extrema based on price difference threshold
+        return filterMinorExtrema(extrema, findMaxima);
+    }
+
+    /**
+     * Filter out minor extrema that are too close in price to neighboring extrema
+     */
+    private List<Candle> filterMinorExtrema(List<Candle> extrema, boolean isMaxima) {
+        if (extrema.size() < 2) return extrema;
+
+        List<Candle> filtered = new ArrayList<>();
+        double threshold = calculateThreshold(candles);
+
+        filtered.add(extrema.get(0));
+
+        for (int i = 1; i < extrema.size(); i++) {
+            double lastPrice = filtered.get(filtered.size() - 1).close();
+            double currentPrice = extrema.get(i).close();
+            double priceDiff = Math.abs(currentPrice - lastPrice);
+
+            // Only keep if price difference is significant
+            if (priceDiff > threshold) {
+                filtered.add(extrema.get(i));
+            }
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Calculate a dynamic threshold based on average price movement
+     */
+    private double calculateThreshold(List<Candle> data) {
+        double sum = 0;
+        int count = 0;
+
+        for (int i = 1; i < data.size(); i++) {
+            sum += Math.abs(data.get(i).close() - data.get(i-1).close());
+            count++;
+        }
+
+        // Use 2x the average price movement as threshold
+        return (sum / count) * 2;
     }
 
     public List<Candle> getCandles() { return candles; }
