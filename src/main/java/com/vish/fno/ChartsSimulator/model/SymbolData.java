@@ -1,16 +1,5 @@
 package com.vish.fno.ChartsSimulator.model;
 
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class SymbolData {
-    private CandleMetaData record;
-    private List<Candle> data;
-}
+public record SymbolData (CandleMetaData record, List<Candle> data) {}

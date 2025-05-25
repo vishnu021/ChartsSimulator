@@ -18,7 +18,7 @@ public class CandleController {
     public Extrema getCandles(
             @RequestParam String symbol,
             @RequestParam String date,
-            @RequestParam(defaultValue = "5") int lookbackPeriod
+            @RequestParam(defaultValue = "3") int lookbackPeriod
     ) {
         return service.getExtrema(symbol, date, lookbackPeriod);
     }
