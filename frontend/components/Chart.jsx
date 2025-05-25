@@ -16,9 +16,15 @@ export default function ChartComponent() {
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showCrosshair, setShowCrosshair] = useState(false);
 
+    const symbol = "NIFTY 50";
+    const date = "2025-05-23";
+    const params = new URLSearchParams({
+        symbol,
+        date
+    }).toString();
     // Fetch data
     useEffect(() => {
-        fetch('http://localhost:8080/api/ohlc')
+        fetch(`http://localhost:9090/api/ohlc?${params}`)
             .then((res) => res.json())
             .then(setData)
             .catch((err) => {

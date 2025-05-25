@@ -1,5 +1,7 @@
 package com.vish.fno.ChartsSimulator.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.Extrema;
 import com.vish.fno.ChartsSimulator.util.FileHandler;
@@ -7,12 +9,17 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CandleService {
+
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final DataClient dataClient;
+
+    public CandleService(DataClient dataClient) {
+        this.dataClient = dataClient;
+    }
 
     /**
      * Loads candle data from the given classpath resource (e.g., "NIFTY_50.txt"),
@@ -22,10 +29,8 @@ public class CandleService {
      * @param symbol      name of the file on the classpath
      * @param lookbackPeriod number of neighbors to consider on each side
      */
-    public Extrema getExtrema(String symbol, int lookbackPeriod) throws IOException {
-        List<Candle> candles = FileHandler.getCandles(symbol);
-
-        // Find maxima and minima
+    public Extrema getExtrema(String symbol, String date, int lookbackPeriod) {
+        List<Candle> candles = dataClient.getCandleData(symbol, date);
         List<Candle> maxima = findLocalExtrema(candles, true, lookbackPeriod);
         List<Candle> minima = findLocalExtrema(candles, false, lookbackPeriod);
 

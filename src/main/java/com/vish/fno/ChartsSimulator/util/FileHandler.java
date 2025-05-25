@@ -17,7 +17,7 @@ public final class FileHandler {
 
     private final static ObjectMapper mapper = new ObjectMapper();
 
-    public static List<Candle> getCandles(String symbol) throws IOException {
+    public static List<Candle> getCandles(String symbol, String date) throws IOException {
         String fileName = symbol.toUpperCase().replaceAll(" ", "_") + ".txt";
         // Read candles from file
         ClassPathResource resource = new ClassPathResource(fileName);
@@ -26,8 +26,10 @@ public final class FileHandler {
             candles = mapper.readValue(is, new TypeReference<>() {});
         }
         // Sort by time
-        return candles.stream()
-                .sorted(Comparator.comparing(Candle::time))
-                .collect(Collectors.toList());
+//        return candles.stream()
+//                .sorted(Comparator.comparing(Candle::time))
+//                .collect(Collectors.toList());
+
+        return null;
     }
 }
