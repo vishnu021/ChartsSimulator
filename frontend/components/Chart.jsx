@@ -126,7 +126,8 @@ export default function Chart({ data, theme = 'dark' }) {
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
         const priceRange = maxPrice - minPrice;
-        const pricePadding = priceRange * 0.1;
+        const minPricePadding = 1; // Minimum padding to avoid overflow/compression
+        const pricePadding = Math.max(priceRange * 0.1, minPricePadding);
 
         const yScale = (price) => {
             return padding.top + ((maxPrice + pricePadding - price) / (priceRange + 2 * pricePadding)) * chartHeight;
@@ -286,7 +287,7 @@ export default function Chart({ data, theme = 'dark' }) {
             const candle = visibleCandles[i];
             if (candle) {
                 const x = xScale(visibleStart + i);
-                ctx.fillText(format(new Date(candle.time), 'MMM dd'), x, height - padding.bottom + 20);
+                ctx.fillText(format(new Date(candle.time), 'MMM dd HH:mm'), x, height - padding.bottom + 20);
             }
         }
 
@@ -477,7 +478,7 @@ export default function Chart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-4" style={{ backgroundColor: colors.background }}>
+        <div className="flex-1 flex flex-col p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
             <div className="flex justify-between items-center mb-4">
                 <div>
                     <h1 className="text-2xl font-bold" style={{ color: colors.text.primary }}>
@@ -510,11 +511,11 @@ export default function Chart({ data, theme = 'dark' }) {
                     Reset View
                 </button>
             </div>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground }}>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 400 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ cursor: 'crosshair' }}
+                    style={{ cursor: 'crosshair', minHeight: 400 }}
                 />
             </div>
         </div>

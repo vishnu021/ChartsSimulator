@@ -74,7 +74,7 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                         type="number"
                         value={lookbackPeriod}
                         onChange={(e) => setLookbackPeriod(parseInt(e.target.value))}
-                        min="5"
+                        min="2"
                         max="50"
                         className="px-3 py-2 rounded-md text-sm transition-colors w-24"
                         style={{
