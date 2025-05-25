@@ -1,60 +1,86 @@
-// frontend/components/Chart.jsx
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
-import { colors, chartSettings } from './chartConfig';
+import { themes, chartSettings } from './chartConfig';
 
-export default function ChartComponent() {
+export default function Chart({ data, theme = 'dark' }) {
     const canvasRef = useRef(null);
-    const [data, setData] = useState(null);
-    const [error, setError] = useState(null);
-    const [zoom, setZoom] = useState(1);
-    const [offset, setOffset] = useState(0);
+    const animationRef = useRef(null);
+    const [viewState, setViewState] = useState({
+        zoom: 1,
+        offset: 0,
+        targetOffset: 0,
+        velocity: 0
+    });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showCrosshair, setShowCrosshair] = useState(false);
 
-    const symbol = "NIFTY 50";
-    const date = "2025-05-23";
-    const params = new URLSearchParams({
-        symbol,
-        date
-    }).toString();
-    // Fetch data
-    useEffect(() => {
-        fetch(`http://localhost:9090/api/ohlc?${params}`)
-            .then((res) => res.json())
-            .then(setData)
-            .catch((err) => {
-                console.error('Failed to fetch data:', err);
-                setError(err.message);
-            });
-    }, []);
+    const colors = themes[theme];
 
     // Setup canvas with proper pixel ratio
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
+        const updateCanvasSize = () => {
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
 
-        // Get the size of the canvas in CSS pixels
-        const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
 
-        // Set the internal size to CSS size * ratio
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+        };
 
-        // Scale the context to ensure correct drawing operations
-        ctx.scale(dpr, dpr);
+        updateCanvasSize();
+        window.addEventListener('resize', updateCanvasSize);
 
-        // Set CSS size
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
+        return () => window.removeEventListener('resize', updateCanvasSize);
     }, [data]);
+
+    // Smooth animation loop
+    useEffect(() => {
+        const animate = () => {
+            setViewState(prev => {
+                const friction = 0.9;
+                const springStrength = 0.1;
+
+                if (!isDragging) {
+                    // Apply spring physics to smooth offset
+                    const offsetDiff = prev.targetOffset - prev.offset;
+                    prev.velocity = prev.velocity * friction + offsetDiff * springStrength;
+                    prev.offset += prev.velocity;
+
+                    // Stop animation when close enough
+                    if (Math.abs(prev.velocity) < 0.1 && Math.abs(offsetDiff) < 0.1) {
+                        prev.offset = prev.targetOffset;
+                        prev.velocity = 0;
+                    }
+                } else {
+                    prev.offset = prev.targetOffset;
+                    prev.velocity = 0;
+                }
+
+                return { ...prev };
+            });
+
+            animationRef.current = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        return () => {
+            if (animationRef.current) {
+                cancelAnimationFrame(animationRef.current);
+            }
+        };
+    }, [isDragging]);
 
     // Draw chart
     const drawChart = useCallback(() => {
@@ -71,18 +97,31 @@ export default function ChartComponent() {
         ctx.fillStyle = colors.background;
         ctx.fillRect(0, 0, width, height);
 
+        // Draw panel background
+        ctx.fillStyle = colors.panelBackground;
+        ctx.fillRect(
+            padding.left - 10,
+            padding.top - 10,
+            width - padding.left - padding.right + 20,
+            height - padding.top - padding.bottom + 20
+        );
+
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        // Calculate visible range
-        const candleWidth = (chartWidth / data.candles.length) * zoom;
-        const visibleStart = Math.max(0, Math.floor(-offset / candleWidth));
-        const visibleEnd = Math.min(data.candles.length, Math.ceil((chartWidth - offset) / candleWidth));
+        // Calculate visible range with proper bounds
+        const candleWidth = (chartWidth / data.candles.length) * viewState.zoom;
+        const maxOffset = 0;
+        const minOffset = Math.min(0, -(data.candles.length * candleWidth - chartWidth));
+        const clampedOffset = Math.max(minOffset, Math.min(maxOffset, viewState.offset));
+
+        const visibleStart = Math.max(0, Math.floor(-clampedOffset / candleWidth));
+        const visibleEnd = Math.min(data.candles.length, Math.ceil((chartWidth - clampedOffset) / candleWidth));
         const visibleCandles = data.candles.slice(visibleStart, visibleEnd);
 
         if (visibleCandles.length === 0) return;
 
-        // Calculate price range
+        // Calculate price range with padding
         const prices = visibleCandles.flatMap(c => [c.high, c.low]);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
@@ -97,35 +136,28 @@ export default function ChartComponent() {
             return padding.left + (index - visibleStart) * candleWidth + candleWidth / 2;
         };
 
+        // Set clipping region for chart area
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(padding.left, padding.top, chartWidth, chartHeight);
+        ctx.clip();
+
         // Draw grid
         ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        // Vertical grid lines and X-axis labels
+        // Vertical grid lines
         const xInterval = Math.ceil(visibleCandles.length / chartSettings.gridLines.vertical);
-        ctx.fillStyle = colors.text.secondary;
-        ctx.font = chartSettings.fonts.labels;
-        ctx.textAlign = 'center';
-
         for (let i = 0; i < visibleCandles.length; i += xInterval) {
             const x = xScale(visibleStart + i);
             ctx.beginPath();
             ctx.moveTo(x, padding.top);
             ctx.lineTo(x, height - padding.bottom);
             ctx.stroke();
-
-            // X-axis label
-            const candle = visibleCandles[i];
-            if (candle) {
-                const date = new Date(candle.time);
-                const label = format(date, 'MMM dd');
-                ctx.fillText(label, x, height - padding.bottom + 20);
-            }
         }
 
-        // Horizontal grid lines and Y-axis labels
-        ctx.textAlign = 'right';
+        // Horizontal grid lines
         for (let i = 0; i <= chartSettings.gridLines.horizontal; i++) {
             const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / chartSettings.gridLines.horizontal;
             const y = yScale(price);
@@ -134,9 +166,6 @@ export default function ChartComponent() {
             ctx.moveTo(padding.left, y);
             ctx.lineTo(width - padding.right, y);
             ctx.stroke();
-
-            // Y-axis label
-            ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
         }
 
         ctx.setLineDash([]);
@@ -169,69 +198,105 @@ export default function ChartComponent() {
             );
         });
 
-        // Prepare extrema points
-        const maximaPoints = [];
-        const minimaPoints = [];
-
-        data.maxima.forEach(point => {
+        // Collect all extrema points (including those outside visible range)
+        const allMaximaPoints = data.maxima.map(point => {
             const index = data.candles.findIndex(c => c.time === point.time);
-            if (index >= visibleStart && index < visibleEnd) {
-                maximaPoints.push({ x: xScale(index), y: yScale(point.high), index });
-            }
+            return {
+                x: padding.left + index * candleWidth + clampedOffset + candleWidth / 2,
+                y: yScale(point.high),
+                index,
+                visible: index >= visibleStart && index < visibleEnd
+            };
         });
 
-        data.minima.forEach(point => {
+        const allMinimaPoints = data.minima.map(point => {
             const index = data.candles.findIndex(c => c.time === point.time);
-            if (index >= visibleStart && index < visibleEnd) {
-                minimaPoints.push({ x: xScale(index), y: yScale(point.low), index });
-            }
+            return {
+                x: padding.left + index * candleWidth + clampedOffset + candleWidth / 2,
+                y: yScale(point.low),
+                index,
+                visible: index >= visibleStart && index < visibleEnd
+            };
         });
 
-        // Draw maxima line
-        if (maximaPoints.length > 1) {
+        // Draw extrema lines (connecting all points, even outside visible range)
+        if (allMaximaPoints.length > 1) {
             ctx.strokeStyle = colors.lines.maxima;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = chartSettings.extremaLineWidth;
             ctx.beginPath();
-            ctx.moveTo(maximaPoints[0].x, maximaPoints[0].y);
-            maximaPoints.slice(1).forEach(point => {
-                ctx.lineTo(point.x, point.y);
+
+            let started = false;
+            allMaximaPoints.forEach(point => {
+                if (!started) {
+                    ctx.moveTo(point.x, point.y);
+                    started = true;
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
             });
             ctx.stroke();
         }
 
-        // Draw minima line
-        if (minimaPoints.length > 1) {
+        if (allMinimaPoints.length > 1) {
             ctx.strokeStyle = colors.lines.minima;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = chartSettings.extremaLineWidth;
             ctx.beginPath();
-            ctx.moveTo(minimaPoints[0].x, minimaPoints[0].y);
-            minimaPoints.slice(1).forEach(point => {
-                ctx.lineTo(point.x, point.y);
+
+            let started = false;
+            allMinimaPoints.forEach(point => {
+                if (!started) {
+                    ctx.moveTo(point.x, point.y);
+                    started = true;
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
             });
             ctx.stroke();
         }
 
-        // Draw extrema points
+        // Draw extrema points (only visible ones)
         ctx.font = chartSettings.fonts.extremaLabels;
         ctx.textAlign = 'center';
 
-        // Maxima points
-        maximaPoints.forEach(point => {
+        allMaximaPoints.filter(p => p.visible).forEach(point => {
             ctx.fillStyle = colors.text.maxima;
             ctx.beginPath();
             ctx.arc(point.x, point.y, chartSettings.extremaPointRadius, 0, 2 * Math.PI);
             ctx.fill();
-            ctx.fillText('H', point.x, point.y - 10);
+            ctx.fillText('H', point.x, point.y - 12);
         });
 
-        // Minima points
-        minimaPoints.forEach(point => {
+        allMinimaPoints.filter(p => p.visible).forEach(point => {
             ctx.fillStyle = colors.text.minima;
             ctx.beginPath();
             ctx.arc(point.x, point.y, chartSettings.extremaPointRadius, 0, 2 * Math.PI);
             ctx.fill();
-            ctx.fillText('L', point.x, point.y + 20);
+            ctx.fillText('L', point.x, point.y + 24);
         });
+
+        ctx.restore(); // Remove clipping
+
+        // Draw axes labels outside clipping region
+        ctx.fillStyle = colors.text.secondary;
+        ctx.font = chartSettings.fonts.labels;
+
+        // X-axis labels
+        ctx.textAlign = 'center';
+        for (let i = 0; i < visibleCandles.length; i += xInterval) {
+            const candle = visibleCandles[i];
+            if (candle) {
+                const x = xScale(visibleStart + i);
+                ctx.fillText(format(new Date(candle.time), 'MMM dd'), x, height - padding.bottom + 20);
+            }
+        }
+
+        // Y-axis labels
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= chartSettings.gridLines.horizontal; i++) {
+            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / chartSettings.gridLines.horizontal;
+            const y = yScale(price);
+            ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
+        }
 
         // Draw crosshair
         if (showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
@@ -257,50 +322,67 @@ export default function ChartComponent() {
 
             // Calculate values at crosshair
             const price = maxPrice + pricePadding - ((mousePos.y - padding.top) / chartHeight) * (priceRange + 2 * pricePadding);
-            const candleIndex = Math.floor((mousePos.x - padding.left) / candleWidth) + visibleStart;
+            const candleIndex = Math.floor((mousePos.x - padding.left - clampedOffset) / candleWidth);
 
             // Price label
-            ctx.fillStyle = colors.panelBackground;
-            ctx.fillRect(width - padding.right + 5, mousePos.y - 10, 70, 20);
+            ctx.fillStyle = colors.tooltip.background;
+            ctx.fillRect(width - padding.right + 5, mousePos.y - 10, 75, 20);
+            ctx.strokeStyle = colors.tooltip.border;
+            ctx.strokeRect(width - padding.right + 5, mousePos.y - 10, 75, 20);
             ctx.fillStyle = colors.text.primary;
             ctx.font = chartSettings.fonts.labels;
             ctx.textAlign = 'left';
             ctx.fillText(price.toFixed(2), width - padding.right + 10, mousePos.y + 4);
 
-            // Date label
+            // Date label and candle info
             if (candleIndex >= 0 && candleIndex < data.candles.length) {
                 const candle = data.candles[candleIndex];
                 const date = format(new Date(candle.time), 'MMM dd HH:mm');
 
-                ctx.fillStyle = colors.panelBackground;
-                ctx.fillRect(mousePos.x - 50, height - padding.bottom + 5, 100, 20);
+                // Date label
+                ctx.fillStyle = colors.tooltip.background;
+                ctx.fillRect(mousePos.x - 60, height - padding.bottom + 5, 120, 20);
+                ctx.strokeRect(mousePos.x - 60, height - padding.bottom + 5, 120, 20);
                 ctx.fillStyle = colors.text.primary;
                 ctx.textAlign = 'center';
                 ctx.fillText(date, mousePos.x, height - padding.bottom + 20);
 
-                // Candle info tooltip
+                // OHLC tooltip
+                const tooltipX = mousePos.x + 15;
+                const tooltipY = mousePos.y - 70;
+
                 ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(mousePos.x + 10, mousePos.y - 60, 180, 100);
+                ctx.fillRect(tooltipX, tooltipY, 180, 110);
                 ctx.strokeStyle = colors.tooltip.border;
-                ctx.strokeRect(mousePos.x + 10, mousePos.y - 60, 180, 100);
+                ctx.lineWidth = 1;
+                ctx.strokeRect(tooltipX, tooltipY, 180, 110);
 
                 ctx.fillStyle = colors.text.primary;
                 ctx.font = chartSettings.fonts.tooltip;
                 ctx.textAlign = 'left';
-                ctx.fillText(`O: ${candle.open.toFixed(2)}`, mousePos.x + 20, mousePos.y - 40);
-                ctx.fillText(`H: ${candle.high.toFixed(2)}`, mousePos.x + 20, mousePos.y - 20);
-                ctx.fillText(`L: ${candle.low.toFixed(2)}`, mousePos.x + 20, mousePos.y);
-                ctx.fillText(`C: ${candle.close.toFixed(2)}`, mousePos.x + 20, mousePos.y + 20);
-                ctx.fillStyle = colors.text.secondary;
-                ctx.fillText(`Vol: ${candle.volume.toLocaleString()}`, mousePos.x + 20, mousePos.y + 40);
+
+                const texts = [
+                    { label: 'O:', value: candle.open.toFixed(2), color: colors.text.primary },
+                    { label: 'H:', value: candle.high.toFixed(2), color: colors.text.maxima },
+                    { label: 'L:', value: candle.low.toFixed(2), color: colors.text.minima },
+                    { label: 'C:', value: candle.close.toFixed(2), color: candle.close >= candle.open ? colors.text.maxima : colors.text.minima },
+                    { label: 'Vol:', value: candle.volume.toLocaleString(), color: colors.text.secondary }
+                ];
+
+                texts.forEach((text, i) => {
+                    ctx.fillStyle = colors.text.secondary;
+                    ctx.fillText(text.label, tooltipX + 10, tooltipY + 25 + i * 20);
+                    ctx.fillStyle = text.color;
+                    ctx.fillText(text.value, tooltipX + 40, tooltipY + 25 + i * 20);
+                });
             }
         }
-    }, [data, zoom, offset, mousePos, showCrosshair]);
+    }, [data, viewState, mousePos, showCrosshair, colors]);
 
-    // Draw on changes
+    // Draw on every frame
     useEffect(() => {
         drawChart();
-    }, [drawChart]);
+    }, [drawChart, viewState]);
 
     // Handle mouse events
     useEffect(() => {
@@ -311,51 +393,43 @@ export default function ChartComponent() {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            const centerRatio = (x - chartSettings.padding.left) / (rect.width - chartSettings.padding.left - chartSettings.padding.right);
+            const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
+            const centerRatio = (x - chartSettings.padding.left) / chartWidth;
 
-            const zoomSpeed = 0.1;
-            const newZoom = e.deltaY < 0 ? zoom * (1 + zoomSpeed) : zoom * (1 - zoomSpeed);
-            const clampedZoom = Math.max(0.5, Math.min(10, newZoom));
+            const zoomSpeed = 0.002;
+            const zoomDelta = -e.deltaY * zoomSpeed;
+            const newZoom = Math.max(0.5, Math.min(20, viewState.zoom + zoomDelta * viewState.zoom));
 
-            // Adjust offset to zoom around mouse position
-            const oldWidth = (rect.width - chartSettings.padding.left - chartSettings.padding.right) / zoom;
-            const newWidth = (rect.width - chartSettings.padding.left - chartSettings.padding.right) / clampedZoom;
-            const widthDiff = newWidth - oldWidth;
+            // Calculate new offset to zoom around mouse position
+            const oldCandleWidth = chartWidth / data.candles.length * viewState.zoom;
+            const newCandleWidth = chartWidth / data.candles.length * newZoom;
+            const candlesWidthDiff = (newCandleWidth - oldCandleWidth) * data.candles.length;
 
-            setZoom(clampedZoom);
-            setOffset(prev => prev - widthDiff * centerRatio * (data.candles.length / oldWidth));
+            setViewState(prev => ({
+                ...prev,
+                zoom: newZoom,
+                targetOffset: prev.targetOffset - candlesWidthDiff * centerRatio,
+                offset: prev.offset - candlesWidthDiff * centerRatio
+            }));
         };
 
         const handleMouseDown = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            if (x > chartSettings.padding.left && x < rect.width - chartSettings.padding.right &&
-                y > chartSettings.padding.top && y < rect.height - chartSettings.padding.bottom) {
-                setIsDragging(true);
-                setDragStart({ x: e.clientX, offset: offset });
-                canvas.style.cursor = 'grabbing';
-            }
+            setIsDragging(true);
+            setDragStart({ x: e.clientX, offset: viewState.targetOffset });
+            canvas.style.cursor = 'grabbing';
         };
 
         const handleMouseMove = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 
-            setMousePos({ x, y });
-
-            if (isDragging && dragStart) {
+            if (isDragging) {
                 const dx = e.clientX - dragStart.x;
-                const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
-                const candleWidth = (chartWidth / data.candles.length) * zoom;
-                const newOffset = dragStart.offset + dx;
-
-                const maxOffset = 0;
-                const minOffset = -(data.candles.length * candleWidth - chartWidth);
-
-                setOffset(Math.max(minOffset, Math.min(maxOffset, newOffset)));
+                setViewState(prev => ({
+                    ...prev,
+                    targetOffset: dragStart.offset + dx
+                }));
             }
         };
 
@@ -389,66 +463,59 @@ export default function ChartComponent() {
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [data, zoom, offset, isDragging, dragStart]);
-
-    if (error) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-900 text-red-400">
-                Error: {error}
-            </div>
-        );
-    }
-
-    if (!data) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                    Loading chart data...
-                </div>
-            </div>
-        );
-    }
+    }, [data, viewState, isDragging, dragStart]);
 
     const handleReset = () => {
-        setZoom(1);
-        setOffset(0);
+        setViewState({
+            zoom: 1,
+            offset: 0,
+            targetOffset: 0,
+            velocity: 0
+        });
     };
 
+    if (!data) return null;
+
     return (
-        <div className="w-full h-screen bg-gray-900 p-4">
-            <div className="bg-gray-800 rounded-lg p-4 h-full flex flex-col">
-                <div className="mb-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">NIFTY 50</h1>
-                        <div className="flex gap-4 mt-2">
-                            <span className="text-green-400 text-sm">Maxima: {data.maxima.length}</span>
-                            <span className="text-red-400 text-sm">Minima: {data.minima.length}</span>
-                            <span className="text-gray-400 text-sm">Total: {data.candles.length} candles</span>
-                            <span className="text-blue-400 text-sm">Zoom: {(zoom * 100).toFixed(0)}%</span>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                        <span className="text-gray-400 text-sm">🖱️ Scroll to zoom | Drag to pan</span>
-                        <button
-                            onClick={handleReset}
-                            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
-                        >
-                            Reset View
-                        </button>
+        <div className="flex-1 flex flex-col p-4" style={{ backgroundColor: colors.background }}>
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold" style={{ color: colors.text.primary }}>
+                        {data.symbol || 'Chart'}
+                    </h1>
+                    <div className="flex gap-4 mt-2">
+                        <span style={{ color: colors.text.maxima }} className="text-sm">
+                            Maxima: {data.maxima?.length || 0}
+                        </span>
+                        <span style={{ color: colors.text.minima }} className="text-sm">
+                            Minima: {data.minima?.length || 0}
+                        </span>
+                        <span style={{ color: colors.text.secondary }} className="text-sm">
+                            Total: {data.candles?.length || 0} candles
+                        </span>
+                        <span style={{ color: colors.text.secondary }} className="text-sm">
+                            Zoom: {(viewState.zoom * 100).toFixed(0)}%
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1">
-                    <canvas
-                        ref={canvasRef}
-                        className="w-full h-full rounded"
-                        style={{
-                            cursor: 'crosshair',
-                            maxWidth: '100%',
-                            maxHeight: '100%'
-                        }}
-                    />
-                </div>
+                <button
+                    onClick={handleReset}
+                    className="px-4 py-2 rounded-md transition-all"
+                    style={{
+                        backgroundColor: colors.panelBackground,
+                        border: `1px solid ${colors.grid}`,
+                        color: colors.text.primary
+                    }}
+                >
+                    Reset View
+                </button>
+            </div>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground }}>
+                <canvas
+                    ref={canvasRef}
+                    className="w-full h-full"
+                    style={{ cursor: 'crosshair' }}
+                />
             </div>
         </div>
     );
