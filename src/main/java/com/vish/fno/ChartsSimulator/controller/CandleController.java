@@ -20,6 +20,6 @@ public class CandleController {
             @RequestParam String date,
             @RequestParam(defaultValue = "3") int lookbackPeriod
     ) {
-        return service.getExtrema(symbol, date, lookbackPeriod);
+        return service.getCandleAndExtrema(symbol, date, lookbackPeriod);
     }
 }

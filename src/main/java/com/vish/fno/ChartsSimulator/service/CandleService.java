@@ -17,8 +17,12 @@ public class CandleService {
         this.dataClient = dataClient;
     }
 
-    public Extrema getExtrema(String symbol, String date, int lookbackPeriod) {
+    public Extrema getCandleAndExtrema(String symbol, String date, int lookbackPeriod) {
         List<Candle> candles = dataClient.getCandleData(symbol, date);
+        return getExtrema(lookbackPeriod, candles);
+    }
+
+    public Extrema getExtrema(int lookbackPeriod, List<Candle> candles) {
         List<Candle> maxima = findLocalExtrema(candles, true, lookbackPeriod);
         List<Candle> minima = findLocalExtrema(candles, false, lookbackPeriod);
 
