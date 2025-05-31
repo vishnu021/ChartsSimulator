@@ -63,6 +63,7 @@ export const themes = {
 
 export const chartSettings = {
     padding: { top: 40, right: 80, bottom: 60, left: 80 },
+    mobilePadding: { top: 30, right: 40, bottom: 40, left: 60 }, // Smaller padding for mobile
     gridLines: {
         horizontal: 8,
         vertical: 10
@@ -74,6 +75,10 @@ export const chartSettings = {
     fonts: {
         labels: '12px -apple-system, BlinkMacSystemFont, sans-serif',
         tooltip: '13px -apple-system, BlinkMacSystemFont, sans-serif',
-        extremaLabels: '11px -apple-system, BlinkMacSystemFont, sans-serif'
+        extremaLabels: '11px -apple-system, BlinkMacSystemFont, sans-serif',
+        // Mobile fonts
+        mobileLabels: '10px -apple-system, BlinkMacSystemFont, sans-serif',
+        mobileTooltip: '11px -apple-system, BlinkMacSystemFont, sans-serif',
+        mobileExtremaLabels: '9px -apple-system, BlinkMacSystemFont, sans-serif'
     }
 };

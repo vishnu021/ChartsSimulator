@@ -22,17 +22,17 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
     };
 
     return (
-        <div className="p-4 rounded-lg shadow-lg" style={{ backgroundColor: colors.controlPanel }}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap gap-4 items-end">
-                <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: colors.text.secondary }}>
+        <div className="p-2 md:p-3 rounded-lg shadow-lg" style={{ backgroundColor: colors.controlPanel }}>
+            <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 md:gap-3 items-end">
+                <div className="flex-1 min-w-[120px]">
+                    <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
                         Symbol
                     </label>
                     <input
                         type="text"
                         value={symbol}
                         onChange={(e) => setSymbol(e.target.value)}
-                        className="px-3 py-2 rounded-md text-sm transition-colors"
+                        className="w-full px-2 py-1.5 rounded text-sm transition-colors"
                         style={{
                             backgroundColor: colors.input.background,
                             border: `1px solid ${colors.input.border}`,
@@ -45,15 +45,15 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: colors.text.secondary }}>
+                <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
                         Date
                     </label>
                     <input
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        className="px-3 py-2 rounded-md text-sm transition-colors"
+                        className="w-full px-2 py-1.5 rounded text-sm transition-colors"
                         style={{
                             backgroundColor: colors.input.background,
                             border: `1px solid ${colors.input.border}`,
@@ -66,9 +66,9 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                     />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: colors.text.secondary }}>
-                        Lookback Period
+                <div className="w-20">
+                    <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
+                        Period
                     </label>
                     <input
                         type="number"
@@ -76,7 +76,7 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                         onChange={(e) => setLookbackPeriod(parseInt(e.target.value))}
                         min="2"
                         max="50"
-                        className="px-3 py-2 rounded-md text-sm transition-colors w-24"
+                        className="w-full px-2 py-1.5 rounded text-sm transition-colors"
                         style={{
                             backgroundColor: colors.input.background,
                             border: `1px solid ${colors.input.border}`,
@@ -91,7 +91,7 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-6 py-2 rounded-md font-medium transition-all transform hover:scale-105"
+                    className="px-3 py-1.5 rounded text-sm font-medium transition-all transform hover:scale-105 whitespace-nowrap"
                     style={{
                         backgroundColor: colors.input.focus,
                         color: '#ffffff',
@@ -102,20 +102,18 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                     {isLoading ? 'Loading...' : 'Load Chart'}
                 </button>
 
-                <div className="ml-auto">
-                    <button
-                        type="button"
-                        onClick={onThemeToggle}
-                        className="px-4 py-2 rounded-md transition-all"
-                        style={{
-                            backgroundColor: colors.panelBackground,
-                            border: `1px solid ${colors.input.border}`,
-                            color: colors.text.primary
-                        }}
-                    >
-                        {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    onClick={onThemeToggle}
+                    className="px-3 py-1.5 rounded transition-all text-sm whitespace-nowrap"
+                    style={{
+                        backgroundColor: colors.panelBackground,
+                        border: `1px solid ${colors.input.border}`,
+                        color: colors.text.primary
+                    }}
+                >
+                    {theme === 'dark' ? '☀️' : '🌙'}
+                </button>
             </form>
         </div>
     );

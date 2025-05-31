@@ -17,8 +17,20 @@ export default function Chart({ data, theme = 'dark' }) {
     const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showCrosshair, setShowCrosshair] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const colors = themes[theme];
+
+    // Detect mobile device
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Setup canvas with proper pixel ratio
     useEffect(() => {
@@ -82,6 +94,40 @@ export default function Chart({ data, theme = 'dark' }) {
         };
     }, [isDragging]);
 
+    // Helper function to find 30-minute intervals
+    const getThirtyMinuteIntervals = (candles, visibleStart, visibleEnd) => {
+        const intervals = [];
+        const startTime = new Date(candles[visibleStart]?.time);
+
+        if (!startTime || isNaN(startTime.getTime())) return intervals;
+
+        // Round down to nearest 30-minute mark
+        const roundedStart = new Date(startTime);
+        const minutes = roundedStart.getMinutes();
+        roundedStart.setMinutes(minutes < 30 ? 0 : 30, 0, 0);
+
+        for (let i = visibleStart; i < visibleEnd; i++) {
+            const candleTime = new Date(candles[i].time);
+            if (isNaN(candleTime.getTime())) continue;
+
+            const candleMinutes = candleTime.getMinutes();
+            // Show labels at 00 and 30 minute marks
+            if (candleMinutes === 0 || candleMinutes === 30) {
+                // Avoid too many labels on mobile
+                if (isMobile) {
+                    // On mobile, show every hour instead
+                    if (candleMinutes === 0) {
+                        intervals.push({ index: i, time: candleTime });
+                    }
+                } else {
+                    intervals.push({ index: i, time: candleTime });
+                }
+            }
+        }
+
+        return intervals;
+    };
+
     // Draw chart
     const drawChart = useCallback(() => {
         if (!data || !canvasRef.current) return;
@@ -91,7 +137,7 @@ export default function Chart({ data, theme = 'dark' }) {
         const dpr = window.devicePixelRatio || 1;
         const width = canvas.width / dpr;
         const height = canvas.height / dpr;
-        const padding = chartSettings.padding;
+        const padding = isMobile ? chartSettings.mobilePadding : chartSettings.padding;
 
         // Clear canvas
         ctx.fillStyle = colors.background;
@@ -126,7 +172,7 @@ export default function Chart({ data, theme = 'dark' }) {
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
         const priceRange = maxPrice - minPrice;
-        const minPricePadding = 1; // Minimum padding to avoid overflow/compression
+        const minPricePadding = 1;
         const pricePadding = Math.max(priceRange * 0.1, minPricePadding);
 
         const yScale = (price) => {
@@ -148,19 +194,24 @@ export default function Chart({ data, theme = 'dark' }) {
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        // Vertical grid lines
-        const xInterval = Math.ceil(visibleCandles.length / chartSettings.gridLines.vertical);
-        for (let i = 0; i < visibleCandles.length; i += xInterval) {
-            const x = xScale(visibleStart + i);
-            ctx.beginPath();
-            ctx.moveTo(x, padding.top);
-            ctx.lineTo(x, height - padding.bottom);
-            ctx.stroke();
-        }
+        // Get 30-minute intervals for vertical grid lines
+        const timeIntervals = getThirtyMinuteIntervals(data.candles, visibleStart, visibleEnd);
+
+        // Vertical grid lines at time intervals
+        timeIntervals.forEach(interval => {
+            const x = xScale(interval.index);
+            if (x >= padding.left && x <= width - padding.right) {
+                ctx.beginPath();
+                ctx.moveTo(x, padding.top);
+                ctx.lineTo(x, height - padding.bottom);
+                ctx.stroke();
+            }
+        });
 
         // Horizontal grid lines
-        for (let i = 0; i <= chartSettings.gridLines.horizontal; i++) {
-            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / chartSettings.gridLines.horizontal;
+        const horizontalLines = isMobile ? 4 : chartSettings.gridLines.horizontal;
+        for (let i = 0; i <= horizontalLines; i++) {
+            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
             const y = yScale(price);
 
             ctx.beginPath();
@@ -199,7 +250,7 @@ export default function Chart({ data, theme = 'dark' }) {
             );
         });
 
-        // Collect all extrema points (including those outside visible range)
+        // Collect all extrema points
         const allMaximaPoints = data.maxima.map(point => {
             const index = data.candles.findIndex(c => c.time === point.time);
             return {
@@ -220,7 +271,7 @@ export default function Chart({ data, theme = 'dark' }) {
             };
         });
 
-        // Draw extrema lines (connecting all points, even outside visible range)
+        // Draw extrema lines
         if (allMaximaPoints.length > 1) {
             ctx.strokeStyle = colors.lines.maxima;
             ctx.lineWidth = chartSettings.extremaLineWidth;
@@ -256,7 +307,8 @@ export default function Chart({ data, theme = 'dark' }) {
         }
 
         // Draw extrema points (only visible ones)
-        ctx.font = chartSettings.fonts.extremaLabels;
+        const fontSize = isMobile ? '9px' : '11px';
+        ctx.font = `${fontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
         ctx.textAlign = 'center';
 
         allMaximaPoints.filter(p => p.visible).forEach(point => {
@@ -279,28 +331,30 @@ export default function Chart({ data, theme = 'dark' }) {
 
         // Draw axes labels outside clipping region
         ctx.fillStyle = colors.text.secondary;
-        ctx.font = chartSettings.fonts.labels;
+        const labelFontSize = isMobile ? '10px' : '12px';
+        ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
-        // X-axis labels
+        // X-axis labels - show only time at 30-minute intervals
         ctx.textAlign = 'center';
-        for (let i = 0; i < visibleCandles.length; i += xInterval) {
-            const candle = visibleCandles[i];
-            if (candle) {
-                const x = xScale(visibleStart + i);
-                ctx.fillText(format(new Date(candle.time), 'MMM dd HH:mm'), x, height - padding.bottom + 20);
+        timeIntervals.forEach(interval => {
+            const x = xScale(interval.index);
+            if (x >= padding.left && x <= width - padding.right) {
+                // Format time only (HH:mm)
+                const timeString = format(interval.time, 'HH:mm');
+                ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
             }
-        }
+        });
 
         // Y-axis labels
         ctx.textAlign = 'right';
-        for (let i = 0; i <= chartSettings.gridLines.horizontal; i++) {
-            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / chartSettings.gridLines.horizontal;
+        for (let i = 0; i <= horizontalLines; i++) {
+            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
             const y = yScale(price);
             ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
         }
 
-        // Draw crosshair
-        if (showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
+        // Draw crosshair (only on non-mobile devices)
+        if (!isMobile && showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
             mousePos.y > padding.top && mousePos.y < height - padding.bottom) {
 
             ctx.strokeStyle = colors.lines.crosshair;
@@ -338,15 +392,15 @@ export default function Chart({ data, theme = 'dark' }) {
             // Date label and candle info
             if (candleIndex >= 0 && candleIndex < data.candles.length) {
                 const candle = data.candles[candleIndex];
-                const date = format(new Date(candle.time), 'MMM dd HH:mm');
+                const time = format(new Date(candle.time), 'HH:mm');
 
-                // Date label
+                // Time label
                 ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(mousePos.x - 60, height - padding.bottom + 5, 120, 20);
-                ctx.strokeRect(mousePos.x - 60, height - padding.bottom + 5, 120, 20);
+                ctx.fillRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
+                ctx.strokeRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
                 ctx.fillStyle = colors.text.primary;
                 ctx.textAlign = 'center';
-                ctx.fillText(date, mousePos.x, height - padding.bottom + 20);
+                ctx.fillText(time, mousePos.x, height - padding.bottom + 20);
 
                 // OHLC tooltip
                 const tooltipX = mousePos.x + 15;
@@ -378,17 +432,17 @@ export default function Chart({ data, theme = 'dark' }) {
                 });
             }
         }
-    }, [data, viewState, mousePos, showCrosshair, colors]);
+    }, [data, viewState, mousePos, showCrosshair, colors, isMobile]);
 
     // Draw on every frame
     useEffect(() => {
         drawChart();
     }, [drawChart, viewState]);
 
-    // Handle mouse events
+    // Handle mouse events (disabled on mobile)
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !data) return;
+        if (!canvas || !data || isMobile) return;
 
         const handleWheel = (e) => {
             e.preventDefault();
@@ -464,7 +518,7 @@ export default function Chart({ data, theme = 'dark' }) {
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [data, viewState, isDragging, dragStart]);
+    }, [data, viewState, isDragging, dragStart, isMobile]);
 
     const handleReset = () => {
         setViewState({
@@ -478,44 +532,48 @@ export default function Chart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex justify-between items-center mb-4">
+        <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: colors.text.primary }}>
+                    <h1 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
                         {data.symbol || 'Chart'}
                     </h1>
-                    <div className="flex gap-4 mt-2">
-                        <span style={{ color: colors.text.maxima }} className="text-sm">
+                    <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
+                        <span style={{ color: colors.text.maxima }}>
                             Maxima: {data.maxima?.length || 0}
                         </span>
-                        <span style={{ color: colors.text.minima }} className="text-sm">
+                        <span style={{ color: colors.text.minima }}>
                             Minima: {data.minima?.length || 0}
                         </span>
-                        <span style={{ color: colors.text.secondary }} className="text-sm">
+                        <span style={{ color: colors.text.secondary }}>
                             Total: {data.candles?.length || 0} candles
                         </span>
-                        <span style={{ color: colors.text.secondary }} className="text-sm">
-                            Zoom: {(viewState.zoom * 100).toFixed(0)}%
-                        </span>
+                        {!isMobile && (
+                            <span style={{ color: colors.text.secondary }}>
+                                Zoom: {(viewState.zoom * 100).toFixed(0)}%
+                            </span>
+                        )}
                     </div>
                 </div>
-                <button
-                    onClick={handleReset}
-                    className="px-4 py-2 rounded-md transition-all"
-                    style={{
-                        backgroundColor: colors.panelBackground,
-                        border: `1px solid ${colors.grid}`,
-                        color: colors.text.primary
-                    }}
-                >
-                    Reset View
-                </button>
+                {!isMobile && (
+                    <button
+                        onClick={handleReset}
+                        className="px-3 py-1 md:px-4 md:py-2 rounded-md transition-all text-sm"
+                        style={{
+                            backgroundColor: colors.panelBackground,
+                            border: `1px solid ${colors.grid}`,
+                            color: colors.text.primary
+                        }}
+                    >
+                        Reset View
+                    </button>
+                )}
             </div>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 400 }}>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ cursor: 'crosshair', minHeight: 400 }}
+                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 300 }}
                 />
             </div>
         </div>
