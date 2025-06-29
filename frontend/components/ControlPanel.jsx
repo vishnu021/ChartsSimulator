@@ -1,9 +1,10 @@
+// frontend/components/ControlPanel.jsx (Updated)
 'use client';
 
 import React, { useState } from 'react';
 import { themes } from './chartConfig';
 
-export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
+export default function ControlPanel({ onSubmit, theme, onThemeToggle, hideLookbackPeriod = false }) {
     const [symbol, setSymbol] = useState('NIFTY 50');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [lookbackPeriod, setLookbackPeriod] = useState(5);
@@ -15,7 +16,11 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
         e.preventDefault();
         setIsLoading(true);
         try {
-            await onSubmit({ symbol, date, lookbackPeriod });
+            const params = { symbol, date };
+            if (!hideLookbackPeriod) {
+                params.lookbackPeriod = lookbackPeriod;
+            }
+            await onSubmit(params);
         } finally {
             setIsLoading(false);
         }
@@ -66,27 +71,29 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                     />
                 </div>
 
-                <div className="w-20">
-                    <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
-                        Period
-                    </label>
-                    <input
-                        type="number"
-                        value={lookbackPeriod}
-                        onChange={(e) => setLookbackPeriod(parseInt(e.target.value))}
-                        min="2"
-                        max="50"
-                        className="w-full px-2 py-1.5 rounded text-sm transition-colors"
-                        style={{
-                            backgroundColor: colors.input.background,
-                            border: `1px solid ${colors.input.border}`,
-                            color: colors.text.primary,
-                            outline: 'none'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = colors.input.focus}
-                        onBlur={(e) => e.target.style.borderColor = colors.input.border}
-                    />
-                </div>
+                {!hideLookbackPeriod && (
+                    <div className="w-20">
+                        <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
+                            Period
+                        </label>
+                        <input
+                            type="number"
+                            value={lookbackPeriod}
+                            onChange={(e) => setLookbackPeriod(parseInt(e.target.value))}
+                            min="2"
+                            max="50"
+                            className="w-full px-2 py-1.5 rounded text-sm transition-colors"
+                            style={{
+                                backgroundColor: colors.input.background,
+                                border: `1px solid ${colors.input.border}`,
+                                color: colors.text.primary,
+                                outline: 'none'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = colors.input.focus}
+                            onBlur={(e) => e.target.style.borderColor = colors.input.border}
+                        />
+                    </div>
+                )}
 
                 <button
                     type="submit"
@@ -99,7 +106,7 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle }) {
                         cursor: isLoading ? 'not-allowed' : 'pointer'
                     }}
                 >
-                    {isLoading ? 'Loading...' : 'Load Chart'}
+                    {isLoading ? 'Loading...' : 'Load Data'}
                 </button>
 
                 <button

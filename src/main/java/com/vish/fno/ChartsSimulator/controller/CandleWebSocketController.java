@@ -37,7 +37,7 @@ public class CandleWebSocketController {
 
             Thread.sleep(messageDelay);
         }
-        String outputPath = "candles-output-" + req.symbol() + "-" + req.date() + ".json";
+        String outputPath = "output/candles-output-" + req.symbol() + "-" + req.date() + ".json";
         FileUtil.saveToFile(outputPath, finalResponse);
     }
 }
