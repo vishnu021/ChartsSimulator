@@ -532,26 +532,26 @@ export default function Chart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
+        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
+            <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
                 <div>
                     <h1 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
                         {data.symbol || 'Chart'}
                     </h1>
                     <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
-                        <span style={{ color: colors.text.maxima }}>
-                            Maxima: {data.maxima?.length || 0}
-                        </span>
+                    <span style={{ color: colors.text.maxima }}>
+                        Maxima: {data.maxima?.length || 0}
+                    </span>
                         <span style={{ color: colors.text.minima }}>
-                            Minima: {data.minima?.length || 0}
-                        </span>
+                        Minima: {data.minima?.length || 0}
+                    </span>
                         <span style={{ color: colors.text.secondary }}>
-                            Total: {data.candles?.length || 0} candles
-                        </span>
+                        Total: {data.candles?.length || 0} candles
+                    </span>
                         {!isMobile && (
                             <span style={{ color: colors.text.secondary }}>
-                                Zoom: {(viewState.zoom * 100).toFixed(0)}%
-                            </span>
+                            Zoom: {(viewState.zoom * 100).toFixed(0)}%
+                        </span>
                         )}
                     </div>
                 </div>
@@ -569,11 +569,11 @@ export default function Chart({ data, theme = 'dark' }) {
                     </button>
                 )}
             </div>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 200 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 300 }}
+                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 200 }}
                 />
             </div>
         </div>

@@ -8,7 +8,7 @@ import ControlPanel from '@/components/ControlPanel';
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     ssr: false,
     loading: () => (
-        <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
             <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
                 Loading chart...
@@ -56,16 +56,18 @@ export default function CandlesPage() {
     }, []);
 
     return (
-        <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <ControlPanel
-                onSubmit={handleLoadChart}
-                theme={theme}
-                onThemeToggle={toggleTheme}
-                hideLookbackPeriod={true}
-            />
+        <div className={`flex flex-col h-[calc(100vh-4rem)] ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+            <div className="flex-shrink-0 p-4">
+                <ControlPanel
+                    onSubmit={handleLoadChart}
+                    theme={theme}
+                    onThemeToggle={toggleTheme}
+                    hideLookbackPeriod={true}
+                />
+            </div>
 
             {error && (
-                <div className="mx-4 mt-2 p-3 bg-red-500 text-white rounded-lg text-sm">
+                <div className="flex-shrink-0 mx-4 p-3 bg-red-500 text-white rounded-lg text-sm">
                     <strong>Error:</strong> {error}
                     <button
                         onClick={() => setError(null)}
@@ -77,7 +79,7 @@ export default function CandlesPage() {
             )}
 
             {isLoading && (
-                <div className="mx-4 mt-2 p-3 bg-blue-500 text-white rounded-lg text-sm">
+                <div className="flex-shrink-0 mx-4 p-3 bg-blue-500 text-white rounded-lg text-sm">
                     <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                         Loading chart data...
@@ -86,7 +88,9 @@ export default function CandlesPage() {
             )}
 
             {chartData ? (
-                <CandleChart data={chartData} theme={theme} />
+                <div className="flex-1 min-h-0">
+                    <CandleChart data={chartData} theme={theme} />
+                </div>
             ) : (
                 <div className={`flex-1 flex items-center justify-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                     <div className="text-center p-4">

@@ -165,12 +165,12 @@ export default function CandleChart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
+        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 200 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ minHeight: 300 }}
+                    style={{ minHeight: 200 }}
                 />
             </div>
         </div>

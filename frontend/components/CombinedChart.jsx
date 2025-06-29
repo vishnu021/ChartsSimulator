@@ -181,7 +181,8 @@ export default function CombinedChart({ data, theme = 'dark' }) {
             visibleHeikinAshi.forEach((candle, i) => {
                 const x = xScale(visibleStart + i);
                 const isGreen = candle.close >= candle.open;
-                const color = isGreen ? '#10b98180' : '#ef444480'; // Semi-transparent
+                // Use distinct colors for Heikin Ashi - Blue/Orange instead of Green/Red
+                const color = isGreen ? '#3b82f6' : '#f97316'; // Blue for bullish, Orange for bearish
 
                 // Draw wick
                 ctx.strokeStyle = color;
@@ -191,13 +192,25 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                 ctx.lineTo(x, yScale(candle.low));
                 ctx.stroke();
 
-                // Draw body
+                // Draw body with more opacity for better visibility
                 const bodyTop = yScale(Math.max(candle.open, candle.close));
                 const bodyBottom = yScale(Math.min(candle.open, candle.close));
                 const bodyHeight = Math.max(1, bodyBottom - bodyTop);
 
                 ctx.fillStyle = color;
+                ctx.globalAlpha = 0.7; // More opaque than before
                 ctx.fillRect(
+                    x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
+                    bodyTop,
+                    candleWidth * chartSettings.candleBodyWidthRatio,
+                    bodyHeight
+                );
+                ctx.globalAlpha = 1.0; // Reset alpha
+
+                // Add subtle border for definition
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(
                     x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
                     bodyTop,
                     candleWidth * chartSettings.candleBodyWidthRatio,
@@ -384,8 +397,8 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
+        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
+            <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
                 <div>
                     <h1 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
                         {data.symbol || 'Combined Chart'}
@@ -433,11 +446,32 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                     )}
                 </div>
             </div>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
+
+            {/* Legend */}
+            <div className="flex-shrink-0 flex flex-wrap gap-4 mb-3 text-xs">
+                <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                        <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bullish }}></div>
+                        <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bearish }}></div>
+                    </div>
+                    <span style={{ color: colors.text.secondary }}>Regular Candles</span>
+                </div>
+                {showHeikinAshi && (
+                    <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                            <div className="w-3 h-2 bg-blue-500"></div>
+                            <div className="w-3 h-2 bg-orange-500"></div>
+                        </div>
+                        <span style={{ color: colors.text.secondary }}>Heikin Ashi</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 200 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 300 }}
+                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 200 }}
                 />
             </div>
         </div>

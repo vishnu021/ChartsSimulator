@@ -42,8 +42,8 @@ const nextConfig = {
 
     // Configure environment variables
     env: {
-        NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || '/ws',
-        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
+        NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     },
 };
 

@@ -15,7 +15,7 @@ export const tickerService = {
     async getTickerData(symbol, date) {
         try {
             const params = new URLSearchParams({ symbol, date });
-            const response = await fetch(`${API_BASE_URL}/api/ticker?${params}`);
+            const response = await fetch(`${API_BASE_URL}/ticker?${params}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

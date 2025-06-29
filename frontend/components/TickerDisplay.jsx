@@ -47,40 +47,6 @@ export default function TickerDisplay({ data, theme = 'dark', symbol }) {
 
     return (
         <div className="flex-1 flex flex-col p-4" style={{ backgroundColor: colors.background }}>
-            {/* Header Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm text-gray-400 mb-1">Current Price</h3>
-                    <div className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                        ₹{currentPrice.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm text-gray-400 mb-1">Change</h3>
-                    <div
-                        className="text-2xl font-bold"
-                        style={{ color: priceChange >= 0 ? '#10b981' : '#ef4444' }}
-                    >
-                        {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm text-gray-400 mb-1">Volume</h3>
-                    <div className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                        {volume.toLocaleString()}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm text-gray-400 mb-1">Ticks</h3>
-                    <div className="text-2xl font-bold" style={{ color: colors.text.primary }}>
-                        {tickCount.toLocaleString()}
-                    </div>
-                </div>
-            </div>
-
             {/* Recent Ticks Table */}
             <div className="bg-gray-800 rounded-lg p-4 flex-1">
                 <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text.primary }}>

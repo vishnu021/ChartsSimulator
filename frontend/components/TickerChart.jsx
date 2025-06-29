@@ -281,59 +281,18 @@ export default function TickerChart({ data, theme = 'dark', symbol }) {
     if (!data || data.length === 0) return null;
 
     return (
-        <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background }}>
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                <div className="bg-gray-800 rounded-lg p-3">
-                    <h3 className="text-xs text-gray-400 mb-1">Current Price</h3>
-                    <div className="text-lg font-bold" style={{ color: colors.text.primary }}>
-                        ₹{stats.currentPrice.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-3">
-                    <h3 className="text-xs text-gray-400 mb-1">Change</h3>
-                    <div
-                        className="text-lg font-bold"
-                        style={{ color: stats.change >= 0 ? '#10b981' : '#ef4444' }}
-                    >
-                        {stats.change >= 0 ? '+' : ''}{stats.change.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-3">
-                    <h3 className="text-xs text-gray-400 mb-1">High</h3>
-                    <div className="text-lg font-bold" style={{ color: colors.text.maxima }}>
-                        ₹{stats.high.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-3">
-                    <h3 className="text-xs text-gray-400 mb-1">Low</h3>
-                    <div className="text-lg font-bold" style={{ color: colors.text.minima }}>
-                        ₹{stats.low.toFixed(2)}
-                    </div>
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-3">
-                    <h3 className="text-xs text-gray-400 mb-1">Volume</h3>
-                    <div className="text-lg font-bold" style={{ color: colors.text.secondary }}>
-                        {stats.volume.toLocaleString()}
-                    </div>
-                </div>
-            </div>
-
+        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background }}>
             {/* Chart */}
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
+            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 200 }}>
                 <canvas
                     ref={canvasRef}
                     className="w-full h-full"
-                    style={{ minHeight: 300 }}
+                    style={{ minHeight: 200 }}
                 />
             </div>
 
             {/* Legend */}
-            <div className="flex flex-wrap gap-4 mt-2 text-xs">
+            <div className="flex-shrink-0 flex flex-wrap gap-4 mt-2 text-xs">
                 <div className="flex items-center gap-2">
                     <div className="w-4 h-2 bg-gray-500 opacity-60"></div>
                     <span style={{ color: colors.text.secondary }}>Candlesticks</span>

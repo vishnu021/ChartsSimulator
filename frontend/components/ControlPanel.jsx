@@ -4,7 +4,15 @@
 import React, { useState } from 'react';
 import { themes } from './chartConfig';
 
-export default function ControlPanel({ onSubmit, theme, onThemeToggle, hideLookbackPeriod = false }) {
+export default function ControlPanel({
+                                         onSubmit,
+                                         theme,
+                                         onThemeToggle,
+                                         hideLookbackPeriod = false,
+                                         showModeToggle = false,
+                                         isRealTime = false,
+                                         onModeToggle
+                                     }) {
     const [symbol, setSymbol] = useState('NIFTY 50');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [lookbackPeriod, setLookbackPeriod] = useState(5);
@@ -92,6 +100,24 @@ export default function ControlPanel({ onSubmit, theme, onThemeToggle, hideLookb
                             onFocus={(e) => e.target.style.borderColor = colors.input.focus}
                             onBlur={(e) => e.target.style.borderColor = colors.input.border}
                         />
+                    </div>
+                )}
+
+                {showModeToggle && (
+                    <div className="w-32">
+                        <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
+                            Mode
+                        </label>
+                        <button
+                            type="button"
+                            onClick={onModeToggle}
+                            className={`w-full px-2 py-1.5 rounded text-sm transition-all ${
+                                isRealTime ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
+                            }`}
+                            style={{ color: '#ffffff' }}
+                        >
+                            {isRealTime ? '⚡ Real-time' : '📊 Instant'}
+                        </button>
                     </div>
                 )}
 
