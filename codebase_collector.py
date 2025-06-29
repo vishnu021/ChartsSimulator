@@ -23,8 +23,8 @@ DEFAULT_SOURCE_DIR = "."
 DEFAULT_OUTPUT_FILE = "combined_code.txt"
 DEFAULT_EXTENSIONS = ["java", "yaml", "yml", "js", "jsx", ".local"]
 DEFAULT_IGNORE_PATTERNS = ["target", "build", ".git", ".idea", "node_modules", ".gradle", ".next"]
-DEFAULT_IGNORE_DIRECTORIES = ["test", "tests", "src/test", "*/test", "*/tests"]
-DEFAULT_IGNORE_FILE_PATTERNS = ["*Test.java", "*Tests.java", "*IT.java", "*ITCase.java", "*TestCase.java"]
+DEFAULT_IGNORE_DIRECTORIES = ["test", "tests", "src/test", "*/test", "*/tests", "frontend/out/_next/static/chunks"]
+DEFAULT_IGNORE_FILE_PATTERNS = ["*Test.java", "*Tests.java", "*IT.java", "*ITCase.java", "*TestCase.java", "layout.js", "chunks", "_buildManifest.js", "_ssgManifest.js"]
 DEFAULT_OUTPUT_FORMAT = "plain"
 
 # Configure logging

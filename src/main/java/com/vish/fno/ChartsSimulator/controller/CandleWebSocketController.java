@@ -4,7 +4,9 @@ import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.CandleRequest;
 import com.vish.fno.ChartsSimulator.service.CandleService;
+import com.vish.fno.ChartsSimulator.util.FileUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
@@ -19,21 +21,23 @@ public class CandleWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final DataClient dataClient;
 
+    @Value("${app.websocket.messageDelay}")
+    private long messageDelay;
+
 
     @MessageMapping("/loadCandles")
     public void streamCandles(CandleRequest req) throws InterruptedException {
-        // 1) compute full-day candles & extrema
         List<Candle> candles = dataClient.getCandleData(req.symbol(), req.date());
 
-        // 2) loop through each minute, slicing out up to i
+        Object finalResponse = null;
         for (int i = 0; i < candles.size(); i++) {
             List<Candle> slice = candles.subList(0, i + 1);
-            messagingTemplate.convertAndSend(
-                    "/topic/candles",
-                    candleService.getExtrema(req.lookbackPeriod(), slice)
-            );
+            finalResponse = candleService.getExtrema(req.lookbackPeriod(), slice);
+            messagingTemplate.convertAndSend("/topic/candles", finalResponse);
 
-            Thread.sleep(100); // speed it up: 50 ms per minute tick
+            Thread.sleep(messageDelay);
         }
+        String outputPath = "candles-output-" + req.symbol() + "-" + req.date() + ".json";
+        FileUtil.saveToFile(outputPath, finalResponse);
     }
 }

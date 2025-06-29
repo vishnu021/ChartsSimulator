@@ -45,6 +45,7 @@ springdoc:
 # Application-specific configuration
 app:
   websocket:
+    messageDelay: 10
     endpoint: /ws
     allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090}
 

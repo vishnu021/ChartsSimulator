@@ -50,3 +50,4 @@ mvnw.cmd
 /target
 combined_code.txt
 /frontend/out
+*.json
