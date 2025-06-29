@@ -48,7 +48,7 @@ export default function CandleChart({ data, theme = 'dark' }) {
         return () => window.removeEventListener('resize', updateCanvasSize);
     }, [data]);
 
-    // Draw chart function (simplified version of original Chart component)
+    // Draw chart function
     const drawChart = useCallback(() => {
         if (!data || !canvasRef.current) return;
 
@@ -166,18 +166,6 @@ export default function CandleChart({ data, theme = 'dark' }) {
 
     return (
         <div className="flex-1 flex flex-col p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
-                <div>
-                    <h2 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
-                        {data.symbol || 'Chart'}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
-                        <span style={{ color: colors.text.secondary }}>
-                            Total: {data.candles?.length || 0} candles
-                        </span>
-                    </div>
-                </div>
-            </div>
             <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 300 }}>
                 <canvas
                     ref={canvasRef}

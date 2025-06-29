@@ -21,7 +21,7 @@ public class TickerWebSocketController {
     private final TickerService tickerService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    @Value("${app.websocket.tickerDelay:1000}")
+    @Value("${app.websocket.tickerDelay:100}")
     private long tickerDelay;
 
     @MessageMapping("/loadTicker")
@@ -32,7 +32,7 @@ public class TickerWebSocketController {
 
         for (Ticker ticker : tickers) {
             messagingTemplate.convertAndSend("/topic/ticker", ticker);
-            Thread.sleep(tickerDelay); // 1 second delay for real-time feel
+            Thread.sleep(tickerDelay); // Fast ticker updates
         }
 
         log.info("Completed ticker stream for {} with {} ticks", req.symbol(), tickers.size());

@@ -1,3 +1,4 @@
+
 // frontend/services/tickerService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
@@ -7,9 +8,28 @@ let isConnecting = false;
 let currentSubscription = null;
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:9090/ws';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090';
 
 export const tickerService = {
-    connectAndStream(symbol, date, startTime, endTime, onData, onError) {
+    // Get ticker data via API
+    async getTickerData(symbol, date) {
+        try {
+            const params = new URLSearchParams({ symbol, date });
+            const response = await fetch(`${API_BASE_URL}/api/ticker?${params}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching ticker data:', error);
+            throw error;
+        }
+    },
+
+    // Stream ticker data via WebSocket for real-time visualization
+    connectAndStream(symbol, date, onData, onError) {
         if (isConnecting) {
             console.log('Ticker connection already in progress, ignoring request');
             return;
@@ -51,7 +71,7 @@ export const tickerService = {
 
                     stompClient.publish({
                         destination: "/app/loadTicker",
-                        body: JSON.stringify({ symbol, date, startTime, endTime }),
+                        body: JSON.stringify({ symbol, date }),
                     });
 
                 } catch (error) {

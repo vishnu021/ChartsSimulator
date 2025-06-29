@@ -1,3 +1,4 @@
+
 // frontend/app/ticker/page.js
 'use client';
 
@@ -6,7 +7,7 @@ import dynamic from 'next/dynamic';
 import ControlPanel from '@/components/ControlPanel';
 import { tickerService } from '@/services/tickerService';
 
-const TickerDisplay = dynamic(() => import('@/components/TickerDisplay'), {
+const TickerChart = dynamic(() => import('@/components/TickerChart'), {
     ssr: false,
     loading: () => (
         <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
@@ -45,14 +46,8 @@ export default function TickerPage() {
                 tickerService.connectAndStream(
                     symbol,
                     date,
-                    '09:15',
-                    '15:30',
                     (tick) => {
-                        setTickerData(prev => {
-                            const newData = [...prev, tick];
-                            // Keep only last 1000 ticks for performance
-                            return newData.slice(-1000);
-                        });
+                        setTickerData(prev => [...prev, tick]);
                     },
                     (err) => {
                         console.error('Ticker service error:', err);
@@ -90,17 +85,12 @@ export default function TickerPage() {
 
     return (
         <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <div className="p-4">
-                <h1 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    Real-Time Ticker Data
-                </h1>
-                <ControlPanel
-                    onSubmit={handleLoadTicker}
-                    theme={theme}
-                    onThemeToggle={toggleTheme}
-                    hideLookbackPeriod={true}
-                />
-            </div>
+            <ControlPanel
+                onSubmit={handleLoadTicker}
+                theme={theme}
+                onThemeToggle={toggleTheme}
+                hideLookbackPeriod={true}
+            />
 
             {error && (
                 <div className="mx-4 mt-2 p-3 bg-red-500 text-white rounded-lg text-sm">
@@ -124,7 +114,7 @@ export default function TickerPage() {
             )}
 
             {tickerData.length > 0 ? (
-                <TickerDisplay
+                <TickerChart
                     data={tickerData}
                     theme={theme}
                     symbol={currentSymbol}

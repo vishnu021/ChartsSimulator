@@ -16,7 +16,6 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
 
-
 server:
   port: ${SERVER_PORT:9090}
   servlet:
@@ -46,6 +45,7 @@ springdoc:
 app:
   websocket:
     messageDelay: 10
+    tickerDelay: 25 # Fast ticker updates (100ms)
     endpoint: /ws
     allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090}
 

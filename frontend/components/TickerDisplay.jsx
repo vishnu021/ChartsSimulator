@@ -1,4 +1,5 @@
 
+
 // frontend/components/TickerDisplay.jsx
 'use client';
 

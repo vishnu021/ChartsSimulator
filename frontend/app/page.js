@@ -1,4 +1,3 @@
-
 // frontend/app/page.js (Updated main page)
 'use client';
 
@@ -38,13 +37,6 @@ export default function HomePage() {
     return (
         <div className="min-h-screen bg-gray-900 text-white p-8">
             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold mb-4">Charts Simulator</h1>
-                    <p className="text-xl text-gray-400">
-                        Comprehensive financial data visualization and analysis platform
-                    </p>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {features.map((feature) => (
                         <div

@@ -1,10 +1,9 @@
 // frontend/app/candles/page.js
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import ControlPanel from '@/components/ControlPanel';
-import { chartService } from '@/services/chartService';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     ssr: false,
@@ -18,63 +17,38 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     )
 });
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090';
+
 export default function CandlesPage() {
     const [chartData, setChartData] = useState(null);
     const [error, setError] = useState(null);
     const [theme, setTheme] = useState('dark');
     const [isLoading, setIsLoading] = useState(false);
-    const loadingRef = useRef(false);
 
-    const handleLoadChart = useCallback(({ symbol, date, lookbackPeriod }) => {
-        if (loadingRef.current || chartService.isConnecting()) {
-            console.log('Request already in progress, ignoring');
-            return;
-        }
-
-        loadingRef.current = true;
+    const handleLoadChart = useCallback(async ({ symbol, date }) => {
         setIsLoading(true);
         setError(null);
         setChartData(null);
 
-        chartService.disconnect();
+        try {
+            const params = new URLSearchParams({ symbol, date });
+            const response = await fetch(`${API_BASE_URL}/charts?${params}`);
 
-        setTimeout(() => {
-            try {
-                chartService.connectAndStream(
-                    symbol,
-                    date,
-                    lookbackPeriod,
-                    (data) => {
-                        setChartData({ ...data, symbol });
-                    },
-                    (err) => {
-                        console.error('Chart service error:', err);
-                        setError(err);
-                        setIsLoading(false);
-                        loadingRef.current = false;
-                    }
-                );
-
-                setTimeout(() => {
-                    setIsLoading(false);
-                    loadingRef.current = false;
-                }, 2000);
-
-            } catch (error) {
-                console.error('Error loading chart:', error);
-                setError('Failed to load chart data');
-                setIsLoading(false);
-                loadingRef.current = false;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        }, 100);
-    }, []);
 
-    React.useEffect(() => {
-        return () => {
-            console.log('Candles page unmounting, disconnecting WebSocket');
-            chartService.disconnect();
-            loadingRef.current = false;
-        };
+            const data = await response.json();
+            setChartData({
+                candles: data.candlesticks,
+                symbol
+            });
+        } catch (error) {
+            console.error('Error loading chart:', error);
+            setError('Failed to load chart data');
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     const toggleTheme = useCallback(() => {
@@ -83,16 +57,12 @@ export default function CandlesPage() {
 
     return (
         <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <div className="p-4">
-                <h1 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    Candlestick Charts
-                </h1>
-                <ControlPanel
-                    onSubmit={handleLoadChart}
-                    theme={theme}
-                    onThemeToggle={toggleTheme}
-                />
-            </div>
+            <ControlPanel
+                onSubmit={handleLoadChart}
+                theme={theme}
+                onThemeToggle={toggleTheme}
+                hideLookbackPeriod={true}
+            />
 
             {error && (
                 <div className="mx-4 mt-2 p-3 bg-red-500 text-white rounded-lg text-sm">

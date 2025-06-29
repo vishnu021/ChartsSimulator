@@ -1,3 +1,4 @@
+
 // frontend/app/extrema/page.js
 'use client';
 
@@ -83,16 +84,11 @@ export default function ExtremaPage() {
 
     return (
         <div className={`h-screen flex flex-col ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <div className="p-4">
-                <h1 className={`text-2xl font-bold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    Extrema Analysis
-                </h1>
-                <ControlPanel
-                    onSubmit={handleLoadChart}
-                    theme={theme}
-                    onThemeToggle={toggleTheme}
-                />
-            </div>
+            <ControlPanel
+                onSubmit={handleLoadChart}
+                theme={theme}
+                onThemeToggle={toggleTheme}
+            />
 
             {error && (
                 <div className="mx-4 mt-2 p-3 bg-red-500 text-white rounded-lg text-sm">
