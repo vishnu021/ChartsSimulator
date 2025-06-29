@@ -19,10 +19,8 @@ public class TickerController {
     @GetMapping("/api/ticker")
     public List<Ticker> getTickerData(
             @RequestParam String symbol,
-            @RequestParam String date,
-            @RequestParam(defaultValue = "09:15") String startTime,
-            @RequestParam(defaultValue = "15:30") String endTime
+            @RequestParam String date
     ) {
-        return tickerService.getTickerData(symbol, date, startTime, endTime);
+        return tickerService.getTickerData(symbol, date);
     }
 }

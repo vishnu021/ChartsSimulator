@@ -27,10 +27,12 @@ public class ChartTypeWebSocketController {
 
         var chartData = chartTypeService.getChartDataStream(req.symbol(), req.date(), req.chartTypes());
 
-        for (var data : chartData) {
-            messagingTemplate.convertAndSend("/topic/chartTypes", data);
-            Thread.sleep(messageDelay);
-        }
+//        for (var data : chartData) {
+//            messagingTemplate.convertAndSend("/topic/chartTypes", data);
+//            Thread.sleep(messageDelay);
+//        }
+
+        messagingTemplate.convertAndSend("/topic/chartTypes", chartData);
 
         log.info("Completed chart types stream for {}", req.symbol());
     }

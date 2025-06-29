@@ -4,5 +4,5 @@ import java.util.List;
 
 public record ChartTypeResponse(
         List<Candle> candlesticks,
-        List<HeikinAshiCandle> heikinAshi
+        List<Candle> heikinAshi
 ) {}

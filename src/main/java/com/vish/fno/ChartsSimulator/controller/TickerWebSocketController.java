@@ -28,7 +28,7 @@ public class TickerWebSocketController {
     public void streamTicker(TickerRequest req) throws InterruptedException {
         log.info("Starting ticker stream for {} on {}", req.symbol(), req.date());
 
-        List<Ticker> tickers = tickerService.getTickerData(req.symbol(), req.date(), req.startTime(), req.endTime());
+        List<Ticker> tickers = tickerService.getTickerData(req.symbol(), req.date());
 
         for (Ticker ticker : tickers) {
             messagingTemplate.convertAndSend("/topic/ticker", ticker);

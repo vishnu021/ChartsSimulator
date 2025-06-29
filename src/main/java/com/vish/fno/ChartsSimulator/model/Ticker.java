@@ -1,8 +1,7 @@
 package com.vish.fno.ChartsSimulator.model;
 
 public record Ticker(
-        String time,
+        long time,
         double price,
-        long volume,
-        String type // BUY, SELL, NEUTRAL
+        long volume
 ) {}
