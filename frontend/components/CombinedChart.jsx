@@ -91,6 +91,31 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         };
     }, [isDragging]);
 
+    // Helper function to find time intervals
+    const getTimeIntervals = (candles, visibleStart, visibleEnd) => {
+        const intervals = [];
+
+        for (let i = visibleStart; i < visibleEnd; i++) {
+            const candleTime = new Date(candles[i].time);
+            if (isNaN(candleTime.getTime())) continue;
+
+            const candleMinutes = candleTime.getMinutes();
+            // Show labels at 00 and 30 minute marks
+            if (candleMinutes === 0 || candleMinutes === 30) {
+                if (isMobile) {
+                    // On mobile, show every hour instead
+                    if (candleMinutes === 0) {
+                        intervals.push({ index: i, time: candleTime });
+                    }
+                } else {
+                    intervals.push({ index: i, time: candleTime });
+                }
+            }
+        }
+
+        return intervals;
+    };
+
     // Draw chart
     const drawChart = useCallback(() => {
         if (!data || !canvasRef.current) return;
@@ -162,6 +187,20 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
+        // Get time intervals for vertical grid lines
+        const timeIntervals = getTimeIntervals(data.candlesticks, visibleStart, visibleEnd);
+
+        // Vertical grid lines at time intervals
+        timeIntervals.forEach(interval => {
+            const x = xScale(interval.index);
+            if (x >= padding.left && x <= width - padding.right) {
+                ctx.beginPath();
+                ctx.moveTo(x, padding.top);
+                ctx.lineTo(x, height - padding.bottom);
+                ctx.stroke();
+            }
+        });
+
         // Horizontal grid lines
         const horizontalLines = isMobile ? 4 : 8;
         for (let i = 0; i <= horizontalLines; i++) {
@@ -176,40 +215,28 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
         ctx.setLineDash([]);
 
-        // Draw Heikin Ashi candles first (background)
+        // Draw Heikin Ashi candles first (background) - YELLOW OUTLINE ONLY
         if (showHeikinAshi && visibleHeikinAshi.length > 0) {
             visibleHeikinAshi.forEach((candle, i) => {
                 const x = xScale(visibleStart + i);
-                const isGreen = candle.close >= candle.open;
-                // Use distinct colors for Heikin Ashi - Blue/Orange instead of Green/Red
-                const color = isGreen ? '#3b82f6' : '#f97316'; // Blue for bullish, Orange for bearish
+                const yellowColor = '#fbbf24'; // Yellow color for all Heikin Ashi candles
 
                 // Draw wick
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = yellowColor;
+                ctx.lineWidth = 1.5; // Slightly thicker for visibility
                 ctx.beginPath();
                 ctx.moveTo(x, yScale(candle.high));
                 ctx.lineTo(x, yScale(candle.low));
                 ctx.stroke();
 
-                // Draw body with more opacity for better visibility
+                // Draw body OUTLINE ONLY (no fill)
                 const bodyTop = yScale(Math.max(candle.open, candle.close));
                 const bodyBottom = yScale(Math.min(candle.open, candle.close));
                 const bodyHeight = Math.max(1, bodyBottom - bodyTop);
 
-                ctx.fillStyle = color;
-                ctx.globalAlpha = 0.7; // More opaque than before
-                ctx.fillRect(
-                    x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
-                    bodyTop,
-                    candleWidth * chartSettings.candleBodyWidthRatio,
-                    bodyHeight
-                );
-                ctx.globalAlpha = 1.0; // Reset alpha
-
-                // Add subtle border for definition
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 0.5;
+                // Only stroke the rectangle, don't fill it
+                ctx.strokeStyle = yellowColor;
+                ctx.lineWidth = 1.5;
                 ctx.strokeRect(
                     x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
                     bodyTop,
@@ -233,7 +260,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
             ctx.lineTo(x, yScale(candle.low));
             ctx.stroke();
 
-            // Draw body with border for distinction
+            // Draw body with fill
             const bodyTop = yScale(Math.max(candle.open, candle.close));
             const bodyBottom = yScale(Math.min(candle.open, candle.close));
             const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -246,7 +273,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                 bodyHeight
             );
 
-            // Add border to regular candles
+            // Add subtle border to regular candles for distinction
             ctx.strokeStyle = colors.background;
             ctx.lineWidth = 0.5;
             ctx.strokeRect(
@@ -263,6 +290,16 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         ctx.fillStyle = colors.text.secondary;
         const labelFontSize = isMobile ? '10px' : '12px';
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
+
+        // X-axis labels - show time at intervals
+        ctx.textAlign = 'center';
+        timeIntervals.forEach(interval => {
+            const x = xScale(interval.index);
+            if (x >= padding.left && x <= width - padding.right) {
+                const timeString = format(interval.time, 'HH:mm');
+                ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
+            }
+        });
 
         // Y-axis labels
         ctx.textAlign = 'right';
@@ -458,11 +495,8 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                 </div>
                 {showHeikinAshi && (
                     <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                            <div className="w-3 h-2 bg-blue-500"></div>
-                            <div className="w-3 h-2 bg-orange-500"></div>
-                        </div>
-                        <span style={{ color: colors.text.secondary }}>Heikin Ashi</span>
+                        <div className="w-3 h-2 border-2 border-yellow-400"></div>
+                        <span style={{ color: colors.text.secondary }}>Heikin Ashi (Yellow Outline)</span>
                     </div>
                 )}
             </div>
