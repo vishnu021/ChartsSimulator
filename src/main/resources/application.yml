@@ -1,3 +1,4 @@
+# src/main/resources/application.yml
 spring:
   application:
     name: ChartsSimulator
@@ -7,7 +8,7 @@ spring:
     resources:
       static-locations: classpath:/static/
       cache:
-        period: 3600
+        period: 3600 # 1 hour default cache
         cachecontrol:
           max-age: 3600
           cache-public: true
@@ -24,6 +25,7 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
 
+# Logging configuration
 logging:
   level:
     com.vish.fno.ChartsSimulator: INFO
@@ -32,6 +34,7 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
+# API Documentation
 springdoc:
   api-docs:
     path: /api-docs
@@ -39,11 +42,11 @@ springdoc:
     path: /swagger-ui.html
 
 app:
-  baseurl:
-  baseLogPath:
+  baseurl: https://127.0.0.1/api/v1/historicalData/
+  baseLogPath: /Volumes/MacSSD/trading-logs
   websocket:
     messageDelay: 10
-    tickerDelay: 25
+    tickerDelay: 25 # Fast ticker updates (100ms)
     endpoint: /ws
     allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090}
 

@@ -1,16 +1,23 @@
-import { useState, useCallback, useRef } from 'react';
-import { chartService } from '../services/chartService';
+import { useState, useCallback } from 'react';
+import { useWebSocket } from './websocket/useWebSocket';
 
 export const useChartData = () => {
     const [isRealTime, setIsRealTime] = useState(false);
     const [instantData, setInstantData] = useState(null);
     const [instantLoading, setInstantLoading] = useState(false);
     const [instantError, setInstantError] = useState(null);
-    const [realTimeData, setRealTimeData] = useState(null);
-    const [realTimeLoading, setRealTimeLoading] = useState(false);
-    const [realTimeError, setRealTimeError] = useState(null);
-    const loadingRef = useRef(false);
 
+    // Real-time WebSocket
+    const {
+        data: realTimeData,
+        isConnecting: realTimeLoading,
+        error: realTimeError,
+        connectAndStream,
+        disconnect,
+        clearError: clearRealTimeError
+    } = useWebSocket();
+
+    // Load instant data via API
     const loadInstantData = useCallback(async (params) => {
         setInstantLoading(true);
         setInstantError(null);
@@ -26,103 +33,47 @@ export const useChartData = () => {
             }
 
             const data = await response.json();
-            console.log(`Instant mode: received ${data.candles?.length} candles, ${data.maxima?.length} maxima, ${data.minima?.length} minima`);
             setInstantData({ ...data, symbol: params.symbol });
         } catch (error) {
-            console.error('Error loading extrema:', error);
             setInstantError('Failed to load extrema data');
         } finally {
             setInstantLoading(false);
         }
     }, []);
 
-    const loadRealTimeData = useCallback((params) => {
-        if (loadingRef.current || chartService.isConnecting()) {
-            console.log('Request already in progress, ignoring');
-            return;
-        }
-
-        loadingRef.current = true;
-        setRealTimeLoading(true);
-        setRealTimeError(null);
-        setRealTimeData(null);
-
-        chartService.disconnect();
-
-        setTimeout(() => {
-            try {
-                chartService.connectAndStream(
-                    params.symbol,
-                    params.date,
-                    params.lookbackPeriod,
-                    (data) => {
-                        console.log(`Received extrema update: ${data.candles?.length} candles, ${data.maxima?.length} maxima, ${data.minima?.length} minima`);
-                        setRealTimeData({ ...data, symbol: params.symbol });
-                    },
-                    (err) => {
-                        console.error('Chart service error:', err);
-                        setRealTimeError(err);
-                        setRealTimeLoading(false);
-                        loadingRef.current = false;
-                    }
-                );
-
-                setTimeout(() => {
-                    setRealTimeLoading(false);
-                    loadingRef.current = false;
-                }, 2000);
-
-            } catch (error) {
-                console.error('Error loading chart:', error);
-                setRealTimeError('Failed to load chart data');
-                setRealTimeLoading(false);
-                loadingRef.current = false;
-            }
-        }, 100);
-    }, []);
-
+    // Main load function
     const loadData = useCallback((params) => {
         if (isRealTime) {
-            loadRealTimeData(params);
+            connectAndStream(params.symbol, params.date, params.lookbackPeriod);
         } else {
             loadInstantData(params);
         }
-    }, [isRealTime, loadRealTimeData, loadInstantData]);
+    }, [isRealTime, connectAndStream, loadInstantData]);
 
+    // Toggle between real-time and instant
     const toggleMode = useCallback(() => {
         setIsRealTime(prev => {
             if (prev) {
-                chartService.disconnect();
-                setRealTimeData(null);
-                setRealTimeError(null);
+                disconnect();
             }
             return !prev;
         });
-    }, []);
+    }, [disconnect]);
 
+    // Clear all errors
     const clearErrors = useCallback(() => {
         setInstantError(null);
-        setRealTimeError(null);
-    }, []);
-
-    const disconnect = useCallback(() => {
-        chartService.disconnect();
-        loadingRef.current = false;
-    }, []);
+        clearRealTimeError();
+    }, [clearRealTimeError]);
 
     return {
-        // Real-time data
         isRealTime,
         realTimeData,
-        realTimeLoading,
-        realTimeError,
-
-        // Instant data
         instantData,
+        realTimeLoading,
         instantLoading,
+        realTimeError,
         instantError,
-
-        // Actions
         loadData,
         toggleMode,
         clearErrors,

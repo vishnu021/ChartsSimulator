@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { tickerService } from '../services/tickerService';
+import { tickerService } from '@/services/tickerService';
 
 export const useTickerData = () => {
     const [tickerData, setTickerData] = useState([]);

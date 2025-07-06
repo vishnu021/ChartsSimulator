@@ -41,7 +41,7 @@ export default function ExtremaPage() {
     const isLoading = isRealTime ? realTimeLoading : instantLoading;
     const error = isRealTime ? realTimeError : instantError;
 
-    // Generate stats for display
+    // Stats
     const generateStatsData = () => {
         if (!currentData) return [];
 
@@ -60,62 +60,41 @@ export default function ExtremaPage() {
                 label: 'Minima',
                 value: currentData.minima?.length || 0,
                 color: 'text-pink-400'
-            },
-            ...(isRealTime ? [{
-                label: 'Status',
-                value: 'Streaming live updates...',
-                color: 'text-blue-400'
-            }] : [])
+            }
         ];
-    };
-
-    const renderControls = () => (
-        <ControlPanel
-            onSubmit={loadData}
-            theme={theme}
-            onThemeToggle={toggleTheme}
-            showModeToggle={true}
-            isRealTime={isRealTime}
-            onModeToggle={toggleMode}
-        />
-    );
-
-    const renderEmptyState = () => (
-        <EmptyState
-            icon="📈"
-            title="No extrema analysis loaded"
-            description={`Enter a symbol and date above. Use ${isRealTime ? '⚡ Real-time' : '📊 Instant'} mode.`}
-            theme={theme}
-            action={isRealTime && (
-                <p className="text-xs mt-2 text-blue-400">
-                    Real-time mode: Extrema analysis will update as new candles are processed
-                </p>
-            )}
-        />
-    );
-
-    const renderStats = () => {
-        if (!currentData) return null;
-        return <StatsBar stats={generateStatsData()} theme={theme} />;
     };
 
     return (
         <PageLayout
             theme={theme}
             title={currentData?.symbol || 'Extrema Analysis'}
-            controls={renderControls()}
-            stats={renderStats()}
+            controls={
+                <ControlPanel
+                    onSubmit={loadData}
+                    theme={theme}
+                    onThemeToggle={toggleTheme}
+                    showModeToggle={true}
+                    isRealTime={isRealTime}
+                    onModeToggle={toggleMode}
+                />
+            }
+            stats={currentData && <StatsBar stats={generateStatsData()} theme={theme} />}
             error={error}
             onErrorDismiss={clearErrors}
             loading={isLoading}
-            loadingMessage={isRealTime ? 'Connecting to real-time extrema feed...' : 'Loading extrema analysis...'}
+            loadingMessage={isRealTime ? 'Connecting to real-time feed...' : 'Loading extrema analysis...'}
         >
             {currentData ? (
                 <div className="flex-1 min-h-0">
                     <Chart data={currentData} theme={theme} />
                 </div>
             ) : (
-                renderEmptyState()
+                <EmptyState
+                    icon="📈"
+                    title="No extrema analysis loaded"
+                    description={`Enter a symbol and date above. Use ${isRealTime ? '⚡ Real-time' : '📊 Instant'} mode.`}
+                    theme={theme}
+                />
             )}
         </PageLayout>
     );

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useTheme } from '@/hooks/useTheme';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
+import { usePageState } from '@/hooks/common/usePageState';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     ssr: false,
@@ -23,14 +24,18 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CandlesPage() {
     const { theme, toggleTheme } = useTheme();
-    const [chartData, setChartData] = useState(null);
-    const [error, setError] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const {
+        data,
+        error,
+        isLoading,
+        handleLoadStart,
+        handleLoadSuccess,
+        handleLoadError,
+        clearError
+    } = usePageState();
 
     const handleLoadChart = useCallback(async ({ symbol, date }) => {
-        setIsLoading(true);
-        setError(null);
-        setChartData(null);
+        handleLoadStart();
 
         try {
             const params = new URLSearchParams({ symbol, date });
@@ -40,18 +45,16 @@ export default function CandlesPage() {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            setChartData({
-                candles: data.candlesticks,
+            const result = await response.json();
+            handleLoadSuccess({
+                candles: result.candlesticks,
                 symbol
             });
         } catch (error) {
             console.error('Error loading chart:', error);
-            setError('Failed to load chart data');
-        } finally {
-            setIsLoading(false);
+            handleLoadError('Failed to load chart data');
         }
-    }, []);
+    }, [handleLoadStart, handleLoadSuccess, handleLoadError]);
 
     const renderControls = () => (
         <ControlPanel
@@ -63,13 +66,13 @@ export default function CandlesPage() {
     );
 
     const renderSubtitle = () => {
-        if (!chartData) return null;
+        if (!data) return null;
 
         const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
         return (
             <span className={textColor}>
-                Total: {chartData.candles?.length || 0} candles
+                Total: {data.candles?.length || 0} candles
             </span>
         );
     };
@@ -83,20 +86,25 @@ export default function CandlesPage() {
         />
     );
 
+    const handleErrorDismiss = useCallback(() => {
+        console.log('Dismissing error'); // Debug log
+        clearError();
+    }, [clearError]);
+
     return (
         <PageLayout
             theme={theme}
-            title={chartData?.symbol || 'Candlestick Chart'}
+            title={data?.symbol || 'Candlestick Chart'}
             subtitle={renderSubtitle()}
             controls={renderControls()}
             error={error}
-            onErrorDismiss={() => setError(null)}
+            onErrorDismiss={handleErrorDismiss} // Use the callback wrapper
             loading={isLoading}
             loadingMessage="Loading chart data..."
         >
-            {chartData ? (
+            {data ? (
                 <div className="flex-1 min-h-0">
-                    <CandleChart data={chartData} theme={theme} />
+                    <CandleChart data={data} theme={theme} />
                 </div>
             ) : (
                 renderEmptyState()

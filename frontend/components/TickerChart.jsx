@@ -86,6 +86,7 @@ const chartSettings = {
     }
 };
 
+// Helper function to format time
 const formatTime = (date, format) => {
     const d = new Date(date);
     const hours = d.getHours().toString().padStart(2, '0');
