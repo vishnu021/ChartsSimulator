@@ -1,9 +1,6 @@
-
-
-// frontend/components/TickerDisplay.jsx
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { themes } from './chartConfig';
 

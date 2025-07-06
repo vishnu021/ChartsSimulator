@@ -1,4 +1,3 @@
-// frontend/components/ControlPanel.jsx (Updated)
 'use client';
 
 import React, { useState } from 'react';

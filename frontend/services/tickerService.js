@@ -1,27 +1,26 @@
-// frontend/services/tickerService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-let stompClient = null;
-let isConnecting = false;
-let currentSubscription = null;
-let isCleaningUp = false;
-let globalListenersAdded = false;
+let tickerStompClient = null;
+let tickerIsConnecting = false;
+let tickerCurrentSubscription = null;
+let tickerIsCleaningUp = false;
+let tickerGlobalListenersAdded = false;
 
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:9090/ws';
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090';
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Add global event listeners only once
-const setupGlobalEventListeners = () => {
-    if (globalListenersAdded || typeof window === 'undefined') {
+const setupTickerGlobalEventListeners = () => {
+    if (tickerGlobalListenersAdded || typeof window === 'undefined') {
         return;
     }
 
-    globalListenersAdded = true;
+    tickerGlobalListenersAdded = true;
 
     // Handle tab visibility changes
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden && stompClient && stompClient.connected) {
+        if (document.hidden && tickerStompClient && tickerStompClient.connected) {
             console.log('Tab became hidden, scheduling ticker WebSocket cleanup');
             setTimeout(() => {
                 if (document.hidden) {
@@ -82,19 +81,19 @@ export const tickerService = {
     // Stream ticker data via WebSocket for real-time visualization
     connectAndStream(symbol, date, onData, onError) {
         // Setup global listeners on first use
-        setupGlobalEventListeners();
+        setupTickerGlobalEventListeners();
 
-        if (isConnecting) {
+        if (tickerIsConnecting) {
             console.log('Ticker connection already in progress, ignoring request');
             return;
         }
 
         this.disconnect();
-        isConnecting = true;
-        isCleaningUp = false;
+        tickerIsConnecting = true;
+        tickerIsCleaningUp = false;
 
         try {
-            stompClient = new Client({
+            tickerStompClient = new Client({
                 webSocketFactory: () => new SockJS(WEBSOCKET_URL),
                 reconnectDelay: 5000,
                 heartbeatIncoming: 4000,
@@ -104,19 +103,19 @@ export const tickerService = {
                 }
             });
 
-            stompClient.onConnect = (frame) => {
+            tickerStompClient.onConnect = (frame) => {
                 console.log('Connected to Ticker WebSocket:', frame);
-                isConnecting = false;
+                tickerIsConnecting = false;
 
                 try {
-                    if (currentSubscription) {
-                        currentSubscription.unsubscribe();
-                        currentSubscription = null;
+                    if (tickerCurrentSubscription) {
+                        tickerCurrentSubscription.unsubscribe();
+                        tickerCurrentSubscription = null;
                     }
 
-                    currentSubscription = stompClient.subscribe("/topic/ticker", (msg) => {
+                    tickerCurrentSubscription = tickerStompClient.subscribe("/topic/ticker", (msg) => {
                         try {
-                            if (isCleaningUp) {
+                            if (tickerIsCleaningUp) {
                                 console.log('Ignoring ticker message during cleanup');
                                 return;
                             }
@@ -129,12 +128,12 @@ export const tickerService = {
                     });
 
                     // Subscribe to error messages
-                    stompClient.subscribe("/user/queue/error", (msg) => {
+                    tickerStompClient.subscribe("/user/queue/error", (msg) => {
                         console.error('Ticker server error:', msg.body);
                         onError(msg.body);
                     });
 
-                    stompClient.publish({
+                    tickerStompClient.publish({
                         destination: "/app/loadTicker",
                         body: JSON.stringify({ symbol, date }),
                     });
@@ -142,46 +141,46 @@ export const tickerService = {
                 } catch (error) {
                     console.error('Error setting up ticker subscription:', error);
                     onError('Error setting up ticker subscription');
-                    isConnecting = false;
+                    tickerIsConnecting = false;
                 }
             };
 
-            stompClient.onDisconnect = (frame) => {
+            tickerStompClient.onDisconnect = (frame) => {
                 console.log('Disconnected from Ticker WebSocket:', frame);
-                isConnecting = false;
-                currentSubscription = null;
+                tickerIsConnecting = false;
+                tickerCurrentSubscription = null;
             };
 
-            stompClient.onStompError = (frame) => {
+            tickerStompClient.onStompError = (frame) => {
                 console.error('STOMP Ticker error:', frame);
-                isConnecting = false;
+                tickerIsConnecting = false;
                 const errorMessage = frame.headers["message"] || "Ticker WebSocket connection error";
                 onError(errorMessage);
                 this.disconnect();
             };
 
-            stompClient.onWebSocketError = (error) => {
+            tickerStompClient.onWebSocketError = (error) => {
                 console.error('Ticker WebSocket error:', error);
-                isConnecting = false;
+                tickerIsConnecting = false;
                 onError('Ticker WebSocket connection failed');
                 this.disconnect();
             };
 
-            stompClient.activate();
+            tickerStompClient.activate();
 
         } catch (error) {
             console.error('Error creating ticker WebSocket connection:', error);
-            isConnecting = false;
+            tickerIsConnecting = false;
             onError('Failed to create ticker WebSocket connection');
         }
     },
 
     // Send disconnect message to server before closing connection
     sendDisconnectMessage() {
-        if (stompClient && stompClient.connected) {
+        if (tickerStompClient && tickerStompClient.connected) {
             try {
                 console.log('Sending disconnect message to server for ticker');
-                stompClient.publish({
+                tickerStompClient.publish({
                     destination: "/app/disconnectTicker",
                     body: JSON.stringify({ reason: "Client navigating away" }),
                 });
@@ -193,25 +192,25 @@ export const tickerService = {
 
     disconnect() {
         console.log('Disconnecting Ticker WebSocket...');
-        isCleaningUp = true;
+        tickerIsCleaningUp = true;
 
         // Send disconnect message before closing
         this.sendDisconnectMessage();
 
         try {
-            if (currentSubscription) {
+            if (tickerCurrentSubscription) {
                 try {
-                    currentSubscription.unsubscribe();
+                    tickerCurrentSubscription.unsubscribe();
                 } catch (error) {
                     console.warn('Error unsubscribing from ticker:', error);
                 }
-                currentSubscription = null;
+                tickerCurrentSubscription = null;
             }
 
-            if (stompClient) {
+            if (tickerStompClient) {
                 try {
-                    if (stompClient.connected) {
-                        stompClient.deactivate();
+                    if (tickerStompClient.connected) {
+                        tickerStompClient.deactivate();
                     }
                 } catch (error) {
                     console.warn('Error deactivating ticker client:', error);
@@ -220,22 +219,22 @@ export const tickerService = {
         } catch (error) {
             console.error('Error during ticker disconnect:', error);
         } finally {
-            stompClient = null;
-            isConnecting = false;
-            currentSubscription = null;
+            tickerStompClient = null;
+            tickerIsConnecting = false;
+            tickerCurrentSubscription = null;
 
             // Reset cleanup flag after a short delay
             setTimeout(() => {
-                isCleaningUp = false;
+                tickerIsCleaningUp = false;
             }, 500);
         }
     },
 
     isConnected() {
-        return stompClient && stompClient.connected;
+        return tickerStompClient && tickerStompClient.connected;
     },
 
     isConnecting() {
-        return isConnecting;
+        return tickerIsConnecting;
     }
 };

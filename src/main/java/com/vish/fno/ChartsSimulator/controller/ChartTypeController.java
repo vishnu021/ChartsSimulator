@@ -1,4 +1,3 @@
-// src/main/java/com/vish/fno/ChartsSimulator/controller/ChartTypeController.java
 package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.model.ChartTypeResponse;

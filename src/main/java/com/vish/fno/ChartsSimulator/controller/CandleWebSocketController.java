@@ -1,4 +1,3 @@
-// src/main/java/com/vish/fno/ChartsSimulator/controller/CandleWebSocketController.java
 package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.client.DataClient;

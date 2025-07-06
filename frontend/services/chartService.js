@@ -1,4 +1,3 @@
-// frontend/services/chartService.js
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
@@ -8,7 +7,7 @@ let currentSubscription = null;
 let isCleaningUp = false;
 let globalListenersAdded = false;
 
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:9090/ws';
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL;
 
 // Add global event listeners only once
 const setupGlobalEventListeners = () => {

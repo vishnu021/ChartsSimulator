@@ -1,8 +1,102 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { format } from 'date-fns';
-import { themes, chartSettings } from './chartConfig';
+
+const themes = {
+    dark: {
+        background: '#0f172a',
+        panelBackground: '#1e293b',
+        controlPanel: '#1e293b',
+        grid: '#334155',
+        text: {
+            primary: '#f1f5f9',
+            secondary: '#94a3b8',
+            maxima: '#10b981',
+            minima: '#ef4444'
+        },
+        candle: {
+            bullish: '#10b981',
+            bearish: '#ef4444'
+        },
+        lines: {
+            maxima: '#fbbf24',
+            minima: '#f472b6',
+            crosshair: '#64748b'
+        },
+        tooltip: {
+            background: 'rgba(30, 41, 59, 0.95)',
+            border: '#475569'
+        },
+        input: {
+            background: '#0f172a',
+            border: '#475569',
+            focus: '#3b82f6'
+        }
+    },
+    light: {
+        background: '#ffffff',
+        panelBackground: '#f8fafc',
+        controlPanel: '#f1f5f9',
+        grid: '#e2e8f0',
+        text: {
+            primary: '#0f172a',
+            secondary: '#64748b',
+            maxima: '#059669',
+            minima: '#dc2626'
+        },
+        candle: {
+            bullish: '#10b981',
+            bearish: '#ef4444'
+        },
+        lines: {
+            maxima: '#f59e0b',
+            minima: '#ec4899',
+            crosshair: '#94a3b8'
+        },
+        tooltip: {
+            background: 'rgba(248, 250, 252, 0.95)',
+            border: '#cbd5e1'
+        },
+        input: {
+            background: '#ffffff',
+            border: '#cbd5e1',
+            focus: '#3b82f6'
+        }
+    }
+};
+
+const chartSettings = {
+    padding: { top: 40, right: 80, bottom: 60, left: 80 },
+    mobilePadding: { top: 30, right: 40, bottom: 40, left: 60 },
+    gridLines: {
+        horizontal: 8,
+        vertical: 10
+    },
+    candleBodyWidthRatio: 0.8,
+    extremaPointRadius: 6,
+    crosshairLineWidth: 1,
+    extremaLineWidth: 2,
+    fonts: {
+        labels: '12px -apple-system, BlinkMacSystemFont, sans-serif',
+        tooltip: '13px -apple-system, BlinkMacSystemFont, sans-serif',
+        extremaLabels: '11px -apple-system, BlinkMacSystemFont, sans-serif',
+        mobileLabels: '10px -apple-system, BlinkMacSystemFont, sans-serif',
+        mobileTooltip: '11px -apple-system, BlinkMacSystemFont, sans-serif',
+        mobileExtremaLabels: '9px -apple-system, BlinkMacSystemFont, sans-serif'
+    }
+};
+
+const formatTime = (date, format) => {
+    const d = new Date(date);
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const seconds = d.getSeconds().toString().padStart(2, '0');
+
+    if (format === 'HH:mm:ss') {
+        return `${hours}:${minutes}:${seconds}`;
+    }
+    return `${hours}:${minutes}`;
+};
 
 export default function TickerChart({ data, theme = 'dark', symbol, stats, isRealTime }) {
     const canvasRef = useRef(null);
@@ -10,12 +104,16 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     const [isMobile, setIsMobile] = useState(false);
     const [viewState, setViewState] = useState({
         zoom: 1,
+        verticalZoom: 1,
         offset: 0,
         targetOffset: 0,
-        velocity: 0
+        velocity: 0,
+        verticalOffset: 0,
+        targetVerticalOffset: 0,
+        verticalVelocity: 0
     });
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0, offset: 0, verticalOffset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [showCrosshair, setShowCrosshair] = useState(false);
     const colors = themes[theme];
@@ -50,13 +148,11 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 const tickTime = new Date(tick.time);
                 if (isNaN(tickTime.getTime())) return;
 
-                const minuteKey = new Date(
-                    tickTime.getFullYear(),
-                    tickTime.getMonth(),
-                    tickTime.getDate(),
-                    tickTime.getHours(),
-                    tickTime.getMinutes()
-                ).getTime();
+                // For candle grouping, use the NEXT minute (9:14:xx data goes to 9:15 candle)
+                const nextMinute = new Date(tickTime);
+                nextMinute.setSeconds(0, 0);
+                nextMinute.setMinutes(nextMinute.getMinutes() + 1);
+                const minuteKey = nextMinute.getTime();
 
                 if (!tickersByMinute.has(minuteKey)) {
                     tickersByMinute.set(minuteKey, []);
@@ -79,6 +175,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
                 if (prices.length === 0) return;
 
+                // The candle represents data UP TO this minute
                 candleData.push({
                     time: new Date(minuteKey).toISOString(),
                     timestamp: minuteKey,
@@ -86,13 +183,14 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                     high: Math.max(...prices),
                     low: Math.min(...prices),
                     close: prices[prices.length - 1],
-                    volume: volumes.reduce((sum, v) => sum + v, 0)
+                    volume: volumes.reduce((sum, v) => sum + v, 0),
+                    tickCount: ticks.length
                 });
             });
 
-        // Sample price data for line chart (max 2000 points for performance)
+        // Keep ALL price data points for full granularity
         let priceData;
-        const maxPoints = 2000;
+        const maxPoints = 10000;
         if (data.length > maxPoints) {
             const step = Math.floor(data.length / maxPoints);
             priceData = data.filter((_, index) => index % step === 0 || index === data.length - 1)
@@ -137,7 +235,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         return () => window.removeEventListener('resize', updateCanvasSize);
     }, []);
 
-    // Smooth animation loop - same as other components
+    // Smooth animation loop
     useEffect(() => {
         const animate = () => {
             setViewState(prev => {
@@ -145,6 +243,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 const springStrength = 0.1;
 
                 if (!isDragging) {
+                    // Horizontal offset
                     const offsetDiff = prev.targetOffset - prev.offset;
                     prev.velocity = prev.velocity * friction + offsetDiff * springStrength;
                     prev.offset += prev.velocity;
@@ -153,9 +252,21 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                         prev.offset = prev.targetOffset;
                         prev.velocity = 0;
                     }
+
+                    // Vertical offset
+                    const verticalOffsetDiff = prev.targetVerticalOffset - prev.verticalOffset;
+                    prev.verticalVelocity = prev.verticalVelocity * friction + verticalOffsetDiff * springStrength;
+                    prev.verticalOffset += prev.verticalVelocity;
+
+                    if (Math.abs(prev.verticalVelocity) < 0.1 && Math.abs(verticalOffsetDiff) < 0.1) {
+                        prev.verticalOffset = prev.targetVerticalOffset;
+                        prev.verticalVelocity = 0;
+                    }
                 } else {
                     prev.offset = prev.targetOffset;
                     prev.velocity = 0;
+                    prev.verticalOffset = prev.targetVerticalOffset;
+                    prev.verticalVelocity = 0;
                 }
 
                 return { ...prev };
@@ -172,32 +283,37 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         };
     }, [isDragging]);
 
-    // Helper function to find 30-minute intervals (same as other components)
-    const getThirtyMinuteIntervals = (candles, visibleStart, visibleEnd) => {
+    // Helper function to find time intervals
+    const getTimeIntervals = (timeRange, chartWidth, zoom) => {
         const intervals = [];
-        if (candles.length === 0) return intervals;
+        if (!timeRange || timeRange.start === 0) return intervals;
 
-        for (let i = visibleStart; i < visibleEnd; i++) {
-            if (i >= candles.length) break;
-            const candleTime = new Date(candles[i].time || candles[i].timestamp);
-            if (isNaN(candleTime.getTime())) continue;
+        const totalDuration = timeRange.end - timeRange.start;
+        const visibleDuration = totalDuration / zoom;
 
-            const candleMinutes = candleTime.getMinutes();
-            if (candleMinutes === 0 || candleMinutes === 30) {
-                if (isMobile) {
-                    if (candleMinutes === 0) {
-                        intervals.push({ index: i, time: candleTime });
-                    }
-                } else {
-                    intervals.push({ index: i, time: candleTime });
-                }
-            }
+        // Determine interval based on zoom level
+        let intervalMs;
+        if (visibleDuration < 60 * 60 * 1000) { // Less than 1 hour visible
+            intervalMs = 5 * 60 * 1000; // 5 minute intervals
+        } else if (visibleDuration < 3 * 60 * 60 * 1000) { // Less than 3 hours
+            intervalMs = 15 * 60 * 1000; // 15 minute intervals
+        } else {
+            intervalMs = 30 * 60 * 1000; // 30 minute intervals
+        }
+
+        const startTime = Math.floor(timeRange.start / intervalMs) * intervalMs;
+
+        for (let time = startTime; time <= timeRange.end; time += intervalMs) {
+            intervals.push({
+                timestamp: time,
+                time: new Date(time)
+            });
         }
 
         return intervals;
     };
 
-    // Main drawing function with proper alignment like other components
+    // Main drawing function
     const drawChart = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || (processedData.priceData.length === 0 && processedData.candleData.length === 0)) return;
@@ -232,67 +348,52 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
         if (allPrices.length === 0) return;
 
-        const minPrice = Math.min(...allPrices);
-        const maxPrice = Math.max(...allPrices);
-        const priceRange = Math.max(maxPrice - minPrice, 0.01);
-        const pricePadding = Math.max(priceRange * 0.1, 1);
+        const basePriceRange = Math.max(0.01, Math.max(...allPrices) - Math.min(...allPrices));
+        const baseMinPrice = Math.min(...allPrices);
+        const baseMaxPrice = Math.max(...allPrices);
+        const centerPrice = (baseMaxPrice + baseMinPrice) / 2;
 
-        // Y-axis scaling - same as other components
+        // Apply vertical zoom and offset
+        const zoomedRange = basePriceRange / viewState.verticalZoom;
+        const verticalShift = viewState.verticalOffset * zoomedRange / chartHeight;
+        const minPrice = centerPrice - zoomedRange / 2 - verticalShift;
+        const maxPrice = centerPrice + zoomedRange / 2 - verticalShift;
+        const priceRange = maxPrice - minPrice;
+        const pricePadding = Math.min(priceRange * 0.1, basePriceRange * 0.1);
+
+        // Y-axis scaling
         const yScale = (price) => {
             return padding.top + ((maxPrice + pricePadding - price) / (priceRange + 2 * pricePadding)) * chartHeight;
         };
 
-        // Use the same candle width calculation as other components
-        let candleWidth = 0;
-        let maxOffset = 0;
-        let minOffset = 0;
-        let clampedOffset = 0;
-        let visibleStart = 0;
-        let visibleEnd = 0;
-        let visibleCandles = [];
+        // Calculate visible time range based on zoom and offset
+        const totalWidth = chartWidth * viewState.zoom;
 
-        if (processedData.candleData.length > 0) {
-            // Same calculation as CandleChart.jsx and Chart.jsx
-            candleWidth = (chartWidth / processedData.candleData.length) * viewState.zoom;
-            maxOffset = 0;
-            minOffset = Math.min(0, -(processedData.candleData.length * candleWidth - chartWidth));
-            clampedOffset = Math.max(minOffset, Math.min(maxOffset, viewState.offset));
+        // Clamp offset to prevent dragging outside data range
+        const maxOffset = 0;
+        const minOffset = Math.min(0, chartWidth - totalWidth);
+        const clampedOffset = Math.max(minOffset, Math.min(maxOffset, viewState.offset));
 
-            visibleStart = Math.max(0, Math.floor(-clampedOffset / candleWidth));
-            visibleEnd = Math.min(processedData.candleData.length, Math.ceil((chartWidth - clampedOffset) / candleWidth));
-            visibleCandles = processedData.candleData.slice(visibleStart, visibleEnd);
+        // Update offset if it was clamped
+        if (clampedOffset !== viewState.offset) {
+            setViewState(prev => ({
+                ...prev,
+                offset: clampedOffset,
+                targetOffset: clampedOffset
+            }));
         }
 
-        // Unified X-axis scaling function - same as other components
-        const xScaleCandle = (index) => {
-            return padding.left + (index - visibleStart) * candleWidth + candleWidth / 2;
-        };
+        const visibleStartRatio = Math.max(0, -clampedOffset / totalWidth);
+        const visibleEndRatio = Math.min(1, (chartWidth - clampedOffset) / totalWidth);
 
-        // Price line X-axis scaling - aligned with candles
-        const xScalePriceLine = (tickerIndex) => {
-            if (processedData.candleData.length === 0) {
-                // Fallback for price-only mode
-                const priceLineWidth = chartWidth * viewState.zoom;
-                const priceOffset = Math.max(Math.min(0, -(priceLineWidth - chartWidth)), Math.min(0, viewState.offset));
-                const ratio = processedData.priceData.length > 1 ? tickerIndex / (processedData.priceData.length - 1) : 0;
-                return padding.left + ratio * priceLineWidth + priceOffset;
-            } else {
-                // Align with candle timeline
-                const tickerTime = new Date(processedData.priceData[tickerIndex].timestamp);
-                const candleIndex = processedData.candleData.findIndex(c => {
-                    const candleTime = new Date(c.timestamp);
-                    return Math.abs(candleTime.getTime() - tickerTime.getTime()) < 60000; // Within 1 minute
-                });
+        const timeSpan = processedData.timeRange.end - processedData.timeRange.start;
+        const visibleStart = processedData.timeRange.start + timeSpan * visibleStartRatio;
+        const visibleEnd = processedData.timeRange.start + timeSpan * visibleEndRatio;
 
-                if (candleIndex >= 0) {
-                    return xScaleCandle(candleIndex);
-                } else {
-                    // Interpolate position
-                    const ratio = processedData.priceData.length > 1 ? tickerIndex / (processedData.priceData.length - 1) : 0;
-                    const totalCandleWidth = processedData.candleData.length * candleWidth;
-                    return padding.left + ratio * totalCandleWidth + clampedOffset;
-                }
-            }
+        // X-axis scaling for timestamps
+        const xScaleTime = (timestamp) => {
+            const ratio = (timestamp - processedData.timeRange.start) / timeSpan;
+            return padding.left + ratio * totalWidth + clampedOffset;
         };
 
         // Set clipping region for chart area
@@ -301,17 +402,17 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         ctx.rect(padding.left, padding.top, chartWidth, chartHeight);
         ctx.clip();
 
-        // Draw grid - same as other components
+        // Draw grid
         ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        // Get time intervals for vertical grid lines
-        const timeIntervals = getThirtyMinuteIntervals(processedData.candleData, visibleStart, visibleEnd);
+        // Get time intervals based on zoom
+        const timeIntervals = getTimeIntervals(processedData.timeRange, chartWidth, viewState.zoom);
 
         // Vertical grid lines at time intervals
         timeIntervals.forEach(interval => {
-            const x = xScaleCandle(interval.index);
+            const x = xScaleTime(interval.timestamp);
             if (x >= padding.left && x <= width - padding.right) {
                 ctx.beginPath();
                 ctx.moveTo(x, padding.top);
@@ -334,50 +435,87 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
         ctx.setLineDash([]);
 
-        // Draw candlesticks first (background layer) - SAME AS OTHER COMPONENTS
-        if (visibleCandles.length > 0) {
-            visibleCandles.forEach((candle, i) => {
-                const x = xScaleCandle(visibleStart + i);
-                const isGreen = candle.close >= candle.open;
-                const color = isGreen ? colors.candle.bullish : colors.candle.bearish;
-
-                // Draw wick - same thickness as other components
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(x, yScale(candle.high));
-                ctx.lineTo(x, yScale(candle.low));
-                ctx.stroke();
-
-                // Draw body - SAME AS OTHER COMPONENTS
-                const bodyTop = yScale(Math.max(candle.open, candle.close));
-                const bodyBottom = yScale(Math.min(candle.open, candle.close));
-                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-
-                ctx.fillStyle = color;
-                ctx.fillRect(
-                    x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
-                    bodyTop,
-                    candleWidth * chartSettings.candleBodyWidthRatio,
-                    bodyHeight
-                );
+        // Draw candles WITHOUT GAPS - aligned to END of their time period
+        if (processedData.candleData.length > 0) {
+            const visibleCandles = processedData.candleData.filter(candle => {
+                const x = xScaleTime(candle.timestamp);
+                return x >= padding.left - 100 && x <= width - padding.right + 100;
             });
+
+            if (visibleCandles.length > 0) {
+                visibleCandles.forEach((candle, i) => {
+                    // Position candle at the END of its minute
+                    const candleX = xScaleTime(candle.timestamp);
+
+                    // Calculate width to previous candle
+                    let candleWidth;
+                    if (i > 0) {
+                        const prevX = xScaleTime(visibleCandles[i - 1].timestamp);
+                        candleWidth = Math.max(1, candleX - prevX);
+                    } else if (i < visibleCandles.length - 1) {
+                        const nextX = xScaleTime(visibleCandles[i + 1].timestamp);
+                        candleWidth = Math.max(1, nextX - candleX);
+                    } else {
+                        // Single candle case - use 1 minute width
+                        candleWidth = (60 * 1000 / timeSpan) * totalWidth;
+                    }
+
+                    // Position candle body to START at previous minute and END at current minute
+                    const bodyX = candleX - candleWidth / 2;
+
+                    const isGreen = candle.close >= candle.open;
+                    const color = isGreen ? colors.candle.bullish : colors.candle.bearish;
+
+                    // Draw wick at center of candle period
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = Math.min(2, candleWidth * 0.2);
+                    ctx.beginPath();
+                    ctx.moveTo(bodyX, yScale(candle.high));
+                    ctx.lineTo(bodyX, yScale(candle.low));
+                    ctx.stroke();
+
+                    // Draw body - fill entire width
+                    const bodyTop = yScale(Math.max(candle.open, candle.close));
+                    const bodyBottom = yScale(Math.min(candle.open, candle.close));
+                    const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+                    ctx.fillStyle = color;
+                    const gapSize = Math.min(1, candleWidth * 0.05);
+                    ctx.fillRect(
+                        bodyX - candleWidth / 2 + gapSize,
+                        bodyTop,
+                        candleWidth - gapSize * 2,
+                        bodyHeight
+                    );
+
+                    // Add subtle border when zoomed in
+                    if (viewState.zoom > 2) {
+                        ctx.strokeStyle = colors.background;
+                        ctx.lineWidth = 0.5;
+                        ctx.strokeRect(
+                            bodyX - candleWidth / 2 + gapSize,
+                            bodyTop,
+                            candleWidth - gapSize * 2,
+                            bodyHeight
+                        );
+                    }
+                });
+            }
         }
 
-        // Draw price line on top (foreground layer) - improved alignment
+        // Draw price line on top (foreground layer) with full detail
         if (processedData.priceData.length > 1) {
-            // Filter visible points based on X position
-            const visiblePricePoints = processedData.priceData.filter((_, index) => {
-                const x = xScalePriceLine(index);
-                return x >= padding.left - 50 && x <= width - padding.right + 50;
+            // Filter visible points
+            const visiblePricePoints = processedData.priceData.filter(point => {
+                const x = xScaleTime(point.timestamp);
+                return x >= padding.left - 100 && x <= width - padding.right + 100;
             });
 
             if (visiblePricePoints.length > 1) {
                 // Draw area under curve first (semi-transparent)
                 ctx.beginPath();
                 visiblePricePoints.forEach((point, i) => {
-                    const originalIndex = processedData.priceData.indexOf(point);
-                    const x = xScalePriceLine(originalIndex);
+                    const x = xScaleTime(point.timestamp);
                     const y = yScale(point.price);
 
                     if (i === 0) {
@@ -389,10 +527,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
                 // Close the area
                 if (visiblePricePoints.length > 0) {
-                    const lastIndex = processedData.priceData.indexOf(visiblePricePoints[visiblePricePoints.length - 1]);
-                    const firstIndex = processedData.priceData.indexOf(visiblePricePoints[0]);
-                    const lastX = xScalePriceLine(lastIndex);
-                    const firstX = xScalePriceLine(firstIndex);
+                    const lastX = xScaleTime(visiblePricePoints[visiblePricePoints.length - 1].timestamp);
+                    const firstX = xScaleTime(visiblePricePoints[0].timestamp);
                     ctx.lineTo(lastX, height - padding.bottom);
                     ctx.lineTo(firstX, height - padding.bottom);
                 }
@@ -404,16 +540,21 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 ctx.fillStyle = areaGradient;
                 ctx.fill();
 
-                // Draw the main price line
+                // Draw the main price line with enhanced visibility
                 ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = viewState.zoom > 2 ? 3 : 2;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
 
+                // Add glow effect when zoomed
+                if (viewState.zoom > 3) {
+                    ctx.shadowColor = '#3b82f6';
+                    ctx.shadowBlur = 4;
+                }
+
                 ctx.beginPath();
                 visiblePricePoints.forEach((point, i) => {
-                    const originalIndex = processedData.priceData.indexOf(point);
-                    const x = xScalePriceLine(originalIndex);
+                    const x = xScaleTime(point.timestamp);
                     const y = yScale(point.price);
 
                     if (i === 0) {
@@ -424,25 +565,27 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 });
                 ctx.stroke();
 
-                // Draw data points at intervals
-                ctx.fillStyle = '#3b82f6';
-                const pointInterval = Math.max(1, Math.floor(visiblePricePoints.length / 30));
-                visiblePricePoints.forEach((point, i) => {
-                    if (i % pointInterval === 0 || i === visiblePricePoints.length - 1) {
-                        const originalIndex = processedData.priceData.indexOf(point);
-                        const x = xScalePriceLine(originalIndex);
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+
+                // Draw data points when zoomed in
+                if (viewState.zoom > 4) {
+                    ctx.fillStyle = '#3b82f6';
+                    visiblePricePoints.forEach(point => {
+                        const x = xScaleTime(point.timestamp);
                         const y = yScale(point.price);
 
                         ctx.beginPath();
-                        ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+                        ctx.arc(x, y, 2, 0, 2 * Math.PI);
                         ctx.fill();
-                    }
-                });
+                    });
+                }
 
                 // Highlight latest point
                 if (processedData.priceData.length > 0) {
                     const lastPoint = processedData.priceData[processedData.priceData.length - 1];
-                    const x = xScalePriceLine(processedData.priceData.length - 1);
+                    const x = xScaleTime(lastPoint.timestamp);
                     const y = yScale(lastPoint.price);
 
                     if (x >= padding.left && x <= width - padding.right) {
@@ -475,17 +618,26 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
         ctx.restore(); // Remove clipping
 
-        // Draw axes labels - same as other components
+        // Draw axes labels
         ctx.fillStyle = colors.text.secondary;
         const labelFontSize = isMobile ? '10px' : '12px';
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
-        // X-axis labels - show only time at 30-minute intervals
+        // X-axis labels - show time based on zoom level
         ctx.textAlign = 'center';
-        timeIntervals.forEach(interval => {
-            const x = xScaleCandle(interval.index);
-            if (x >= padding.left && x <= width - padding.right) {
-                const timeString = format(interval.time, 'HH:mm');
+        const visibleIntervals = timeIntervals.filter(interval => {
+            const x = xScaleTime(interval.timestamp);
+            return x >= padding.left && x <= width - padding.right;
+        });
+
+        // Limit number of labels to avoid crowding
+        const maxLabels = isMobile ? 4 : 8;
+        const labelStep = Math.ceil(visibleIntervals.length / maxLabels);
+
+        visibleIntervals.forEach((interval, i) => {
+            if (i % labelStep === 0) {
+                const x = xScaleTime(interval.timestamp);
+                const timeString = formatTime(interval.time, 'HH:mm');
                 ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
             }
         });
@@ -498,7 +650,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
         }
 
-        // Draw crosshair - same as other components
+        // Draw crosshair
         if (!isMobile && showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
             mousePos.y > padding.top && mousePos.y < height - padding.bottom) {
 
@@ -522,7 +674,6 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
             // Calculate values at crosshair
             const price = maxPrice + pricePadding - ((mousePos.y - padding.top) / chartHeight) * (priceRange + 2 * pricePadding);
-            const candleIndex = Math.floor((mousePos.x - padding.left - clampedOffset) / candleWidth);
 
             // Price label
             ctx.fillStyle = colors.tooltip.background;
@@ -534,58 +685,27 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             ctx.textAlign = 'left';
             ctx.fillText(price.toFixed(2), width - padding.right + 10, mousePos.y + 4);
 
-            // Date label and candle info
-            if (candleIndex >= 0 && candleIndex < processedData.candleData.length) {
-                const candle = processedData.candleData[candleIndex];
-                const time = format(new Date(candle.time), 'HH:mm');
+            // Time label
+            const hoveredTime = processedData.timeRange.start +
+                ((mousePos.x - padding.left - clampedOffset) / totalWidth) * timeSpan;
+            const timeLabel = formatTime(new Date(hoveredTime), 'HH:mm:ss');
 
-                // Time label
-                ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
-                ctx.strokeRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
-                ctx.fillStyle = colors.text.primary;
-                ctx.textAlign = 'center';
-                ctx.fillText(time, mousePos.x, height - padding.bottom + 20);
-
-                // OHLC tooltip
-                const tooltipX = mousePos.x + 15;
-                const tooltipY = mousePos.y - 70;
-
-                ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(tooltipX, tooltipY, 180, 110);
-                ctx.strokeStyle = colors.tooltip.border;
-                ctx.lineWidth = 1;
-                ctx.strokeRect(tooltipX, tooltipY, 180, 110);
-
-                ctx.fillStyle = colors.text.primary;
-                ctx.font = chartSettings.fonts.tooltip;
-                ctx.textAlign = 'left';
-
-                const texts = [
-                    { label: 'O:', value: candle.open.toFixed(2), color: colors.text.primary },
-                    { label: 'H:', value: candle.high.toFixed(2), color: colors.text.maxima },
-                    { label: 'L:', value: candle.low.toFixed(2), color: colors.text.minima },
-                    { label: 'C:', value: candle.close.toFixed(2), color: candle.close >= candle.open ? colors.text.maxima : colors.text.minima },
-                    { label: 'Vol:', value: candle.volume.toLocaleString(), color: colors.text.secondary }
-                ];
-
-                texts.forEach((text, i) => {
-                    ctx.fillStyle = colors.text.secondary;
-                    ctx.fillText(text.label, tooltipX + 10, tooltipY + 25 + i * 20);
-                    ctx.fillStyle = text.color;
-                    ctx.fillText(text.value, tooltipX + 40, tooltipY + 25 + i * 20);
-                });
-            }
+            ctx.fillStyle = colors.tooltip.background;
+            ctx.fillRect(mousePos.x - 40, height - padding.bottom + 5, 80, 20);
+            ctx.strokeRect(mousePos.x - 40, height - padding.bottom + 5, 80, 20);
+            ctx.fillStyle = colors.text.primary;
+            ctx.textAlign = 'center';
+            ctx.fillText(timeLabel, mousePos.x, height - padding.bottom + 20);
         }
 
-    }, [processedData, colors, symbol, viewState, mousePos, showCrosshair, isMobile, theme, isDragging]);
+    }, [processedData, colors, symbol, viewState, mousePos, showCrosshair, isMobile, theme]);
 
     // Draw chart on data change
     useEffect(() => {
         drawChart();
     }, [drawChart]);
 
-    // Mouse interactions - same as other components
+    // Enhanced mouse interactions with vertical zoom
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || isMobile) return;
@@ -595,28 +715,55 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
-            const centerRatio = (x - chartSettings.padding.left) / chartWidth;
+            const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
-            const zoomSpeed = 0.002;
+            const zoomSpeed = 0.003;
             const zoomDelta = -e.deltaY * zoomSpeed;
-            const newZoom = Math.max(0.5, Math.min(20, viewState.zoom + zoomDelta * viewState.zoom));
 
-            // Same calculation as other components
-            const oldCandleWidth = chartWidth / processedData.candleData.length * viewState.zoom;
-            const newCandleWidth = chartWidth / processedData.candleData.length * newZoom;
-            const candlesWidthDiff = (newCandleWidth - oldCandleWidth) * processedData.candleData.length;
+            // Check if Shift key is held for vertical zoom
+            if (e.shiftKey) {
+                e.stopPropagation(); // Prevent browser's horizontal scroll
+                // Vertical zoom
+                const newVerticalZoom = Math.max(0.5, Math.min(10, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
+                setViewState(prev => ({
+                    ...prev,
+                    verticalZoom: newVerticalZoom
+                }));
+            } else {
+                // Horizontal zoom
+                const newZoom = Math.max(0.5, Math.min(50, viewState.zoom + zoomDelta * viewState.zoom));
 
-            setViewState(prev => ({
-                ...prev,
-                zoom: newZoom,
-                targetOffset: prev.targetOffset - candlesWidthDiff * centerRatio,
-                offset: prev.offset - candlesWidthDiff * centerRatio
-            }));
+                // Calculate new offset to zoom around mouse position
+                const totalWidth = chartWidth * viewState.zoom;
+                const newTotalWidth = chartWidth * newZoom;
+                const widthDiff = newTotalWidth - totalWidth;
+
+                // Calculate offset limits
+                const maxOffset = 0;
+                const minOffset = Math.min(0, chartWidth - newTotalWidth);
+
+                setViewState(prev => {
+                    const newOffset = prev.targetOffset - widthDiff * mouseRatio;
+                    const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+
+                    return {
+                        ...prev,
+                        zoom: newZoom,
+                        targetOffset: clampedOffset,
+                        offset: prev.offset - widthDiff * mouseRatio
+                    };
+                });
+            }
         };
 
         const handleMouseDown = (e) => {
             setIsDragging(true);
-            setDragStart({ x: e.clientX, offset: viewState.targetOffset });
+            setDragStart({
+                x: e.clientX,
+                y: e.clientY,
+                offset: viewState.targetOffset,
+                verticalOffset: viewState.targetVerticalOffset
+            });
             canvas.style.cursor = 'grabbing';
         };
 
@@ -626,9 +773,21 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
             if (isDragging) {
                 const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+                const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
+                const totalWidth = chartWidth * viewState.zoom;
+
+                // Calculate horizontal offset limits
+                const maxOffset = 0;
+                const minOffset = Math.min(0, chartWidth - totalWidth);
+
+                const newOffset = dragStart.offset + dx;
+                const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+
                 setViewState(prev => ({
                     ...prev,
-                    targetOffset: dragStart.offset + dx
+                    targetOffset: clampedOffset,
+                    targetVerticalOffset: dragStart.verticalOffset - dy
                 }));
             }
         };
@@ -664,14 +823,18 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [viewState, isDragging, dragStart, isMobile, processedData.candleData.length]);
+    }, [viewState, isDragging, dragStart, isMobile, processedData.timeRange]);
 
     const handleReset = () => {
         setViewState({
             zoom: 1,
+            verticalZoom: 1,
             offset: 0,
             targetOffset: 0,
-            velocity: 0
+            velocity: 0,
+            verticalOffset: 0,
+            targetVerticalOffset: 0,
+            verticalVelocity: 0
         });
     };
 
@@ -688,84 +851,137 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
     return (
         <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
-            {/* Chart controls */}
-            <div className="flex justify-between items-center p-3 border-b"
-                 style={{ borderColor: colors.grid }}>
-                <div className="flex items-center gap-4">
-                    <div className="text-sm" style={{ color: colors.text.secondary }}>
-                        {processedData.priceData.length} price points • {processedData.candleData.length} candles
+            {/* CONSOLIDATED HEADER PANEL WITH ALL INFO IN ONE BAR */}
+            <div className="px-3 py-2 border-b" style={{ borderColor: colors.grid }}>
+                <div className="flex justify-between items-center">
+                    {/* Left side - Symbol and price info */}
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-bold" style={{ color: colors.text.primary }}>
+                            {symbol}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="font-semibold" style={{ color: colors.text.primary }}>
+                                ₹{stats.currentPrice.toFixed(2)}
+                            </span>
+                            <div className={`flex items-center gap-1 ${stats.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                <span>{stats.change >= 0 ? '▲' : '▼'}</span>
+                                <span>{Math.abs(stats.change).toFixed(2)} ({stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%)</span>
+                            </div>
+                        </div>
                     </div>
-                    {!isMobile && (
-                        <div className="text-sm" style={{ color: colors.text.secondary }}>
-                            Zoom: {(viewState.zoom * 100).toFixed(0)}%
-                        </div>
-                    )}
-                </div>
 
-                <div className="flex items-center gap-2">
-                    {isRealTime && (
-                        <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded text-xs text-white">
-                            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                            STREAMING
-                        </div>
-                    )}
-                    {!isMobile && (
+                    {/* Center - All data info */}
+                    <div className="flex items-center gap-3 text-xs">
+                        <span className="text-blue-400">{processedData.priceData.length} ticks</span>
+                        <span className="text-yellow-400">{processedData.candleData.length} candles</span>
+                        <span style={{ color: colors.text.secondary }}>Vol: {stats.volume.toLocaleString()}</span>
+                        <span style={{ color: colors.text.secondary }}>₹{stats.low.toFixed(2)}-₹{stats.high.toFixed(2)}</span>
+                        {!isMobile && (
+                            <>
+                                <span style={{ color: colors.text.secondary }}>|</span>
+                                <span style={{ color: colors.text.secondary }}>
+                                    Scroll: H-zoom | Drag: Pan | H: {(viewState.zoom * 100).toFixed(0)}% V: {(viewState.verticalZoom * 100).toFixed(0)}%
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Right side - Status and controls */}
+                    <div className="flex items-center gap-2">
+                        {isRealTime && (
+                            <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded text-xs text-white">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                                LIVE
+                            </div>
+                        )}
                         <button
                             onClick={handleReset}
-                            className="px-3 py-1 rounded text-sm transition-all hover:opacity-80"
+                            className="px-2 py-1 rounded text-xs transition-all hover:opacity-80"
                             style={{
                                 backgroundColor: colors.background,
                                 border: `1px solid ${colors.grid}`,
                                 color: colors.text.primary
                             }}
                         >
-                            Reset View
+                            Reset
                         </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Main chart area */}
-            <div className="relative" style={{ height: 'calc(100% - 120px)' }}>
-                <canvas
-                    ref={canvasRef}
-                    className="w-full h-full"
-                    style={{ cursor: isMobile ? 'default' : 'crosshair' }}
-                />
-            </div>
-
-            {/* Chart legend */}
-            <div className="px-3 py-2 border-t" style={{ borderColor: colors.grid }}>
-                <div className="flex flex-wrap gap-4 text-xs">
-                    {processedData.candleData.length > 0 && (
-                        <>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 border" style={{
-                                    backgroundColor: colors.candle.bullish,
-                                    borderColor: theme === 'dark' ? '#ffffff30' : '#00000030'
-                                }}></div>
-                                <span style={{ color: colors.text.secondary }}>Bullish (1min)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 border" style={{
-                                    backgroundColor: colors.candle.bearish,
-                                    borderColor: theme === 'dark' ? '#ffffff30' : '#00000030'
-                                }}></div>
-                                <span style={{ color: colors.text.secondary }}>Bearish (1min)</span>
-                            </div>
-                        </>
-                    )}
-                    <div className="flex items-center gap-2">
-                        <div className="w-4 h-0.5 bg-blue-500"></div>
-                        <span style={{ color: colors.text.secondary }}>Price Line (ticks)</span>
                     </div>
-                    {!isMobile && (
-                        <div className="flex items-center gap-2">
-                            <span style={{ color: colors.text.secondary }}>🖱️ Scroll: zoom • Drag: pan • Hover: crosshair</span>
-                        </div>
-                    )}
                 </div>
             </div>
+        {/*</div>*/}
+
+    {/* CHART AREA - Takes remaining space */}
+    <div className="relative flex" style={{ height: 'calc(100% - 48px)' }}>
+        <div className="flex-1 relative">
+            <canvas
+                ref={canvasRef}
+                className="w-full h-full"
+                style={{ cursor: isMobile ? 'default' : 'crosshair' }}
+            />
         </div>
-    );
+
+        {/* Vertical Zoom Control */}
+        {!isMobile && (
+            <div className="flex flex-col items-center px-2 py-4" style={{ backgroundColor: colors.background }}>
+                <div className="text-xs mb-2 text-center" style={{ color: colors.text.secondary }}>
+                    Vertical
+                </div>
+
+                <button
+                    onClick={() => setViewState(prev => ({
+                        ...prev,
+                        verticalZoom: Math.min(10, prev.verticalZoom * 1.5)
+                    }))}
+                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80"
+                    style={{
+                        backgroundColor: colors.panelBackground,
+                        border: `1px solid ${colors.grid}`,
+                        color: colors.text.primary
+                    }}
+                >
+                    +
+                </button>
+
+                <div className="flex-1 flex flex-col justify-center py-2">
+                    <div className="text-center text-xs font-bold" style={{ color: colors.text.primary }}>
+                        {(viewState.verticalZoom * 100).toFixed(0)}%
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => setViewState(prev => ({
+                        ...prev,
+                        verticalZoom: Math.max(0.5, prev.verticalZoom / 1.5)
+                    }))}
+                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80"
+                    style={{
+                        backgroundColor: colors.panelBackground,
+                        border: `1px solid ${colors.grid}`,
+                        color: colors.text.primary
+                    }}
+                >
+                    -
+                </button>
+
+                <button
+                    onClick={() => setViewState(prev => ({
+                        ...prev,
+                        verticalZoom: 1,
+                        verticalOffset: 0,
+                        targetVerticalOffset: 0,
+                        verticalVelocity: 0
+                    }))}
+                    className="px-1 py-1 mt-2 rounded text-xs hover:opacity-80"
+                    style={{
+                        backgroundColor: colors.input.focus,
+                        color: '#ffffff'
+                    }}
+                >
+                    1x
+                </button>
+            </div>
+        )}
+    </div>
+</div>
+);
 }

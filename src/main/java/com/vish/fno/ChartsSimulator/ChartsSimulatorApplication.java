@@ -8,12 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @OpenAPIDefinition(
 		info = @Info(
-				title = "Options Analyzer",
-				description = "Project to analyze the technicals of stock options available in National Stock Exchange - India",
-				contact = @Contact(
-						name = "Vishnu Shankar",
-						email = "vish045@gmail.com"
-				)
+				title = "Charts Simulator"
 		)
 )
 @SpringBootApplication
@@ -22,5 +17,4 @@ public class ChartsSimulatorApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ChartsSimulatorApplication.class, args);
 	}
-
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/vish/fno/ChartsSimulator/controller/TickerController.java
 package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.model.Ticker;

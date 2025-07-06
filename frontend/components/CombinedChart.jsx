@@ -1,4 +1,3 @@
-// frontend/components/CombinedChart.jsx
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
@@ -215,38 +214,9 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
         ctx.setLineDash([]);
 
-        // Draw Heikin Ashi candles first (background) - YELLOW OUTLINE ONLY
-        if (showHeikinAshi && visibleHeikinAshi.length > 0) {
-            visibleHeikinAshi.forEach((candle, i) => {
-                const x = xScale(visibleStart + i);
-                const yellowColor = '#fbbf24'; // Yellow color for all Heikin Ashi candles
 
-                // Draw wick
-                ctx.strokeStyle = yellowColor;
-                ctx.lineWidth = 1.5; // Slightly thicker for visibility
-                ctx.beginPath();
-                ctx.moveTo(x, yScale(candle.high));
-                ctx.lineTo(x, yScale(candle.low));
-                ctx.stroke();
 
-                // Draw body OUTLINE ONLY (no fill)
-                const bodyTop = yScale(Math.max(candle.open, candle.close));
-                const bodyBottom = yScale(Math.min(candle.open, candle.close));
-                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-
-                // Only stroke the rectangle, don't fill it
-                ctx.strokeStyle = yellowColor;
-                ctx.lineWidth = 1.5;
-                ctx.strokeRect(
-                    x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
-                    bodyTop,
-                    candleWidth * chartSettings.candleBodyWidthRatio,
-                    bodyHeight
-                );
-            });
-        }
-
-        // Draw regular candlesticks (foreground)
+        // Draw regular candlesticks (background)
         visibleCandles.forEach((candle, i) => {
             const x = xScale(visibleStart + i);
             const isGreen = candle.close >= candle.open;
@@ -283,6 +253,37 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                 bodyHeight
             );
         });
+
+        // Draw Heikin Ashi candles first (foreground) - YELLOW OUTLINE ONLY
+        if (showHeikinAshi && visibleHeikinAshi.length > 0) {
+            visibleHeikinAshi.forEach((candle, i) => {
+                const x = xScale(visibleStart + i);
+                const yellowColor = '#fbbf24'; // Yellow color for all Heikin Ashi candles
+
+                // Draw wick
+                ctx.strokeStyle = yellowColor;
+                ctx.lineWidth = 1.5; // Slightly thicker for visibility
+                ctx.beginPath();
+                ctx.moveTo(x, yScale(candle.high));
+                ctx.lineTo(x, yScale(candle.low));
+                ctx.stroke();
+
+                // Draw body OUTLINE ONLY (no fill)
+                const bodyTop = yScale(Math.max(candle.open, candle.close));
+                const bodyBottom = yScale(Math.min(candle.open, candle.close));
+                const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+                // Only stroke the rectangle, don't fill it
+                ctx.strokeStyle = yellowColor;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(
+                    x - candleWidth * chartSettings.candleBodyWidthRatio / 2,
+                    bodyTop,
+                    candleWidth * chartSettings.candleBodyWidthRatio,
+                    bodyHeight
+                );
+            });
+        }
 
         ctx.restore(); // Remove clipping
 
@@ -458,7 +459,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                     <button
                         onClick={toggleHeikinAshi}
                         className={`px-3 py-1 md:px-4 md:py-2 rounded-md transition-all text-sm ${
-                            showHeikinAshi ? 'opacity-100' : 'opacity-60'
+                            showHeikinAshi ? 'opacity-100' : 'opacity-90'
                         }`}
                         style={{
                             backgroundColor: colors.panelBackground,

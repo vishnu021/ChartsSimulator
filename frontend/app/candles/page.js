@@ -1,8 +1,10 @@
-// frontend/app/candles/page.js
 'use client';
 
 import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useTheme } from '@/hooks/useTheme';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
@@ -17,12 +19,12 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     )
 });
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CandlesPage() {
+    const { theme, toggleTheme } = useTheme();
     const [chartData, setChartData] = useState(null);
     const [error, setError] = useState(null);
-    const [theme, setTheme] = useState('dark');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLoadChart = useCallback(async ({ symbol, date }) => {
@@ -51,55 +53,54 @@ export default function CandlesPage() {
         }
     }, []);
 
-    const toggleTheme = useCallback(() => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    }, []);
+    const renderControls = () => (
+        <ControlPanel
+            onSubmit={handleLoadChart}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+            hideLookbackPeriod={true}
+        />
+    );
+
+    const renderSubtitle = () => {
+        if (!chartData) return null;
+
+        const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+
+        return (
+            <span className={textColor}>
+                Total: {chartData.candles?.length || 0} candles
+            </span>
+        );
+    };
+
+    const renderEmptyState = () => (
+        <EmptyState
+            icon="📊"
+            title="No chart loaded"
+            description="Enter a symbol and date above to load candlestick data"
+            theme={theme}
+        />
+    );
 
     return (
-        <div className={`flex flex-col h-[calc(100vh-4rem)] ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-            <div className="flex-shrink-0 p-4">
-                <ControlPanel
-                    onSubmit={handleLoadChart}
-                    theme={theme}
-                    onThemeToggle={toggleTheme}
-                    hideLookbackPeriod={true}
-                />
-            </div>
-
-            {error && (
-                <div className="flex-shrink-0 mx-4 p-3 bg-red-500 text-white rounded-lg text-sm">
-                    <strong>Error:</strong> {error}
-                    <button
-                        onClick={() => setError(null)}
-                        className="ml-3 text-red-200 hover:text-white"
-                    >
-                        ✕
-                    </button>
-                </div>
-            )}
-
-            {isLoading && (
-                <div className="flex-shrink-0 mx-4 p-3 bg-blue-500 text-white rounded-lg text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Loading chart data...
-                    </div>
-                </div>
-            )}
-
+        <PageLayout
+            theme={theme}
+            title={chartData?.symbol || 'Candlestick Chart'}
+            subtitle={renderSubtitle()}
+            controls={renderControls()}
+            error={error}
+            onErrorDismiss={() => setError(null)}
+            loading={isLoading}
+            loadingMessage="Loading chart data..."
+        >
             {chartData ? (
                 <div className="flex-1 min-h-0">
                     <CandleChart data={chartData} theme={theme} />
                 </div>
             ) : (
-                <div className={`flex-1 flex items-center justify-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <div className="text-center p-4">
-                        <div className="text-4xl mb-4">📊</div>
-                        <p className="text-lg md:text-xl mb-2">No chart loaded</p>
-                        <p className="text-sm md:text-base">Enter a symbol and date above to load candlestick data</p>
-                    </div>
-                </div>
+                renderEmptyState()
             )}
-        </div>
+        </PageLayout>
     );
 }

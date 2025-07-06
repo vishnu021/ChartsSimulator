@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vish.fno.ChartsSimulator.model.StockTicker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -24,7 +25,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DataLoaderService {
 
-    private static final String BASE_LOG_PATH = "/Volumes/MacSSD/trading-logs";
+    @Value("${app.baseLogPath}")
+    private String baseLogPath;
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 
     private final ObjectMapper objectMapper;
@@ -63,7 +65,7 @@ public class DataLoaderService {
         String day = dateParts[2];
 
         return String.format("%s/%s-%s/%s-%s-%s/%s/%s.txt",
-                BASE_LOG_PATH,
+                baseLogPath,
                 month, year,
                 day, month, year,
                 date,
@@ -108,8 +110,6 @@ public class DataLoaderService {
         LocalDateTime dateTime = fromEpochMilli(timestamp);
         int hour = dateTime.getHour();
         int minute = dateTime.getMinute();
-
-        // Trading hours: 9:15 AM to 3:30 PM
         int startTime = 9 * 60 + 15; // 9:15 AM in minutes
         int endTime = 15 * 60 + 30;  // 3:30 PM in minutes
         int currentTime = hour * 60 + minute;

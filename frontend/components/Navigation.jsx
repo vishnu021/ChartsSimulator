@@ -1,10 +1,7 @@
-// frontend/components/Navigation.jsx
 'use client';
 
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { chartService } from '@/services/chartService';
-import { tickerService } from '@/services/tickerService';
 
 export default function Navigation() {
     const router = useRouter();
@@ -26,38 +23,8 @@ export default function Navigation() {
 
     const handleNavigation = (path) => {
         console.log(`Navigating from ${pathname} to ${path}`);
-
-        // Close mobile menu
         setIsMenuOpen(false);
-
-        // Send disconnect messages to server before navigation
-        const isLeavingRealTimePage = pathname === '/extrema' || pathname === '/ticker';
-        const isGoingToRealTimePage = path === '/extrema' || path === '/ticker';
-
-        if (isLeavingRealTimePage) {
-            console.log('Leaving real-time page, sending disconnect messages to server');
-
-            // Send disconnect messages to server
-            if (chartService.isConnected()) {
-                chartService.sendDisconnectMessage();
-            }
-            if (tickerService.isConnected()) {
-                tickerService.sendDisconnectMessage();
-            }
-
-            // Small delay to ensure messages are sent before navigation
-            setTimeout(() => {
-                // Disconnect client-side
-                chartService.disconnect();
-                tickerService.disconnect();
-
-                // Navigate after cleanup
-                router.push(path);
-            }, 100);
-        } else {
-            // For non-real-time pages, navigate immediately
-            router.push(path);
-        }
+        router.push(path);
     };
 
     return (
@@ -90,22 +57,6 @@ export default function Navigation() {
                                 </button>
                             ))}
                         </div>
-                    </div>
-
-                    {/* Connection Status Indicator */}
-                    <div className="hidden md:flex items-center gap-2">
-                        {chartService.isConnected() && (
-                            <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded text-xs">
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                                <span>Extrema Live</span>
-                            </div>
-                        )}
-                        {tickerService.isConnected() && (
-                            <div className="flex items-center gap-1 bg-blue-600 px-2 py-1 rounded text-xs">
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                                <span>Ticker Live</span>
-                            </div>
-                        )}
                     </div>
 
                     {/* Mobile menu button */}
@@ -143,27 +94,6 @@ export default function Navigation() {
                                 {item.label}
                             </button>
                         ))}
-
-                        {/* Mobile Connection Status */}
-                        <div className="px-3 py-2">
-                            <div className="flex flex-col gap-1">
-                                {chartService.isConnected() && (
-                                    <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded text-xs w-fit">
-                                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                                        <span>Extrema Live</span>
-                                    </div>
-                                )}
-                                {tickerService.isConnected() && (
-                                    <div className="flex items-center gap-1 bg-blue-600 px-2 py-1 rounded text-xs w-fit">
-                                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                                        <span>Ticker Live</span>
-                                    </div>
-                                )}
-                                {!chartService.isConnected() && !tickerService.isConnected() && (
-                                    <div className="text-gray-400 text-xs">No live connections</div>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}

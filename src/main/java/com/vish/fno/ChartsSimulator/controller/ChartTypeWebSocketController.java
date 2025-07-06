@@ -1,4 +1,3 @@
-// src/main/java/com/vish/fno/ChartsSimulator/controller/ChartTypeWebSocketController.java
 package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.model.ChartTypeRequest;
@@ -24,16 +23,8 @@ public class ChartTypeWebSocketController {
     @MessageMapping("/loadChartTypes")
     public void streamChartTypes(ChartTypeRequest req) throws InterruptedException {
         log.info("Starting chart types stream for {} on {}", req.symbol(), req.date());
-
         var chartData = chartTypeService.getChartDataStream(req.symbol(), req.date(), req.chartTypes());
-
-//        for (var data : chartData) {
-//            messagingTemplate.convertAndSend("/topic/chartTypes", data);
-//            Thread.sleep(messageDelay);
-//        }
-
         messagingTemplate.convertAndSend("/topic/chartTypes", chartData);
-
         log.info("Completed chart types stream for {}", req.symbol());
     }
 }

@@ -1,4 +1,3 @@
-// src/main/java/com/vish/fno/ChartsSimulator/config/WebSocketEventListener.java
 package com.vish.fno.ChartsSimulator.config;
 
 import com.vish.fno.ChartsSimulator.service.WebSocketSessionManager;
@@ -56,8 +55,7 @@ public class WebSocketEventListener {
         String subscriptionId = headerAccessor.getSubscriptionId();
 
         log.debug("Client unsubscribed - Session: {}, Subscription: {}", sessionId, subscriptionId);
-
-        // If this was a candle or ticker subscription, clean up the session
+        // clean up the session
         sessionManager.removeSession(sessionId);
     }
 }

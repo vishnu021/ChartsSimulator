@@ -14,6 +14,7 @@ import org.apache.http.impl.client.*;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
@@ -29,16 +30,17 @@ import java.util.stream.Collectors;
 
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 
-
 @Slf4j
 @Component
 public class DataClient {
-    private final static String baseurl= "https://127.0.0.1/api/v1/historicalData/";
+
+    @Value("${app.baseurl}")
+    private String baseurl;
+
     private final CloseableHttpClient httpClient;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public DataClient() throws GeneralSecurityException {
-
         SSLContext sslContext = SSLContextBuilder.create()
                 .loadTrustMaterial(new TrustSelfSignedStrategy())
                 .build();
@@ -52,7 +54,6 @@ public class DataClient {
                 .build();
     }
 
-
     public List<Candle> getCandleData(String symbol, String date) {
         if(isValidSymbolAndDate(symbol, date)) {
             log.warn("Invalid symbol {} or date {}", symbol, date);
@@ -65,7 +66,6 @@ public class DataClient {
             throw new RuntimeException(e);
         }
     }
-
 
     private boolean isValidSymbolAndDate(String symbol, String date) {
         return symbol == null || date == null || !date.matches("\\d{4}-\\d{2}-\\d{2}");
@@ -83,7 +83,6 @@ public class DataClient {
                 .supplyAsync(() -> executeGetRequest(httpGet))
                 .thenApplyAsync(this::parseResponse);
     }
-
 
     private CloseableHttpResponse executeGetRequest(HttpGet request) {
         try {

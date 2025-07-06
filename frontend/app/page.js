@@ -1,4 +1,3 @@
-// frontend/app/page.js (Updated main page)
 'use client';
 
 import React from 'react';

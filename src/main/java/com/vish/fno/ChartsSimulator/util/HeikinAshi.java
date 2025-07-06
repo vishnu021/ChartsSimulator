@@ -17,7 +17,6 @@ public final class HeikinAshi {
         return convertToHeikinAshi(candles);
     }
 
-
     private static List<Candle> convertToHeikinAshi(List<Candle> candles) {
         List<Candle> heikinAshiCandles = new ArrayList<>();
 
