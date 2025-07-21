@@ -1,3 +1,5 @@
+import { configService } from '../config/configService.js';
+
 class ApiError extends Error {
     constructor(message, status, data) {
         super(message);
@@ -8,14 +10,27 @@ class ApiError extends Error {
 }
 
 class ApiClient {
-    constructor(baseURL) {
+    constructor(baseURL = null) {
         this.baseURL = baseURL;
         this.defaultHeaders = {
             'Content-Type': 'application/json',
         };
+        this.configLoaded = false;
+    }
+
+    async ensureConfig() {
+        if (!this.configLoaded) {
+            await configService.loadConfig();
+            if (!this.baseURL) {
+                this.baseURL = configService.getApiUrl();
+            }
+            this.configLoaded = true;
+        }
     }
 
     async request(endpoint, options = {}) {
+        await this.ensureConfig();
+        
         const url = `${this.baseURL}${endpoint}`;
         const config = {
             headers: { ...this.defaultHeaders, ...options.headers },
@@ -74,4 +89,4 @@ class ApiClient {
     }
 }
 
-export const apiClient = new ApiClient(process.env.NEXT_PUBLIC_API_URL);
+export const apiClient = new ApiClient();

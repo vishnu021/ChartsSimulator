@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  charts-simulator:
+    build: .
+    ports:
+      - "${SERVER_PORT:-9090}:${SERVER_PORT:-9090}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-production}
+      - SERVER_PORT=${SERVER_PORT:-9090}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_BASE_PATH=/app/logs
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SERVER_PORT:-9090}/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

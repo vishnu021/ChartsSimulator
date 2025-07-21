@@ -1,53 +1,78 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
 
-# dependencies
-frontend/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Java
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
 
-# testing
-/coverage
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# OS
 .DS_Store
-*.pem
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Node.js / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Testing
+/coverage
+*.tsbuildinfo
 
-# vercel
+# Build artifacts
+deploy-*/
+combined_code.txt
+*.tgz
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+
+# Logs
+logs/
+
+# Vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
+# TypeScript
 next-env.d.ts
-
-
-/.idea
-frontend/node_modules
-frontend/package-lock.json
-/frontend/.next
-mvnw
-mvnw.cmd
-/target
-combined_code.txt
-/frontend/out
-*.json

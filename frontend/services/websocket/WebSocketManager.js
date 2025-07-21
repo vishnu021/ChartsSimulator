@@ -1,8 +1,9 @@
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { configService } from "../config/configService.js";
 
 export class WebSocketManager {
-    constructor(wsUrl) {
+    constructor(wsUrl = null) {
         this.wsUrl = wsUrl;
         this.client = null;
         this.isConnecting = false;
@@ -10,8 +11,20 @@ export class WebSocketManager {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000;
+        this.maxReconnectDelay = 30000;
+        this.configLoaded = false;
 
         this.setupGlobalEventListeners();
+    }
+
+    async ensureConfig() {
+        if (!this.configLoaded) {
+            await configService.loadConfig();
+            if (!this.wsUrl) {
+                this.wsUrl = configService.getWsUrl();
+            }
+            this.configLoaded = true;
+        }
     }
 
     setupGlobalEventListeners() {
@@ -45,13 +58,15 @@ export class WebSocketManager {
             return Promise.resolve();
         }
 
+        await this.ensureConfig();
+
         return new Promise((resolve, reject) => {
             this.isConnecting = true;
 
             try {
                 this.client = new Client({
                     webSocketFactory: () => new SockJS(this.wsUrl),
-                    reconnectDelay: this.reconnectDelay,
+                    reconnectDelay: this.getReconnectDelay(),
                     heartbeatIncoming: 4000,
                     heartbeatOutgoing: 4000,
                     debug: (str) => console.log('STOMP:', str)
@@ -68,6 +83,7 @@ export class WebSocketManager {
                     console.log('WebSocket disconnected:', frame);
                     this.isConnecting = false;
                     this.subscriptions.clear();
+                    this.scheduleReconnect();
                 };
 
                 this.client.onStompError = (frame) => {
@@ -161,5 +177,36 @@ export class WebSocketManager {
 
     isConnecting() {
         return this.isConnecting;
+    }
+
+    getReconnectDelay() {
+        const delay = Math.min(
+            this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
+            this.maxReconnectDelay
+        );
+        return delay + Math.random() * 1000; // Add jitter
+    }
+
+    scheduleReconnect() {
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.error('Max reconnection attempts reached');
+            return;
+        }
+
+        const delay = this.getReconnectDelay();
+        console.log(`Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
+        
+        setTimeout(() => {
+            if (!this.isConnected() && !this.isConnecting) {
+                this.reconnectAttempts++;
+                this.connect().catch(error => {
+                    console.error('Reconnection failed:', error);
+                });
+            }
+        }, delay);
+    }
+
+    resetReconnectAttempts() {
+        this.reconnectAttempts = 0;
     }
 }
