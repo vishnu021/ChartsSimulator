@@ -16,6 +16,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileWriter;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -30,25 +31,34 @@ public class TickDataProcessor implements CommandLineRunner {
 
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-    
+
     private final DataLoaderService dataLoaderService;
     private final ObjectMapper objectMapper;
-    
+
     @Value("${app.tickProcessor.enabled:false}")
     private boolean enabled;
-    
+
     @Value("${app.tickProcessor.date:}")
     private String defaultDate;
-    
+
     @Value("${app.tickProcessor.symbol:}")
     private String defaultSymbol;
-    
+
     @Value("${app.tickProcessor.outputPath:output/}")
     private String outputPath;
-    
+
     @Value("${app.tickProcessor.deduplicateTimestamps:true}")
     private boolean deduplicateTimestamps;
-    
+
+    @Value("${app.tickProcessor.timeFilter.enabled:false}")
+    private boolean timeFilterEnabled;
+
+    @Value("${app.tickProcessor.timeFilter.startTime:09:00:00}")
+    private String startTimeStr;
+
+    @Value("${app.tickProcessor.timeFilter.endTime:15:30:00}")
+    private String endTimeStr;
+
     @PostConstruct
     public void configureObjectMapper() {
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -84,7 +94,7 @@ public class TickDataProcessor implements CommandLineRunner {
             ProcessedTickData processedData = processTickersWithDeduplication(tickers);
             String outputFilePath = generateOutputFilePath(symbol, date);
             ensureOutputDirectoryExists();
-            
+
             Map<String, Object> jsonOutput = createJsonOutput(symbol, date, processedData);
             writeJsonToFile(jsonOutput, outputFilePath);
 
@@ -106,8 +116,14 @@ public class TickDataProcessor implements CommandLineRunner {
 
         for (StockTicker ticker : tickers) {
             long originalTimestamp = ticker.tickTimestamp();
+
+            // Apply time filtering if enabled
+            if (timeFilterEnabled && !isWithinTimeRange(originalTimestamp)) {
+                continue;
+            }
+
             String timeKey = formatTime(originalTimestamp);
-            
+
             if (shouldAdjustDuplicateTimestamp(timeToPrice, timeKey)) {
                 duplicatesAdjusted++;
                 String adjustedTime = adjustTimestampForDuplicate(originalTimestamp, timeKey, timeOccurrences);
@@ -125,7 +141,7 @@ public class TickDataProcessor implements CommandLineRunner {
         return deduplicateTimestamps && timeToPrice.containsKey(timeKey);
     }
 
-    private String adjustTimestampForDuplicate(long originalTimestamp, String timeKey, 
+    private String adjustTimestampForDuplicate(long originalTimestamp, String timeKey,
                                              Map<String, Integer> timeOccurrences) {
         int occurrence = timeOccurrences.getOrDefault(timeKey, 0) + 1;
         timeOccurrences.put(timeKey, occurrence);
@@ -153,10 +169,22 @@ public class TickDataProcessor implements CommandLineRunner {
         Map<String, Object> jsonOutput = new LinkedHashMap<>();
         jsonOutput.put("symbol", symbol);
         jsonOutput.put("date", date);
-        jsonOutput.put("totalTicks", processedData.timeToPrice().size());
-        jsonOutput.put("hasVolumeData", false);
-        jsonOutput.put("timestampDeduplicationEnabled", deduplicateTimestamps);
+//        jsonOutput.put("totalTicks", processedData.timeToPrice().size());
+//        jsonOutput.put("hasVolumeData", false);
+//        jsonOutput.put("timestampDeduplicationEnabled", deduplicateTimestamps);
         jsonOutput.put("duplicateTimestampsAdjusted", processedData.duplicatesAdjusted());
+
+        // Add time filtering information
+        if (timeFilterEnabled) {
+            Map<String, Object> timeFilterInfo = new LinkedHashMap<>();
+            timeFilterInfo.put("enabled", true);
+            timeFilterInfo.put("startTime", startTimeStr);
+            timeFilterInfo.put("endTime", endTimeStr);
+            jsonOutput.put("timeFilter", timeFilterInfo);
+        } else {
+            jsonOutput.put("timeFilter", Map.of("enabled", false));
+        }
+
         jsonOutput.put("data", createDataArray(processedData.timeToPrice()));
         return jsonOutput;
     }
@@ -181,9 +209,20 @@ public class TickDataProcessor implements CommandLineRunner {
     }
 
     private void logProcessingResults(ProcessedTickData processedData, String outputFilePath) {
-        log.info("Successfully processed {} unique ticks (duplicates adjusted: {})", 
+        log.info("Successfully processed {} unique ticks (duplicates adjusted: {})",
                 processedData.timeToPrice().size(), processedData.duplicatesAdjusted());
         log.info("Output file created: {}", outputFilePath);
+    }
+
+    private boolean isWithinTimeRange(long timestamp) {
+        LocalTime tickTime = Instant.ofEpochMilli(timestamp)
+                .atZone(INDIA_ZONE)
+                .toLocalTime();
+
+        LocalTime startTime = LocalTime.parse(startTimeStr);
+        LocalTime endTime = LocalTime.parse(endTimeStr);
+
+        return !tickTime.isBefore(startTime) && !tickTime.isAfter(endTime);
     }
 
     private String formatTime(long timestamp) {

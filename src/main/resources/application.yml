@@ -69,3 +69,7 @@ app:
     symbol: NIFTY 50
     outputPath: output/
     deduplicateTimestamps: true
+    timeFilter:
+      enabled: true        # Set to true to enable time range filtering
+      startTime: "14:20:00" # Start time (HH:mm:ss format)
+      endTime: "14:30:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format

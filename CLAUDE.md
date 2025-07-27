@@ -117,7 +117,28 @@ app:
     date: 2025-07-18      # Date to process (required)
     symbol: NIFTY 50      # Symbol to process (required)
     outputPath: output/    # Output directory
-    deduplicateTimestamps: true
+    deduplicateTimestamps: true # Handle duplicate timestamps by incrementing by 600ms
+    timeFilter:
+      enabled: false        # Set to true to enable time range filtering
+      startTime: "09:20:00" # Start time (HH:mm:ss format)
+      endTime: "13:20:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format
+
+# Examples:
+
+# Process all data (default behavior):
+# timeFilter.enabled: false
+
+# Process only data between 9:20 AM to 1:20 PM:
+# timeFilter:
+#   enabled: true
+#   startTime: "09:20:00"
+#   endTime: "13:20:00"
+
+# Process only morning session (9:15 AM to 11:30 AM):
+# timeFilter:
+#   enabled: true
+#   startTime: "09:15:00"
+#   endTime: "11:30:00"
 
 # Run application - tick processing happens automatically on startup if enabled:
 mvn spring-boot:run
@@ -129,7 +150,13 @@ java -jar target/ChartsSimulator-0.0.1-SNAPSHOT.jar
 # Output:
 # Creates output/tick_data_NIFTY_50_2025-07-18.json with time-price mappings
 # Uses existing DataLoaderService and baseLogPath configuration
-# Format: {"symbol": "NIFTY 50", "date": "2025-07-18", "data": [{"time": "09:15:00", "ltp": 25144.2}, ...]}
+# Format includes time filtering info:
+# {
+#   "symbol": "NIFTY 50", 
+#   "date": "2025-07-18", 
+#   "timeFilter": {"enabled": true, "startTime": "09:20:00", "endTime": "13:20:00"},
+#   "data": [{"time": "09:20:00.000", "ltp": 25144.2}, ...]
+# }
 
 # To disable: Set app.tickProcessor.enabled=false in application.yml
 ```
