@@ -108,6 +108,32 @@ mvn clean install
 curl http://localhost:9090/api/health
 ```
 
+### Tick Data Processing (Configuration-Based)
+```bash
+# Configure tick processing in application.yml:
+app:
+  tickProcessor:
+    enabled: true          # Set to true to enable automatic processing on startup
+    date: 2025-07-18      # Date to process (required)
+    symbol: NIFTY 50      # Symbol to process (required)
+    outputPath: output/    # Output directory
+    deduplicateTimestamps: true
+
+# Run application - tick processing happens automatically on startup if enabled:
+mvn spring-boot:run
+
+# Or build and run JAR:
+mvn clean package -Pdev
+java -jar target/ChartsSimulator-0.0.1-SNAPSHOT.jar
+
+# Output:
+# Creates output/tick_data_NIFTY_50_2025-07-18.json with time-price mappings
+# Uses existing DataLoaderService and baseLogPath configuration
+# Format: {"symbol": "NIFTY 50", "date": "2025-07-18", "data": [{"time": "09:15:00", "ltp": 25144.2}, ...]}
+
+# To disable: Set app.tickProcessor.enabled=false in application.yml
+```
+
 ## Maven Profiles
 
 - **prod** (default): Full build including frontend static generation

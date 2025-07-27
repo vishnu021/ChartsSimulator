@@ -18,6 +18,16 @@ const themes = {
             bullish: '#10b981',
             bearish: '#ef4444'
         },
+        ticker: {
+            line: '#ffffff',
+            shadow: '#3b82f6',
+            area: {
+                top: 'rgba(255, 255, 255, 0.25)',
+                bottom: 'rgba(59, 130, 246, 0.08)'
+            },
+            point: '#ffffff',
+            pointShadow: '#3b82f6'
+        },
         lines: {
             maxima: '#fbbf24',
             minima: '#f472b6',
@@ -48,6 +58,16 @@ const themes = {
             bullish: '#10b981',
             bearish: '#ef4444'
         },
+        ticker: {
+            line: '#0f172a',
+            shadow: '#3b82f6',
+            area: {
+                top: 'rgba(15, 23, 42, 0.20)',
+                bottom: 'rgba(59, 130, 246, 0.05)'
+            },
+            point: '#0f172a',
+            pointShadow: '#3b82f6'
+        },
         lines: {
             maxima: '#f59e0b',
             minima: '#ec4899',
@@ -76,6 +96,8 @@ const chartSettings = {
     extremaPointRadius: 6,
     crosshairLineWidth: 1,
     extremaLineWidth: 2,
+    trendArrowSize: 8,
+    significantMoveThreshold: 0.5, // Percentage threshold for significant moves
     fonts: {
         labels: '12px -apple-system, BlinkMacSystemFont, sans-serif',
         tooltip: '13px -apple-system, BlinkMacSystemFont, sans-serif',
@@ -536,21 +558,42 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 ctx.closePath();
 
                 const areaGradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-                areaGradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
-                areaGradient.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
+                areaGradient.addColorStop(0, colors.ticker.area.top);
+                areaGradient.addColorStop(1, colors.ticker.area.bottom);
                 ctx.fillStyle = areaGradient;
                 ctx.fill();
 
-                // Draw the main price line with enhanced visibility
-                ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = viewState.zoom > 2 ? 3 : 2;
+                // Draw background/shadow line first for enhanced visibility
+                ctx.strokeStyle = colors.ticker.shadow;
+                ctx.lineWidth = viewState.zoom > 2 ? 6 : 4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 0.3;
+                
+                ctx.beginPath();
+                visiblePricePoints.forEach((point, i) => {
+                    const x = xScaleTime(point.timestamp);
+                    const y = yScale(point.price);
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+                
+                // Reset alpha and draw main line with enhanced visibility
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = colors.ticker.line;
+                ctx.lineWidth = viewState.zoom > 2 ? 4 : 3;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
 
-                // Add glow effect when zoomed
+                // Add subtle glow effect when zoomed
                 if (viewState.zoom > 3) {
-                    ctx.shadowColor = '#3b82f6';
-                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = colors.ticker.shadow;
+                    ctx.shadowBlur = 2;
                 }
 
                 ctx.beginPath();
@@ -570,9 +613,23 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
 
-                // Draw data points when zoomed in
+                // Draw data points when zoomed in with enhanced visibility
                 if (viewState.zoom > 4) {
-                    ctx.fillStyle = '#3b82f6';
+                    // Draw shadow points first
+                    ctx.fillStyle = colors.ticker.pointShadow;
+                    ctx.globalAlpha = 0.4;
+                    visiblePricePoints.forEach(point => {
+                        const x = xScaleTime(point.timestamp);
+                        const y = yScale(point.price);
+
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                    
+                    // Draw main points
+                    ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = colors.ticker.point;
                     visiblePricePoints.forEach(point => {
                         const x = xScaleTime(point.timestamp);
                         const y = yScale(point.price);
@@ -590,30 +647,129 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                     const y = yScale(lastPoint.price);
 
                     if (x >= padding.left && x <= width - padding.right) {
-                        // Pulsing outer ring
-                        ctx.strokeStyle = '#3b82f6';
-                        ctx.lineWidth = 2;
+                        // Pulsing outer ring with theme colors
+                        ctx.strokeStyle = colors.ticker.pointShadow;
+                        ctx.lineWidth = 3;
                         ctx.beginPath();
-                        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                        ctx.arc(x, y, 6, 0, 2 * Math.PI);
                         ctx.stroke();
 
-                        // Inner point
-                        ctx.fillStyle = '#ffffff';
+                        // Inner point with enhanced visibility
+                        ctx.fillStyle = colors.ticker.point;
                         ctx.beginPath();
-                        ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
+                        ctx.arc(x, y, 3, 0, 2 * Math.PI);
                         ctx.fill();
 
-                        // Current price label
+                        // Current price label with enhanced visibility
                         const priceText = `₹${lastPoint.price.toFixed(2)}`;
                         const labelX = Math.min(x + 10, width - padding.right - 70);
-                        ctx.fillStyle = '#3b82f6';
-                        ctx.fillRect(labelX, y - 10, 60, 20);
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+                        
+                        // Draw label background with border
+                        ctx.fillStyle = colors.ticker.pointShadow;
+                        ctx.fillRect(labelX, y - 12, 65, 24);
+                        
+                        // Draw label text with contrasting color
+                        ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#ffffff';
+                        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif';
                         ctx.textAlign = 'left';
-                        ctx.fillText(priceText, labelX + 5, y + 2);
+                        ctx.fillText(priceText, labelX + 5, y + 3);
                     }
                 }
+            }
+        }
+
+        // Draw significant trend indicators (arrows for major moves) when zoomed in
+        if (processedData.priceData.length > 5 && viewState.zoom > 1.5) {
+            const visiblePricePoints = processedData.priceData.filter(point => {
+                const x = xScaleTime(point.timestamp);
+                return x >= padding.left - 100 && x <= width - padding.right + 100;
+            });
+
+            if (visiblePricePoints.length > 5) {
+                // Find significant price movements
+                const significantMoves = [];
+                const lookbackWindow = Math.max(3, Math.floor(visiblePricePoints.length * 0.02));
+                
+                for (let i = lookbackWindow; i < visiblePricePoints.length - lookbackWindow; i++) {
+                    const currentPrice = visiblePricePoints[i].price;
+                    const prevAvg = visiblePricePoints.slice(i - lookbackWindow, i)
+                        .reduce((sum, p) => sum + p.price, 0) / lookbackWindow;
+                    const nextAvg = visiblePricePoints.slice(i + 1, i + lookbackWindow + 1)
+                        .reduce((sum, p) => sum + p.price, 0) / lookbackWindow;
+                    
+                    const changeFromPrev = ((currentPrice - prevAvg) / prevAvg) * 100;
+                    const changeToNext = ((nextAvg - currentPrice) / currentPrice) * 100;
+                    
+                    // Detect significant dips or peaks
+                    if (Math.abs(changeFromPrev) > chartSettings.significantMoveThreshold || 
+                        Math.abs(changeToNext) > chartSettings.significantMoveThreshold) {
+                        
+                        const isDip = changeFromPrev < -chartSettings.significantMoveThreshold && 
+                                     changeToNext > chartSettings.significantMoveThreshold;
+                        const isPeak = changeFromPrev > chartSettings.significantMoveThreshold && 
+                                      changeToNext < -chartSettings.significantMoveThreshold;
+                        
+                        if (isDip || isPeak) {
+                            significantMoves.push({
+                                point: visiblePricePoints[i],
+                                type: isDip ? 'dip' : 'peak',
+                                magnitude: Math.max(Math.abs(changeFromPrev), Math.abs(changeToNext))
+                            });
+                        }
+                    }
+                }
+
+                // Draw arrows for significant moves
+                significantMoves.forEach(move => {
+                    const x = xScaleTime(move.point.timestamp);
+                    const y = yScale(move.point.price);
+                    
+                    if (x >= padding.left && x <= width - padding.right) {
+                        const arrowSize = chartSettings.trendArrowSize;
+                        const color = move.type === 'dip' ? colors.candle.bullish : colors.candle.bearish;
+                        const alpha = Math.min(0.8, 0.4 + (move.magnitude / 5));
+                        
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.fillStyle = color;
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2;
+                        
+                        // Draw arrow pointing to the significant move
+                        ctx.beginPath();
+                        if (move.type === 'dip') {
+                            // Downward arrow for dips
+                            const arrowY = y + arrowSize + 5;
+                            ctx.moveTo(x, arrowY);
+                            ctx.lineTo(x - arrowSize/2, arrowY + arrowSize);
+                            ctx.lineTo(x + arrowSize/2, arrowY + arrowSize);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            // Add exclamation mark
+                            ctx.fillStyle = colors.text.primary;
+                            ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('!', x, arrowY + arrowSize + 12);
+                        } else {
+                            // Upward arrow for peaks
+                            const arrowY = y - arrowSize - 5;
+                            ctx.moveTo(x, arrowY);
+                            ctx.lineTo(x - arrowSize/2, arrowY - arrowSize);
+                            ctx.lineTo(x + arrowSize/2, arrowY - arrowSize);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            // Add exclamation mark
+                            ctx.fillStyle = colors.text.primary;
+                            ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('!', x, arrowY - arrowSize - 8);
+                        }
+                        
+                        ctx.restore();
+                    }
+                });
             }
         }
 
