@@ -42,7 +42,19 @@ export default function CandlesPage() {
             const response = await fetch(`${API_BASE_URL}/charts?${params}`);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Try to get detailed error information from response
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { 
+                        message: `HTTP error! status: ${response.status}`,
+                        context: { symbol, date, httpStatusCode: response.status }
+                    };
+                }
+                console.error('Error loading chart:', errorData);
+                handleLoadError(JSON.stringify(errorData));
+                return;
             }
 
             const result = await response.json();
@@ -52,7 +64,11 @@ export default function CandlesPage() {
             });
         } catch (error) {
             console.error('Error loading chart:', error);
-            handleLoadError('Failed to load chart data');
+            const errorData = {
+                message: 'Failed to load chart data: ' + error.message,
+                context: { symbol, date, error: error.message }
+            };
+            handleLoadError(JSON.stringify(errorData));
         }
     }, [handleLoadStart, handleLoadSuccess, handleLoadError]);
 

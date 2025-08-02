@@ -41,14 +41,30 @@ export default function ChartsPage() {
             const response = await fetch(`${API_BASE_URL}/charts?${params}`);
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Try to get detailed error information from response
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    errorData = { 
+                        message: `HTTP error! status: ${response.status}`,
+                        context: { symbol, date, httpStatusCode: response.status }
+                    };
+                }
+                console.error('Error loading charts:', errorData);
+                setError(JSON.stringify(errorData));
+                return;
             }
 
             const data = await response.json();
             setChartData({ ...data, symbol });
         } catch (error) {
             console.error('Error loading charts:', error);
-            setError('Failed to load chart data');
+            const errorData = {
+                message: 'Failed to load chart data: ' + error.message,
+                context: { symbol, date, error: error.message }
+            };
+            setError(JSON.stringify(errorData));
         } finally {
             setIsLoading(false);
         }

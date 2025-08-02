@@ -329,24 +329,36 @@ export default function CandleChart({ data, theme = 'dark' }) {
 
         const handleWheel = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const padding = canvasUtils.getPadding(isMobile);
             const chartWidth = rect.width - padding.left - padding.right;
-            const centerRatio = (x - padding.left) / chartWidth;
+            const mouseRatio = (x - padding.left) / chartWidth;
 
-            const zoomDelta = -e.deltaY * CHART_CONSTANTS.ZOOM_SPEED;
-            const newZoom = Math.max(CHART_CONSTANTS.MIN_ZOOM, Math.min(CHART_CONSTANTS.MAX_ZOOM, viewState.zoom + zoomDelta * viewState.zoom));
+            // Simplified and stable zoom calculation
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Simple zoom in/out factor
+            const newZoom = Math.max(CHART_CONSTANTS.MIN_ZOOM, Math.min(CHART_CONSTANTS.MAX_ZOOM, viewState.zoom * zoomFactor));
 
-            const oldCandleWidth = chartWidth / data.candles.length * viewState.zoom;
-            const newCandleWidth = chartWidth / data.candles.length * newZoom;
-            const candlesWidthDiff = (newCandleWidth - oldCandleWidth) * data.candles.length;
+            // Calculate horizontal offset to keep cursor position stable
+            const totalWidth = chartWidth * viewState.zoom;
+            const newTotalWidth = chartWidth * newZoom;
+            const widthChange = newTotalWidth - totalWidth;
+            
+            // Zoom around cursor position
+            const newOffset = viewState.offset - widthChange * mouseRatio;
+            
+            // Calculate offset limits
+            const maxOffset = 0;
+            const minOffset = Math.min(0, chartWidth - newTotalWidth);
+            const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
 
             setViewState(prev => ({
                 ...prev,
                 zoom: newZoom,
-                targetOffset: prev.targetOffset - candlesWidthDiff * centerRatio,
-                offset: prev.offset - candlesWidthDiff * centerRatio
+                offset: clampedOffset,
+                targetOffset: clampedOffset
             }));
         };
 
@@ -413,44 +425,12 @@ export default function CandleChart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
-                <div>
-                    <h1 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
-                        {data.symbol || 'Candlestick Chart'}
-                    </h1>
-                    <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
-                        <span style={{ color: colors.text.secondary }}>
-                            Total: {data.candles?.length || 0} candles
-                        </span>
-                        {!isMobile && (
-                            <span style={{ color: colors.text.secondary }}>
-                                Zoom: {(viewState.zoom * 100).toFixed(0)}%
-                            </span>
-                        )}
-                    </div>
-                </div>
-                {!isMobile && (
-                    <button
-                        onClick={handleReset}
-                        className="px-3 py-1 md:px-4 md:py-2 rounded-md transition-all text-sm"
-                        style={{
-                            backgroundColor: colors.panelBackground,
-                            border: `1px solid ${colors.grid}`,
-                            color: colors.text.primary
-                        }}
-                    >
-                        Reset View
-                    </button>
-                )}
-            </div>
-            <div className="flex-1 rounded-lg overflow-hidden" style={{ backgroundColor: colors.panelBackground, minHeight: 200 }}>
-                <canvas
-                    ref={canvasRef}
-                    className="w-full h-full"
-                    style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 200 }}
-                />
-            </div>
+        <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
+            <canvas
+                ref={canvasRef}
+                className="w-full h-full"
+                style={{ cursor: isMobile ? 'default' : 'crosshair' }}
+            />
         </div>
     );
 }

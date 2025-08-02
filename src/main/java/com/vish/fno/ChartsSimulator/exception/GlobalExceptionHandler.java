@@ -5,88 +5,57 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @ControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(DataFetchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> handleDataFetchException(DataFetchException ex, WebRequest request) {
+        log.error("DataFetchException occurred", ex);
+        
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("timestamp", LocalDateTime.now().toString());
+        errorDetails.put("status", HttpStatus.BAD_REQUEST.value());
+        errorDetails.put("error", "Data Fetch Error");
+        errorDetails.put("message", ex.getMessage());
+        errorDetails.put("path", request.getDescription(false).replace("uri=", ""));
+        
+        // Add detailed context
+        Map<String, Object> context = new HashMap<>();
+        context.put("symbol", ex.getSymbol());
+        context.put("date", ex.getDate());
+        context.put("requestUrl", ex.getUrl());
+        context.put("httpStatusCode", ex.getStatusCode());
+        context.put("responseContent", ex.getResponseContent());
+        
+        errorDetails.put("context", context);
+        
+        return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(
-            Exception ex, WebRequest request) {
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, WebRequest request) {
+        log.error("Unexpected error occurred", ex);
         
-        String errorId = UUID.randomUUID().toString();
-        log.error("Unhandled exception [{}]: {}", errorId, ex.getMessage(), ex);
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("timestamp", LocalDateTime.now().toString());
+        errorDetails.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        errorDetails.put("error", "Internal Server Error");
+        errorDetails.put("message", "An unexpected error occurred: " + ex.getMessage());
+        errorDetails.put("path", request.getDescription(false).replace("uri=", ""));
         
-        Map<String, Object> errorResponse = createErrorResponse(
-            "INTERNAL_ERROR",
-            "An unexpected error occurred",
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            request.getDescription(false),
-            errorId
-        );
-        
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(
-            IllegalArgumentException ex, WebRequest request) {
-        
-        String errorId = UUID.randomUUID().toString();
-        log.warn("Invalid argument [{}]: {}", errorId, ex.getMessage());
-        
-        Map<String, Object> errorResponse = createErrorResponse(
-            "INVALID_ARGUMENT",
-            ex.getMessage(),
-            HttpStatus.BAD_REQUEST,
-            request.getDescription(false),
-            errorId
-        );
-        
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, Object>> handleRuntimeException(
-            RuntimeException ex, WebRequest request) {
-        
-        String errorId = UUID.randomUUID().toString();
-        log.error("Runtime exception [{}]: {}", errorId, ex.getMessage(), ex);
-        
-        Map<String, Object> errorResponse = createErrorResponse(
-            "RUNTIME_ERROR",
-            "A runtime error occurred",
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            request.getDescription(false),
-            errorId
-        );
-        
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    private Map<String, Object> createErrorResponse(
-            String errorCode,
-            String message,
-            HttpStatus status,
-            String path,
-            String errorId) {
-        
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", Instant.now().toString());
-        errorResponse.put("status", status.value());
-        errorResponse.put("error", status.getReasonPhrase());
-        errorResponse.put("errorCode", errorCode);
-        errorResponse.put("message", message);
-        errorResponse.put("path", path);
-        errorResponse.put("errorId", errorId);
-        
-        return errorResponse;
+        return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

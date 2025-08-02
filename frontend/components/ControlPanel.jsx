@@ -38,6 +38,53 @@ export default function ControlPanel({
         }
     };
 
+    // Utility functions for date navigation (skip weekends)
+    const getPreviousDate = (currentDate) => {
+        const date = new Date(currentDate);
+        do {
+            date.setDate(date.getDate() - 1);
+        } while (date.getDay() === 0 || date.getDay() === 6); // Skip Sunday (0) and Saturday (6)
+        return date.toISOString().split('T')[0];
+    };
+
+    const getNextDate = (currentDate) => {
+        const date = new Date(currentDate);
+        do {
+            date.setDate(date.getDate() + 1);
+        } while (date.getDay() === 0 || date.getDay() === 6); // Skip Sunday (0) and Saturday (6)
+        return date.toISOString().split('T')[0];
+    };
+
+    const handlePreviousDate = async () => {
+        const prevDate = getPreviousDate(date);
+        updateDate(prevDate);
+        setIsLoading(true);
+        try {
+            const params = { symbol, date: prevDate };
+            if (!hideLookbackPeriod) {
+                params.lookbackPeriod = lookbackPeriod;
+            }
+            await onSubmit(params);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleNextDate = async () => {
+        const nextDate = getNextDate(date);
+        updateDate(nextDate);
+        setIsLoading(true);
+        try {
+            const params = { symbol, date: nextDate };
+            if (!hideLookbackPeriod) {
+                params.lookbackPeriod = lookbackPeriod;
+            }
+            await onSubmit(params);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="p-2 md:p-3 rounded-lg shadow-lg" style={{ backgroundColor: colors.controlPanel }}>
             <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 md:gap-3 items-end">
@@ -81,6 +128,49 @@ export default function ControlPanel({
                         onBlur={(e) => e.target.style.borderColor = colors.input.border}
                         required
                     />
+                </div>
+
+                {/* Date Navigation Buttons */}
+                <div className="flex gap-1">
+                    <div>
+                        <label className="block text-xs font-medium mb-1 opacity-0" style={{ color: colors.text.secondary }}>
+                            Nav
+                        </label>
+                        <div className="flex gap-1">
+                            <button
+                                type="button"
+                                onClick={handlePreviousDate}
+                                disabled={isLoading || !symbol}
+                                className="px-2 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                                style={{
+                                    backgroundColor: colors.panelBackground,
+                                    border: `1px solid ${colors.input.border}`,
+                                    color: colors.text.primary,
+                                    opacity: (isLoading || !symbol) ? 0.5 : 1,
+                                    cursor: (isLoading || !symbol) ? 'not-allowed' : 'pointer'
+                                }}
+                                title="Previous Day"
+                            >
+                                ◀
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleNextDate}
+                                disabled={isLoading || !symbol}
+                                className="px-2 py-1.5 rounded text-sm font-medium transition-all hover:scale-105"
+                                style={{
+                                    backgroundColor: colors.panelBackground,
+                                    border: `1px solid ${colors.input.border}`,
+                                    color: colors.text.primary,
+                                    opacity: (isLoading || !symbol) ? 0.5 : 1,
+                                    cursor: (isLoading || !symbol) ? 'not-allowed' : 'pointer'
+                                }}
+                                title="Next Day"
+                            >
+                                ▶
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {!hideLookbackPeriod && (
