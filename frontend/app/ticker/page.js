@@ -3,7 +3,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { useTickerData } from '@/hooks/useTickerData';
-import { useTheme } from '@/hooks/useTheme';
+import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatsBar } from '@/components/ui/StatsBar';
@@ -23,7 +23,7 @@ const TickerChart = dynamic(() => import('@/components/TickerChart'), {
 });
 
 export default function TickerPage() {
-    const { theme, toggleTheme } = useTheme();
+    const { theme, toggleTheme } = useAppState();
     const {
         tickerData,
         stats,
@@ -130,12 +130,7 @@ export default function TickerPage() {
             loading={isLoading}
             loadingMessage={isRealTime ? 'Connecting to real-time feed...' : 'Loading ticker data...'}
         >
-            {/* Compact header with status */}
-            <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700">
-                {renderHeader()}
-            </div>
-
-            {/* Main chart area */}
+            {/* Main chart area - no separate header */}
             <div className="flex-1 min-h-0 p-4">
                 {tickerData.length > 0 ? (
                     <div className="h-full rounded-lg overflow-hidden shadow-lg">

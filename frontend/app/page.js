@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useAppState } from '@/contexts/AppStateContext';
 
 export default function HomePage() {
     const router = useRouter();
+    const { theme } = useAppState();
 
     const features = [
         {
@@ -33,19 +35,35 @@ export default function HomePage() {
         }
     ];
 
+    // Theme-aware styles
+    const themeStyles = {
+        dark: {
+            background: 'bg-gray-900 text-white',
+            card: 'bg-gray-800 hover:bg-gray-700',
+            description: 'text-gray-400'
+        },
+        light: {
+            background: 'bg-gray-50 text-gray-800',
+            card: 'bg-gray-100 hover:bg-gray-200',
+            description: 'text-gray-600'
+        }
+    };
+
+    const currentTheme = themeStyles[theme];
+
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-8">
+        <div className={`min-h-screen p-8 ${currentTheme.background}`}>
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {features.map((feature) => (
                         <div
                             key={feature.path}
                             onClick={() => router.push(feature.path)}
-                            className="bg-gray-800 rounded-lg p-6 cursor-pointer hover:bg-gray-700 transition-all transform hover:scale-105"
+                            className={`rounded-lg p-6 cursor-pointer transition-all transform hover:scale-105 ${currentTheme.card}`}
                         >
                             <div className="text-4xl mb-4">{feature.icon}</div>
                             <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                            <p className="text-gray-400 text-sm">{feature.description}</p>
+                            <p className={`text-sm ${currentTheme.description}`}>{feature.description}</p>
                         </div>
                     ))}
                 </div>

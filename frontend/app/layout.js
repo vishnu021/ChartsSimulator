@@ -1,5 +1,6 @@
 import "./globals.css";
 import Navigation from '@/components/Navigation';
+import { AppStateProvider } from '@/contexts/AppStateContext';
 
 export const metadata = {
     title: "Charts Simulator",
@@ -10,10 +11,12 @@ export default function RootLayout({ children }) {
     return (
         <html lang="en">
         <body className="antialiased">
-        <Navigation />
-        <main className="pt-16">
-            {children}
-        </main>
+        <AppStateProvider>
+            <Navigation />
+            <main className="pt-16">
+                {children}
+            </main>
+        </AppStateProvider>
         </body>
         </html>
     );

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { useTheme } from '@/hooks/useTheme';
+import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
@@ -22,7 +22,7 @@ const CombinedChart = dynamic(() => import('@/components/CombinedChart'), {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ChartsPage() {
-    const { theme, toggleTheme } = useTheme();
+    const { theme, toggleTheme } = useAppState();
     const [chartData, setChartData] = useState(null);
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);

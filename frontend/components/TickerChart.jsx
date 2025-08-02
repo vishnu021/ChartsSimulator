@@ -44,13 +44,13 @@ const themes = {
         }
     },
     light: {
-        background: '#ffffff',
-        panelBackground: '#f8fafc',
-        controlPanel: '#f1f5f9',
-        grid: '#e2e8f0',
+        background: '#f9fafb',
+        panelBackground: '#f3f4f6',
+        controlPanel: '#e5e7eb',
+        grid: '#d1d5db',
         text: {
-            primary: '#0f172a',
-            secondary: '#64748b',
+            primary: '#374151',
+            secondary: '#6b7280',
             maxima: '#059669',
             minima: '#dc2626'
         },
@@ -59,28 +59,28 @@ const themes = {
             bearish: '#ef4444'
         },
         ticker: {
-            line: '#0f172a',
-            shadow: '#3b82f6',
+            line: '#374151',
+            shadow: '#6366f1',
             area: {
-                top: 'rgba(15, 23, 42, 0.20)',
-                bottom: 'rgba(59, 130, 246, 0.05)'
+                top: 'rgba(55, 65, 81, 0.15)',
+                bottom: 'rgba(99, 102, 241, 0.05)'
             },
-            point: '#0f172a',
-            pointShadow: '#3b82f6'
+            point: '#374151',
+            pointShadow: '#6366f1'
         },
         lines: {
             maxima: '#f59e0b',
             minima: '#ec4899',
-            crosshair: '#94a3b8'
+            crosshair: '#9ca3af'
         },
         tooltip: {
-            background: 'rgba(248, 250, 252, 0.95)',
-            border: '#cbd5e1'
+            background: 'rgba(243, 244, 246, 0.95)',
+            border: '#d1d5db'
         },
         input: {
-            background: '#ffffff',
-            border: '#cbd5e1',
-            focus: '#3b82f6'
+            background: '#f9fafb',
+            border: '#d1d5db',
+            focus: '#6366f1'
         }
     }
 };
@@ -879,44 +879,53 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
             const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
-            // Enhanced zoom speed based on current zoom level for smoother experience
-            const baseZoomSpeed = 0.002;
-            const currentZoomLevel = e.shiftKey ? viewState.verticalZoom : viewState.zoom;
-            const adaptiveZoomSpeed = baseZoomSpeed * (1 + Math.log10(currentZoomLevel));
-            const zoomDelta = -e.deltaY * adaptiveZoomSpeed;
+            // Simplified and stable zoom calculation
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Simple zoom in/out factor
 
             // Check if Shift key is held for vertical zoom
             if (e.shiftKey) {
-                // Enhanced vertical zoom with more granular control - ensure minimum zoom allows zoom back in
-                const newVerticalZoom = Math.max(0.2, Math.min(20, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
+                // Vertical zoom stable at cursor position
+                const newVerticalZoom = Math.max(0.2, Math.min(20, viewState.verticalZoom * zoomFactor));
+                
+                // Calculate vertical offset to keep cursor position stable
+                const chartHeight = rect.height - chartSettings.padding.top - chartSettings.padding.bottom;
+                const mouseY = e.clientY - rect.top - chartSettings.padding.top;
+                const mouseRatioY = mouseY / chartHeight;
+                
+                // Adjust vertical offset to zoom around cursor
+                const zoomChange = newVerticalZoom / viewState.verticalZoom;
+                const newVerticalOffset = viewState.verticalOffset + (mouseRatioY - 0.5) * chartHeight * (1 - 1/zoomChange);
+                
                 setViewState(prev => ({
                     ...prev,
-                    verticalZoom: newVerticalZoom
+                    verticalZoom: newVerticalZoom,
+                    verticalOffset: newVerticalOffset,
+                    targetVerticalOffset: newVerticalOffset
                 }));
+                return; // Prevent horizontal zoom when shift is held
             } else {
-                // Enhanced horizontal zoom with more granular control - ensure minimum zoom allows zoom back in
-                const newZoom = Math.max(0.2, Math.min(100, viewState.zoom + zoomDelta * viewState.zoom));
+                // Horizontal zoom stable at cursor position
+                const newZoom = Math.max(0.2, Math.min(100, viewState.zoom * zoomFactor));
 
-                // Calculate new offset to zoom around mouse position
+                // Calculate horizontal offset to keep cursor position stable
                 const totalWidth = chartWidth * viewState.zoom;
                 const newTotalWidth = chartWidth * newZoom;
-                const widthDiff = newTotalWidth - totalWidth;
-
+                const widthChange = newTotalWidth - totalWidth;
+                
+                // Zoom around cursor position
+                const newOffset = viewState.offset - widthChange * mouseRatio;
+                
                 // Calculate offset limits
                 const maxOffset = 0;
                 const minOffset = Math.min(0, chartWidth - newTotalWidth);
+                const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
 
-                setViewState(prev => {
-                    const newOffset = prev.targetOffset - widthDiff * mouseRatio;
-                    const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
-
-                    return {
-                        ...prev,
-                        zoom: newZoom,
-                        targetOffset: clampedOffset,
-                        offset: prev.offset - widthDiff * mouseRatio
-                    };
-                });
+                setViewState(prev => ({
+                    ...prev,
+                    zoom: newZoom,
+                    offset: clampedOffset,
+                    targetOffset: clampedOffset
+                }));
             }
         };
 
@@ -987,7 +996,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [viewState, isDragging, dragStart, isMobile, processedData.timeRange]);
+    }, [viewState, isDragging, dragStart, isMobile]); // Restore necessary dependencies for drag functionality
 
     const handleReset = () => {
         setViewState({
@@ -1015,108 +1024,47 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
     return (
         <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
-            {/* CONSOLIDATED HEADER PANEL WITH ALL INFO IN ONE BAR */}
-            <div className="px-3 py-2 border-b" style={{ borderColor: colors.grid }}>
+            {/* ULTRA COMPACT HEADER - ALL INFO IN ONE LINE */}
+            <div className="px-2 py-1 border-b text-xs" style={{ borderColor: colors.grid }}>
                 <div className="flex justify-between items-center">
-                    {/* Left side - Symbol and price info */}
-                    <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-bold" style={{ color: colors.text.primary }}>
-                            {symbol}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm">
-                            <span className="font-semibold" style={{ color: colors.text.primary }}>
-                                ₹{stats.currentPrice.toFixed(2)}
-                            </span>
-                            <div className={`flex items-center gap-1 ${stats.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                <span>{stats.change >= 0 ? '▲' : '▼'}</span>
-                                <span>{Math.abs(stats.change).toFixed(2)} ({stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%)</span>
-                            </div>
-                        </div>
+                    {/* All Info Combined - Symbol, Price, Change, Data Stats */}
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm" style={{ color: colors.text.primary }}>{symbol}</span>
+                        <span className="font-semibold" style={{ color: colors.text.primary }}>₹{stats.currentPrice.toFixed(2)}</span>
+                        <span className={`${stats.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {stats.change >= 0 ? '▲' : '▼'}{Math.abs(stats.change).toFixed(2)} ({stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%)
+                        </span>
+                        <span style={{ color: colors.text.secondary }}>|</span>
+                        <span className="text-blue-400">{processedData.priceData.length}t</span>
+                        <span className="text-yellow-400">{processedData.candleData.length}c</span>
+                        <span style={{ color: colors.text.secondary }}>Vol:{stats.volume.toLocaleString()}</span>
+                        <span style={{ color: colors.text.secondary }}>₹{stats.low.toFixed(0)}-{stats.high.toFixed(0)}</span>
                     </div>
 
-                    {/* Center - All data info */}
-                    <div className="flex items-center gap-3 text-xs">
-                        <span className="text-blue-400">{processedData.priceData.length} ticks</span>
-                        <span className="text-yellow-400">{processedData.candleData.length} candles</span>
-                        <span style={{ color: colors.text.secondary }}>Vol: {stats.volume.toLocaleString()}</span>
-                        <span style={{ color: colors.text.secondary }}>₹{stats.low.toFixed(2)}-₹{stats.high.toFixed(2)}</span>
+                    {/* Right - Controls Info & Status */}
+                    <div className="flex items-center gap-2" style={{ color: colors.text.secondary }}>
                         {!isMobile && (
                             <>
-                                <span style={{ color: colors.text.secondary }}>|</span>
-                                <span style={{ color: colors.text.secondary }}>
-                                    Scroll: H-zoom | Shift+Scroll: V-zoom | Drag: Pan
-                                </span>
-                                <span style={{ color: colors.text.secondary }}>|
-                                    H: {(viewState.zoom * 100).toFixed(0)}% V: {(viewState.verticalZoom * 100).toFixed(0)}%
-                                </span>
+                                <span>Scroll:H Shift+Scroll:V Drag:Pan</span>
+                                <span>H:{(viewState.zoom * 100).toFixed(0)}% V:{(viewState.verticalZoom * 100).toFixed(0)}%</span>
+                                <span>|</span>
                             </>
                         )}
-                    </div>
-
-                    {/* Right side - Status and controls */}
-                    <div className="flex items-center gap-2">
                         {isRealTime && (
-                            <div className="flex items-center gap-1 bg-green-600 px-2 py-1 rounded text-xs text-white">
-                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                            <div className="flex items-center gap-1 bg-green-600 px-1.5 py-0.5 rounded text-xs text-white">
+                                <div className="w-1 h-1 bg-white rounded-full animate-pulse"></div>
                                 LIVE
-                            </div>
-                        )}
-                        {/* Quick Zoom Buttons */}
-                        {!isMobile && (
-                            <div className="flex items-center gap-1 mr-2">
-                                <button
-                                    onClick={() => setViewState(prev => ({
-                                        ...prev,
-                                        zoom: Math.min(100, prev.zoom * 2)
-                                    }))}
-                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
-                                    style={{
-                                        backgroundColor: colors.input.focus,
-                                        color: '#ffffff'
-                                    }}
-                                    title="Zoom in 2x"
-                                >
-                                    2x
-                                </button>
-                                <button
-                                    onClick={() => setViewState(prev => ({
-                                        ...prev,
-                                        zoom: Math.min(100, prev.zoom * 5)
-                                    }))}
-                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
-                                    style={{
-                                        backgroundColor: colors.input.focus,
-                                        color: '#ffffff'
-                                    }}
-                                    title="Zoom in 5x"
-                                >
-                                    5x
-                                </button>
-                                <button
-                                    onClick={() => setViewState(prev => ({
-                                        ...prev,
-                                        zoom: Math.min(100, prev.zoom * 10)
-                                    }))}
-                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
-                                    style={{
-                                        backgroundColor: colors.input.focus,
-                                        color: '#ffffff'
-                                    }}
-                                    title="Zoom in 10x"
-                                >
-                                    10x
-                                </button>
                             </div>
                         )}
                         <button
                             onClick={handleReset}
-                            className="px-2 py-1 rounded text-xs transition-all hover:opacity-80"
+                            className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
                             style={{
                                 backgroundColor: colors.background,
                                 border: `1px solid ${colors.grid}`,
                                 color: colors.text.primary
                             }}
-                            title="Reset all zoom and pan"
+                            title="Reset zoom and pan"
                         >
                             Reset
                         </button>
@@ -1126,7 +1074,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         {/*</div>*/}
 
     {/* CHART AREA - Takes remaining space */}
-    <div className="relative flex" style={{ height: 'calc(100% - 48px)' }}>
+    <div className="relative flex" style={{ height: 'calc(100% - 25px)' }}>
         <div className="flex-1 relative">
             <canvas
                 ref={canvasRef}
@@ -1145,7 +1093,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.min(20, prev.verticalZoom * 1.2)
+                        verticalZoom: Math.min(20, prev.verticalZoom * 1.2),
+                        targetVerticalOffset: prev.targetVerticalOffset // Preserve vertical position
                     }))}
                     className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
                     style={{
@@ -1167,7 +1116,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.max(0.2, prev.verticalZoom / 1.2)
+                        verticalZoom: Math.max(0.2, prev.verticalZoom / 1.2),
+                        targetVerticalOffset: prev.targetVerticalOffset // Preserve vertical position
                     }))}
                     className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
                     style={{

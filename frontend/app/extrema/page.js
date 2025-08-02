@@ -3,7 +3,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { useChartData } from '@/hooks/useChartData';
-import { useTheme } from '@/hooks/useTheme';
+import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatsBar } from '@/components/ui/StatsBar';
@@ -22,7 +22,7 @@ const Chart = dynamic(() => import('@/components/Chart'), {
 });
 
 export default function ExtremaPage() {
-    const { theme, toggleTheme } = useTheme();
+    const { theme, toggleTheme } = useAppState();
     const {
         isRealTime,
         realTimeData,

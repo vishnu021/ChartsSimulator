@@ -2,22 +2,27 @@
 
 import React, { useState } from 'react';
 import { themes } from './chartConfig';
+import { useAppState } from '@/contexts/AppStateContext';
 
 export default function ControlPanel({
                                          onSubmit,
-                                         theme,
-                                         onThemeToggle,
+                                         theme: propTheme, // Keep prop theme for backward compatibility
+                                         onThemeToggle: propOnThemeToggle, // Keep prop for backward compatibility
                                          hideLookbackPeriod = false,
                                          showModeToggle = false,
                                          isRealTime = false,
                                          onModeToggle
                                      }) {
-    const [symbol, setSymbol] = useState('NIFTY 50');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    // Use shared state for symbol, date, and theme
+    const { symbol, date, theme, updateSymbol, updateDate, toggleTheme } = useAppState();
+    
+    // Use shared theme unless prop is provided (for backward compatibility)
+    const currentTheme = propTheme || theme;
+    const currentToggleTheme = propOnThemeToggle || toggleTheme;
     const [lookbackPeriod, setLookbackPeriod] = useState(5);
     const [isLoading, setIsLoading] = useState(false);
 
-    const colors = themes[theme];
+    const colors = themes[currentTheme];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,7 +48,7 @@ export default function ControlPanel({
                     <input
                         type="text"
                         value={symbol}
-                        onChange={(e) => setSymbol(e.target.value)}
+                        onChange={(e) => updateSymbol(e.target.value)}
                         className="w-full px-2 py-1.5 rounded text-sm transition-colors"
                         style={{
                             backgroundColor: colors.input.background,
@@ -64,7 +69,7 @@ export default function ControlPanel({
                     <input
                         type="date"
                         value={date}
-                        onChange={(e) => setDate(e.target.value)}
+                        onChange={(e) => updateDate(e.target.value)}
                         className="w-full px-2 py-1.5 rounded text-sm transition-colors"
                         style={{
                             backgroundColor: colors.input.background,
@@ -136,7 +141,7 @@ export default function ControlPanel({
 
                 <button
                     type="button"
-                    onClick={onThemeToggle}
+                    onClick={currentToggleTheme}
                     className="px-3 py-1.5 rounded transition-all text-sm whitespace-nowrap"
                     style={{
                         backgroundColor: colors.panelBackground,
@@ -144,7 +149,7 @@ export default function ControlPanel({
                         color: colors.text.primary
                     }}
                 >
-                    {theme === 'dark' ? '☀️' : '🌙'}
+                    {currentTheme === 'dark' ? '☀️' : '🌙'}
                 </button>
             </form>
         </div>
