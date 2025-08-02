@@ -6,15 +6,19 @@ import { themes, chartSettings } from './chartConfig';
 import { CHART_CONSTANTS, UI_CONSTANTS } from '@/utils/constants';
 import { canvasUtils, scalingUtils } from '@/utils/chart';
 
-export default function CandleChart({ data, theme = 'dark' }) {
+export default function CandleChart({ data, theme = 'dark', externalViewState = null }) {
     const canvasRef = useRef(null);
     const animationRef = useRef(null);
-    const [viewState, setViewState] = useState({
+    const [internalViewState, setInternalViewState] = useState({
         zoom: 1,
         offset: 0,
         targetOffset: 0,
         velocity: 0
     });
+    
+    // Use external view state if provided, otherwise use internal state
+    const viewState = externalViewState || internalViewState;
+    const setViewState = externalViewState ? () => {} : setInternalViewState;
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -325,7 +329,7 @@ export default function CandleChart({ data, theme = 'dark' }) {
     // Mouse event handlers (keeping existing logic but using constants)
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !data || isMobile) return;
+        if (!canvas || !data || isMobile || externalViewState) return; // Skip if using external view state
 
         const handleWheel = (e) => {
             e.preventDefault();
@@ -411,7 +415,7 @@ export default function CandleChart({ data, theme = 'dark' }) {
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [data, viewState, isDragging, dragStart, isMobile]);
+    }, [data, viewState, isDragging, dragStart, isMobile, externalViewState]);
 
     const handleReset = () => {
         setViewState({

@@ -15,7 +15,8 @@ export default function Navigation() {
         { path: '/candles', label: 'Candles', icon: '📊' },
         { path: '/extrema', label: 'Extrema', icon: '📈' },
         { path: '/charts', label: 'Charts', icon: '📉' },
-        { path: '/ticker', label: 'Ticker', icon: '⚡' }
+        { path: '/ticker', label: 'Ticker', icon: '⚡' },
+        { path: '/dashboard', label: 'Dashboard', icon: '📋' }
     ];
 
     const isActive = (path) => {
