@@ -211,11 +211,13 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 });
             });
 
-        // Keep ALL price data points for full granularity
+        // Keep MORE price data points for better granularity - show roughly same density as candles
         let priceData;
-        const maxPoints = 10000;
+        // Increase max points to show more detail - aim for roughly 1 point per candle period
+        const maxPoints = 50000; // Increased from 10000 to show more ticker detail
         if (data.length > maxPoints) {
-            const step = Math.floor(data.length / maxPoints);
+            // Use smaller step to keep more points
+            const step = Math.max(1, Math.floor(data.length / maxPoints));
             priceData = data.filter((_, index) => index % step === 0 || index === data.length - 1)
                 .filter(tick => tick && tick.time && typeof tick.price === 'number' && !isNaN(tick.price))
                 .map(tick => ({
@@ -224,6 +226,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                     price: tick.price
                 }));
         } else {
+            // Use all data points when under the limit
             priceData = data.filter(tick => tick && tick.time && typeof tick.price === 'number' && !isNaN(tick.price))
                 .map(tick => ({
                     time: tick.time,
@@ -869,6 +872,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
         const handleWheel = (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
@@ -882,16 +887,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
             // Check if Shift key is held for vertical zoom
             if (e.shiftKey) {
-                e.stopPropagation(); // Prevent browser's horizontal scroll
-                // Enhanced vertical zoom with more granular control
-                const newVerticalZoom = Math.max(0.1, Math.min(20, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
+                // Enhanced vertical zoom with more granular control - ensure minimum zoom allows zoom back in
+                const newVerticalZoom = Math.max(0.2, Math.min(20, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
                 setViewState(prev => ({
                     ...prev,
                     verticalZoom: newVerticalZoom
                 }));
             } else {
-                // Enhanced horizontal zoom with more granular control
-                const newZoom = Math.max(0.1, Math.min(100, viewState.zoom + zoomDelta * viewState.zoom));
+                // Enhanced horizontal zoom with more granular control - ensure minimum zoom allows zoom back in
+                const newZoom = Math.max(0.2, Math.min(100, viewState.zoom + zoomDelta * viewState.zoom));
 
                 // Calculate new offset to zoom around mouse position
                 const totalWidth = chartWidth * viewState.zoom;
@@ -1163,7 +1167,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.max(0.1, prev.verticalZoom / 1.2)
+                        verticalZoom: Math.max(0.2, prev.verticalZoom / 1.2)
                     }))}
                     className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
                     style={{
