@@ -63,6 +63,9 @@ app:
       enabled: ${RATE_LIMIT_ENABLED:true}
       requests-per-minute: ${RATE_LIMIT_REQUESTS_PER_MINUTE:60}
 
+  ticker:
+    deduplicateTimestamps: true # Handle duplicate timestamps in ticker API by incrementing by 600ms
+
   tickProcessor:
     enabled: true  # Set to true to enable automatic tick processing on startup
     date: 2025-07-18
@@ -71,5 +74,5 @@ app:
     deduplicateTimestamps: true
     timeFilter:
       enabled: true        # Set to true to enable time range filtering
-      startTime: "14:20:00" # Start time (HH:mm:ss format)
-      endTime: "14:30:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format
+      startTime: "13:20:00" # Start time (HH:mm:ss format)
+      endTime: "14:00:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format

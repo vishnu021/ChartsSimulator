@@ -874,21 +874,24 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
             const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
-            const zoomSpeed = 0.003;
-            const zoomDelta = -e.deltaY * zoomSpeed;
+            // Enhanced zoom speed based on current zoom level for smoother experience
+            const baseZoomSpeed = 0.002;
+            const currentZoomLevel = e.shiftKey ? viewState.verticalZoom : viewState.zoom;
+            const adaptiveZoomSpeed = baseZoomSpeed * (1 + Math.log10(currentZoomLevel));
+            const zoomDelta = -e.deltaY * adaptiveZoomSpeed;
 
             // Check if Shift key is held for vertical zoom
             if (e.shiftKey) {
                 e.stopPropagation(); // Prevent browser's horizontal scroll
-                // Vertical zoom
-                const newVerticalZoom = Math.max(0.5, Math.min(10, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
+                // Enhanced vertical zoom with more granular control
+                const newVerticalZoom = Math.max(0.1, Math.min(20, viewState.verticalZoom + zoomDelta * viewState.verticalZoom));
                 setViewState(prev => ({
                     ...prev,
                     verticalZoom: newVerticalZoom
                 }));
             } else {
-                // Horizontal zoom
-                const newZoom = Math.max(0.5, Math.min(50, viewState.zoom + zoomDelta * viewState.zoom));
+                // Enhanced horizontal zoom with more granular control
+                const newZoom = Math.max(0.1, Math.min(100, viewState.zoom + zoomDelta * viewState.zoom));
 
                 // Calculate new offset to zoom around mouse position
                 const totalWidth = chartWidth * viewState.zoom;
@@ -1037,7 +1040,10 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                             <>
                                 <span style={{ color: colors.text.secondary }}>|</span>
                                 <span style={{ color: colors.text.secondary }}>
-                                    Scroll: H-zoom | Drag: Pan | H: {(viewState.zoom * 100).toFixed(0)}% V: {(viewState.verticalZoom * 100).toFixed(0)}%
+                                    Scroll: H-zoom | Shift+Scroll: V-zoom | Drag: Pan
+                                </span>
+                                <span style={{ color: colors.text.secondary }}>|
+                                    H: {(viewState.zoom * 100).toFixed(0)}% V: {(viewState.verticalZoom * 100).toFixed(0)}%
                                 </span>
                             </>
                         )}
@@ -1051,6 +1057,53 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                                 LIVE
                             </div>
                         )}
+                        {/* Quick Zoom Buttons */}
+                        {!isMobile && (
+                            <div className="flex items-center gap-1 mr-2">
+                                <button
+                                    onClick={() => setViewState(prev => ({
+                                        ...prev,
+                                        zoom: Math.min(100, prev.zoom * 2)
+                                    }))}
+                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
+                                    style={{
+                                        backgroundColor: colors.input.focus,
+                                        color: '#ffffff'
+                                    }}
+                                    title="Zoom in 2x"
+                                >
+                                    2x
+                                </button>
+                                <button
+                                    onClick={() => setViewState(prev => ({
+                                        ...prev,
+                                        zoom: Math.min(100, prev.zoom * 5)
+                                    }))}
+                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
+                                    style={{
+                                        backgroundColor: colors.input.focus,
+                                        color: '#ffffff'
+                                    }}
+                                    title="Zoom in 5x"
+                                >
+                                    5x
+                                </button>
+                                <button
+                                    onClick={() => setViewState(prev => ({
+                                        ...prev,
+                                        zoom: Math.min(100, prev.zoom * 10)
+                                    }))}
+                                    className="px-1.5 py-0.5 rounded text-xs transition-all hover:opacity-80"
+                                    style={{
+                                        backgroundColor: colors.input.focus,
+                                        color: '#ffffff'
+                                    }}
+                                    title="Zoom in 10x"
+                                >
+                                    10x
+                                </button>
+                            </div>
+                        )}
                         <button
                             onClick={handleReset}
                             className="px-2 py-1 rounded text-xs transition-all hover:opacity-80"
@@ -1059,6 +1112,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                                 border: `1px solid ${colors.grid}`,
                                 color: colors.text.primary
                             }}
+                            title="Reset all zoom and pan"
                         >
                             Reset
                         </button>
@@ -1087,14 +1141,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.min(10, prev.verticalZoom * 1.5)
+                        verticalZoom: Math.min(20, prev.verticalZoom * 1.2)
                     }))}
-                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80"
+                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
                     style={{
                         backgroundColor: colors.panelBackground,
                         border: `1px solid ${colors.grid}`,
                         color: colors.text.primary
                     }}
+                    title="Zoom in vertically (Shift+Scroll also works)"
                 >
                     +
                 </button>
@@ -1108,14 +1163,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.max(0.5, prev.verticalZoom / 1.5)
+                        verticalZoom: Math.max(0.1, prev.verticalZoom / 1.2)
                     }))}
-                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80"
+                    className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
                     style={{
                         backgroundColor: colors.panelBackground,
                         border: `1px solid ${colors.grid}`,
                         color: colors.text.primary
                     }}
+                    title="Zoom out vertically (Shift+Scroll also works)"
                 >
                     -
                 </button>

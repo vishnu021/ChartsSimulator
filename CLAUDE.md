@@ -203,6 +203,19 @@ cp frontend/.env.example frontend/.env.local
 - **Health Monitoring**: Comprehensive health check endpoints with system metrics
 - **WebSocket Reliability**: Exponential backoff reconnection with connection pooling
 
+### Data Processing Enhancements
+- **Tick Data Processing**: Command line tool for processing tick files with time-price mappings
+- **Timestamp Deduplication**: Handles duplicate timestamps by incrementing by 600ms in both API and file processing
+- **Time Range Filtering**: Configurable time filtering for tick data processing (e.g., 9:20 AM to 1:20 PM)
+- **Enhanced Ticker API**: REST API now includes same deduplication logic as file processing for consistent data
+
+### Frontend Chart Improvements
+- **Enhanced Zooming**: Improved zoom controls with granular levels (0.1x to 100x horizontal, 0.1x to 20x vertical)
+- **Quick Zoom Buttons**: One-click 2x, 5x, and 10x zoom buttons for rapid navigation
+- **Adaptive Zoom Speed**: Zoom speed adapts based on current zoom level for smoother experience
+- **Dual-axis Zoom**: Horizontal zoom via scroll, vertical zoom via Shift+scroll
+- **Better UX**: Enhanced tooltips, visual feedback, and control instructions
+
 ### Development Enhancements
 - **Integrated Build**: Single command deploys both frontend and backend
 - **Configuration Validation**: Startup validation prevents deployment issues
