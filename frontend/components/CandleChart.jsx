@@ -126,11 +126,16 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         if (!setup) return;
 
         const { ctx, width, height } = setup;
-        // Use larger bottom padding for smaller charts (like dashboard panels)
+        // Use larger bottom padding for dashboard panels and small charts
         const basePadding = canvasUtils.getPadding(isMobile);
-        const padding = height < 400 ? {
+        // Detect dashboard panels: either small area or using external view state (dashboard sync)
+        const isDashboardPanel = externalViewState !== null || (width * height < 200000); // Small area indicates dashboard panel
+        const isSmallChart = height < 400;
+        const needsExtraPadding = isDashboardPanel || isSmallChart;
+        
+        const padding = needsExtraPadding ? {
             ...basePadding,
-            bottom: Math.max(50, basePadding.bottom + 25), // Extra space for time labels in small charts
+            bottom: Math.max(70, basePadding.bottom + 45), // Extra space to accommodate absolute positioning
             top: Math.max(20, basePadding.top),
             left: Math.max(40, basePadding.left - 10),
             right: Math.max(30, basePadding.right - 10)
@@ -178,7 +183,23 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         // Get time intervals for vertical grid lines and labels
         const timeIntervals = getTimeIntervals(data.candles, visibleStart, visibleEnd);
         
-        // Debug logging for time intervals
+        // Debug logging for time intervals and canvas dimensions
+        const calculatedLabelY = height - 5 - 14; // Same calculation as in the drawing loop
+        console.log('Canvas debug:', { 
+            width, 
+            height, 
+            area: width * height,
+            paddingBottom: padding.bottom,
+            timeIntervals: timeIntervals.length,
+            hasCandles: !!data.candles,
+            isDashboardPanel,
+            isSmallChart,
+            needsExtraPadding,
+            hasExternalViewState: !!externalViewState,
+            calculatedLabelY,
+            distanceFromBottom: height - calculatedLabelY
+        });
+        
         if (timeIntervals.length === 0) {
             console.log('No time intervals found', { 
                 hasCandles: !!data.candles, 
@@ -258,11 +279,23 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             const x = xScale(interval.index);
             if (x >= padding.left && x <= width - padding.right) {
                 const timeString = format(interval.time, 'HH:mm');
-                // Ensure labels are always visible - position within bottom padding
-                const labelY = height - padding.bottom + (height < 400 ? 20 : (isMobile ? 15 : 20));
+                // Ensure labels are always visible - aggressive positioning
+                // Always position from the actual bottom, working backwards
+                const textHeight = 14; // Approximate text height
+                const minMargin = 5; // Minimum space from canvas edge
+                
+                // Calculate safe Y position from canvas bottom
+                const labelY = height - minMargin - textHeight;
                 
                 // Draw with contrasting color and ensure visibility
                 ctx.save();
+                
+                // Draw background rectangle for better visibility
+                const textWidth = ctx.measureText(timeString).width;
+                ctx.fillStyle = colors.panelBackground || '#1e293b'; // Background color
+                ctx.fillRect(x - textWidth/2 - 2, labelY - textHeight + 2, textWidth + 4, textHeight + 2);
+                
+                // Draw text on top
                 ctx.fillStyle = colors.text.primary; // Use primary text color for better visibility
                 ctx.fillText(timeString, x, labelY);
                 ctx.restore();
