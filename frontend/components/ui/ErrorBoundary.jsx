@@ -73,7 +73,7 @@ class ErrorBoundary extends React.Component {
                         </div>
                         
                         <div className="text-sm text-gray-500 mb-4">
-                            <p>We're sorry, but something unexpected happened. Our team has been notified.</p>
+                            <p>We&apos;re sorry, but something unexpected happened. Our team has been notified.</p>
                             {this.state.errorId && (
                                 <p className="mt-2">
                                     <strong>Error ID:</strong> {this.state.errorId}

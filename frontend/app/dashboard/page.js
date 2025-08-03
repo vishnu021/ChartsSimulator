@@ -1,178 +1,27 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef, createContext, useContext } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppState } from '@/contexts/AppStateContext';
-
-const CandleChart = dynamic(() => import('@/components/CandleChart'), {
-    ssr: false,
-    loading: () => (
-        <div className="flex items-center justify-center h-full bg-gray-900 text-white">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto mb-1"></div>
-                <span className="text-xs">Loading...</span>
-            </div>
-        </div>
-    )
-});
+import CandleChart from '@/components/CandleChart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Context for synchronized chart interactions
-const SyncContext = createContext();
-
-const useSyncContext = () => {
-    const context = useContext(SyncContext);
-    if (!context) {
-        throw new Error('useSyncContext must be used within SyncProvider');
-    }
-    return context;
-};
-
-// Sync Provider component
-const SyncProvider = ({ children }) => {
-    const [syncState, setSyncState] = useState({
-        zoom: 1,
-        offset: 0,
-        isDragging: false
-    });
-
-    const updateSyncState = useCallback((newState) => {
-        setSyncState(prev => ({ ...prev, ...newState }));
-    }, []);
-
-    return (
-        <SyncContext.Provider value={{ syncState, updateSyncState }}>
-            {children}
-        </SyncContext.Provider>
-    );
-};
-
-// Cookie utilities
-const setCookie = (name, value, days = 30) => {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
-};
-
-const getCookie = (name) => {
-    if (typeof document === 'undefined') return null;
-    return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-    }, null);
-};
-
-// Synchronized Chart Component that wraps CandleChart with sync capabilities
-const SyncedCandleChart = ({ data, theme, chartId }) => {
-    const { syncState, updateSyncState } = useSyncContext();
-    const chartRef = useRef(null);
-    
-    // Create a synced view state that updates from global sync state
-    const syncedViewState = {
-        zoom: syncState.zoom,
-        offset: syncState.offset,
-        targetOffset: syncState.offset,
-        velocity: 0
-    };
-
-    // Handle synchronized interactions by intercepting events
-    useEffect(() => {
-        const chartElement = chartRef.current;
-        if (!chartElement || !data) return;
-
-        const handleWheel = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const rect = chartElement.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const chartWidth = rect.width - 100; // Account for padding
-            const mouseRatio = (x - 50) / chartWidth;
-
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            const newZoom = Math.max(0.5, Math.min(20, syncState.zoom * zoomFactor));
-
-            const totalWidth = chartWidth * syncState.zoom;
-            const newTotalWidth = chartWidth * newZoom;
-            const widthChange = newTotalWidth - totalWidth;
-            
-            const newOffset = syncState.offset - widthChange * mouseRatio;
-            const maxOffset = 0;
-            const minOffset = Math.min(0, chartWidth - newTotalWidth);
-            const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
-
-            updateSyncState({
-                zoom: newZoom,
-                offset: clampedOffset
-            });
-        };
-
-        const handleMouseDown = (e) => {
-            e.preventDefault();
-            const startX = e.clientX;
-            const startOffset = syncState.offset;
-            
-            updateSyncState({ isDragging: true });
-
-            const handleMouseMove = (e) => {
-                const dx = e.clientX - startX;
-                const newOffset = startOffset + dx;
-                
-                updateSyncState({
-                    offset: newOffset
-                });
-            };
-
-            const handleMouseUp = () => {
-                updateSyncState({ isDragging: false });
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        };
-
-        chartElement.addEventListener('wheel', handleWheel, { passive: false });
-        chartElement.addEventListener('mousedown', handleMouseDown);
-
-        return () => {
-            chartElement.removeEventListener('wheel', handleWheel);
-            chartElement.removeEventListener('mousedown', handleMouseDown);
-        };
-    }, [data, syncState, updateSyncState]);
-
-    if (!data) return null;
-
-    return (
-        <div ref={chartRef} className="w-full h-full">
-            <CandleChart 
-                data={data} 
-                theme={theme}
-                externalViewState={syncedViewState}
-            />
-        </div>
-    );
-};
-
-// Individual chart component
-const StockChart = ({ index, theme, globalDate, onSymbolChange }) => {
+// Simple chart component
+const SimpleChart = ({ index, theme, globalDate }) => {
     const [stockData, setStockData] = useState(null);
     const [symbol, setSymbol] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Load symbol from cookie on mount
+    // Load symbol from localStorage on mount
     useEffect(() => {
-        const savedSymbol = getCookie(`dashboard_symbol_${index}`);
-        if (savedSymbol) {
-            setSymbol(savedSymbol);
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(`dashboard_symbol_${index}`);
+            if (saved) setSymbol(saved);
         }
     }, [index]);
 
-    // Remove auto-loading - only load on button click
-
-    const loadStockData = useCallback(async (stockSymbol, date) => {
+    const loadData = useCallback(async (stockSymbol, date) => {
         if (!stockSymbol || !date) return;
         
         setIsLoading(true);
@@ -181,153 +30,92 @@ const StockChart = ({ index, theme, globalDate, onSymbolChange }) => {
         try {
             const params = new URLSearchParams({ symbol: stockSymbol, date });
             const response = await fetch(`${API_BASE_URL}/charts?${params}`);
-
+            
             if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { 
-                        message: `HTTP error! status: ${response.status}`,
-                        context: { symbol: stockSymbol, date, httpStatusCode: response.status }
-                    };
-                }
-                setError(JSON.stringify(errorData));
-                return;
+                throw new Error(`HTTP ${response.status}`);
             }
-
+            
             const result = await response.json();
             setStockData({
                 candles: result.candlesticks,
                 symbol: stockSymbol
             });
-        } catch (error) {
-            const errorData = {
-                message: 'Failed to load chart data: ' + error.message,
-                context: { symbol: stockSymbol, date, error: error.message }
-            };
-            setError(JSON.stringify(errorData));
+        } catch (err) {
+            setError(err.message);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
+    // Listen for load all event
+    useEffect(() => {
+        const handleLoadAll = (event) => {
+            if (symbol && event.detail.date) {
+                loadData(symbol, event.detail.date);
+            }
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('loadAllCharts', handleLoadAll);
+            return () => window.removeEventListener('loadAllCharts', handleLoadAll);
+        }
+    }, [symbol, loadData]);
+
     const handleSymbolChange = (e) => {
         const newSymbol = e.target.value;
         setSymbol(newSymbol);
-        setCookie(`dashboard_symbol_${index}`, newSymbol);
-        onSymbolChange(index, newSymbol);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(`dashboard_symbol_${index}`, newSymbol);
+        }
     };
 
     const handleLoad = () => {
         if (symbol && globalDate) {
-            setStockData(null); // Clear previous data
-            loadStockData(symbol, globalDate);
-        }
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
-            handleLoad();
+            setStockData(null);
+            loadData(symbol, globalDate);
         }
     };
 
     const colors = {
-        dark: {
-            background: '#0f172a',
-            panelBackground: '#1e293b',
-            grid: '#334155',
-            text: { primary: '#f1f5f9', secondary: '#94a3b8' },
-            input: { background: '#0f172a', border: '#475569', focus: '#3b82f6' }
-        },
-        light: {
-            background: '#f9fafb',
-            panelBackground: '#f3f4f6',
-            grid: '#d1d5db',
-            text: { primary: '#374151', secondary: '#6b7280' },
-            input: { background: '#f9fafb', border: '#d1d5db', focus: '#6366f1' }
-        }
+        dark: { bg: '#1e293b', border: '#475569', text: '#f1f5f9', input: '#0f172a' },
+        light: { bg: '#f3f4f6', border: '#d1d5db', text: '#374151', input: '#f9fafb' }
     };
-
-    const themeColors = colors[theme];
+    const c = colors[theme];
 
     return (
-        <div className="h-full flex flex-col" style={{ backgroundColor: themeColors.panelBackground }}>
-            {/* Fixed header - always same height */}
-            <div className="px-1 py-1 border-b flex items-center justify-between" style={{ 
-                borderColor: themeColors.grid,
-                height: '32px', // Fixed height
-                minHeight: '32px',
-                maxHeight: '32px'
-            }}>
-                <div className="flex gap-1 items-center flex-1">
-                    <input
-                        type="text"
-                        value={symbol}
-                        onChange={handleSymbolChange}
-                        onKeyPress={handleKeyPress}
-                        placeholder={`Stock ${index + 1}`}
-                        className="flex-1 px-1 py-0.5 rounded text-xs"
-                        style={{
-                            backgroundColor: themeColors.input.background,
-                            border: `1px solid ${themeColors.input.border}`,
-                            color: themeColors.text.primary,
-                            minWidth: '60px',
-                            height: '20px' // Fixed input height
-                        }}
-                    />
-                    <button
-                        onClick={handleLoad}
-                        disabled={isLoading || !symbol || !globalDate}
-                        className="px-1 py-0.5 rounded text-xs transition-all"
-                        style={{
-                            backgroundColor: themeColors.input.focus,
-                            color: '#ffffff',
-                            opacity: (isLoading || !symbol || !globalDate) ? 0.5 : 1,
-                            cursor: (isLoading || !symbol || !globalDate) ? 'not-allowed' : 'pointer',
-                            width: '24px', // Fixed button width
-                            height: '20px', // Fixed button height
-                            minWidth: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        {isLoading ? '⏳' : '⚡'}
-                    </button>
-                </div>
-                
-                {/* Fixed status area - always same width */}
-                <div className="text-xs ml-1" style={{ 
-                    color: themeColors.text.secondary,
-                    width: '30px', // Fixed width
-                    textAlign: 'right',
-                    fontSize: '10px'
-                }}>
-                    {stockData ? `${stockData.candles?.length || 0}c` : ''}
-                </div>
+        <div className="h-full flex flex-col" style={{ backgroundColor: c.bg }}>
+            <div className="p-2 border-b flex items-center gap-2" style={{ borderColor: c.border }}>
+                <input
+                    type="text"
+                    value={symbol}
+                    onChange={handleSymbolChange}
+                    placeholder={`Symbol ${index + 1}`}
+                    className="flex-1 px-2 py-1 rounded text-sm"
+                    style={{ backgroundColor: c.input, border: `1px solid ${c.border}`, color: c.text }}
+                />
+                <button
+                    onClick={handleLoad}
+                    disabled={isLoading || !symbol}
+                    className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                    {isLoading ? '⏳' : '⚡'}
+                </button>
             </div>
-
-            {/* Fixed chart area - always same dimensions */}
-            <div style={{ 
-                height: 'calc(100% - 32px)', // Fixed height minus header
-                position: 'relative',
-                minHeight: '200px' // Minimum chart height
-            }}>
+            <div className="flex-1 relative">
                 {error ? (
-                    <div className="flex items-center justify-center h-full p-2">
-                        <div className="text-center text-xs text-red-400">
-                            <div className="mb-1">❌</div>
-                            <div className="text-xs opacity-75">No data</div>
+                    <div className="flex items-center justify-center h-full text-red-400">
+                        <div className="text-center">
+                            <div>❌</div>
+                            <div className="text-xs mt-1">Error loading data</div>
                         </div>
                     </div>
                 ) : stockData ? (
-                    <SyncedCandleChart data={stockData} theme={theme} chartId={index} />
+                    <CandleChart data={stockData} theme={theme} />
                 ) : (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-xs" style={{ color: themeColors.text.secondary }}>
-                            <div className="mb-1">📊</div>
-                            <div>Click ⚡ to load</div>
+                    <div className="flex items-center justify-center h-full" style={{ color: c.text }}>
+                        <div className="text-center">
+                            <div>📊</div>
+                            <div className="text-sm mt-1">Enter symbol and click ⚡</div>
                         </div>
                     </div>
                 )}
@@ -339,150 +127,59 @@ const StockChart = ({ index, theme, globalDate, onSymbolChange }) => {
 export default function DashboardPage() {
     const { theme, toggleTheme, date, updateDate } = useAppState();
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Update time every second
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const getPreviousDate = (currentDate) => {
-        const date = new Date(currentDate);
-        do {
-            date.setDate(date.getDate() - 1);
-        } while (date.getDay() === 0 || date.getDay() === 6);
-        return date.toISOString().split('T')[0];
+    const loadAllCharts = () => {
+        const event = new CustomEvent('loadAllCharts', { detail: { date } });
+        window.dispatchEvent(event);
     };
 
-    const getNextDate = (currentDate) => {
-        const date = new Date(currentDate);
-        do {
-            date.setDate(date.getDate() + 1);
-        } while (date.getDay() === 0 || date.getDay() === 6);
-        return date.toISOString().split('T')[0];
-    };
-
-    const handleDateChange = (e) => {
-        updateDate(e.target.value);
-        // Remove automatic refresh - only refresh on button click
-    };
-
-    const handlePreviousDate = () => {
-        const prevDate = getPreviousDate(date);
-        updateDate(prevDate);
-        // Remove automatic refresh - only refresh on button click
-    };
-
-    const handleNextDate = () => {
-        const nextDate = getNextDate(date);
-        updateDate(nextDate);
-        // Remove automatic refresh - only refresh on button click
-    };
-
-    const refreshAll = () => {
+    const resetAllCharts = () => {
+        for (let i = 0; i < 4; i++) {
+            localStorage.removeItem(`dashboard_symbol_${i}`);
+        }
         setRefreshTrigger(prev => prev + 1);
     };
 
-    const handleSymbolChange = (index, symbol) => {
-        // This could be used for additional symbol tracking if needed
-    };
-
     const colors = {
-        dark: {
-            background: '#0f172a',
-            panelBackground: '#1e293b',
-            grid: '#334155',
-            text: { primary: '#f1f5f9', secondary: '#94a3b8' },
-            input: { background: '#0f172a', border: '#475569', focus: '#3b82f6' }
-        },
-        light: {
-            background: '#f9fafb',
-            panelBackground: '#f3f4f6',
-            grid: '#d1d5db',
-            text: { primary: '#374151', secondary: '#6b7280' },
-            input: { background: '#f9fafb', border: '#d1d5db', focus: '#6366f1' }
-        }
+        dark: { bg: '#0f172a', panel: '#1e293b', border: '#475569', text: '#f1f5f9' },
+        light: { bg: '#f9fafb', panel: '#f3f4f6', border: '#d1d5db', text: '#374151' }
     };
-
-    const themeColors = colors[theme];
+    const c = colors[theme];
 
     return (
-        <SyncProvider>
-            <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: themeColors.background, paddingTop: '4rem' }}>
-            {/* Ultra compact top bar */}
-            <div className="flex-shrink-0 px-2 py-1 border-b" style={{ backgroundColor: themeColors.panelBackground, borderColor: themeColors.grid }}>
+        <div className="h-screen flex flex-col" style={{ backgroundColor: c.bg, paddingTop: '4rem' }}>
+            {/* Header */}
+            <div className="flex-shrink-0 p-4 border-b" style={{ backgroundColor: c.panel, borderColor: c.border }}>
                 <div className="flex items-center justify-between">
-                    {/* Left: Title and Time */}
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-sm font-bold" style={{ color: themeColors.text.primary }}>
-                            📋 Multi-Stock Dashboard
-                        </h1>
-                        <div className="text-xs font-mono" style={{ color: themeColors.text.secondary }}>
-                            {currentTime.toLocaleTimeString()}
-                        </div>
-                    </div>
-
-                    {/* Center: Date Navigation */}
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={handlePreviousDate}
-                            className="px-1 py-0.5 rounded text-xs transition-all hover:scale-105"
-                            style={{
-                                backgroundColor: themeColors.background,
-                                border: `1px solid ${themeColors.input.border}`,
-                                color: themeColors.text.primary
-                            }}
-                            title="Previous Day"
-                        >
-                            ◀
-                        </button>
+                    <h1 className="text-xl font-bold" style={{ color: c.text }}>
+                        📋 Multi-Stock Dashboard
+                    </h1>
+                    <div className="flex items-center gap-2">
                         <input
                             type="date"
                             value={date}
-                            onChange={handleDateChange}
-                            className="px-2 py-0.5 rounded text-xs"
-                            style={{
-                                backgroundColor: themeColors.input.background,
-                                border: `1px solid ${themeColors.input.border}`,
-                                color: themeColors.text.primary,
-                            }}
+                            onChange={(e) => updateDate(e.target.value)}
+                            className="px-3 py-1 rounded border"
+                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
                         />
                         <button
-                            onClick={handleNextDate}
-                            className="px-1 py-0.5 rounded text-xs transition-all hover:scale-105"
-                            style={{
-                                backgroundColor: themeColors.background,
-                                border: `1px solid ${themeColors.input.border}`,
-                                color: themeColors.text.primary
-                            }}
-                            title="Next Day"
+                            onClick={loadAllCharts}
+                            className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                            title="Load All Charts"
                         >
-                            ▶
+                            ⚡📊
                         </button>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-1">
                         <button
-                            onClick={refreshAll}
-                            className="px-2 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-                            style={{
-                                backgroundColor: themeColors.input.focus,
-                                color: '#ffffff'
-                            }}
-                            title="Refresh All Charts"
+                            onClick={resetAllCharts}
+                            className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                            title="Reset All"
                         >
-                            🔄
+                            🧹
                         </button>
                         <button
                             onClick={toggleTheme}
-                            className="px-2 py-0.5 rounded transition-all text-xs"
-                            style={{
-                                backgroundColor: themeColors.background,
-                                border: `1px solid ${themeColors.input.border}`,
-                                color: themeColors.text.primary
-                            }}
+                            className="px-3 py-1 rounded border"
+                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
                         >
                             {theme === 'dark' ? '☀️' : '🌙'}
                         </button>
@@ -490,37 +187,20 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Fixed chart grid - consistent panel sizes */}
-            <div className="flex-1 p-1 overflow-hidden" style={{ minHeight: '0', maxHeight: 'calc(100vh - 4rem - 48px)' }}>
-                <div className="grid grid-cols-2 gap-1 h-full overflow-hidden" style={{ 
-                    gridTemplateRows: '1fr 1fr', // Fixed equal rows
-                    gridTemplateColumns: '1fr 1fr' // Fixed equal columns
-                }}>
+            {/* Chart Grid */}
+            <div className="flex-1 p-4">
+                <div className="grid grid-cols-2 gap-4 h-full">
                     {[0, 1, 2, 3].map((index) => (
-                        <div 
-                            key={index} // Remove refreshTrigger to prevent re-mounting
-                            className="rounded border overflow-hidden"
-                            style={{ 
-                                backgroundColor: themeColors.panelBackground,
-                                borderColor: themeColors.grid,
-                                height: '100%', // Fill available space exactly
-                                width: '100%', // Fill available space exactly
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}
+                        <div
+                            key={`${index}-${refreshTrigger}`}
+                            className="border rounded-lg overflow-hidden"
+                            style={{ backgroundColor: c.panel, borderColor: c.border }}
                         >
-                            <StockChart 
-                                index={index} 
-                                theme={theme} 
-                                globalDate={date}
-                                onSymbolChange={handleSymbolChange}
-                                key={refreshTrigger} // Move refresh trigger here for data refresh only
-                            />
+                            <SimpleChart index={index} theme={theme} globalDate={date} />
                         </div>
                     ))}
                 </div>
             </div>
         </div>
-        </SyncProvider>
     );
 }

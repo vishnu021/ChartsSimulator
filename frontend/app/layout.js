@@ -5,6 +5,9 @@ import { AppStateProvider } from '@/contexts/AppStateContext';
 export const metadata = {
     title: "Charts Simulator",
     description: "Real-time financial charts simulator",
+    icons: {
+        icon: '/favicon.svg',
+    },
 };
 
 export default function RootLayout({ children }) {
