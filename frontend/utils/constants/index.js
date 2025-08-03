@@ -1,7 +1,7 @@
 export const CHART_CONSTANTS = {
-    MIN_ZOOM: 0.5,
+    MIN_ZOOM: 1.0,
     MAX_ZOOM: 50,
-    MIN_VERTICAL_ZOOM: 0.5,
+    MIN_VERTICAL_ZOOM: 1.0,
     MAX_VERTICAL_ZOOM: 10,
 
     PADDING: {

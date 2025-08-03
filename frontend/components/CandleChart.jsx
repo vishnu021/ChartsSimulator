@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { themes, chartSettings } from './chartConfig';
 import { CHART_CONSTANTS, UI_CONSTANTS } from '@/utils/constants';
@@ -18,7 +18,9 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
     
     // Use external view state if provided, otherwise use internal state
     const viewState = externalViewState || internalViewState;
-    const setViewState = externalViewState ? () => {} : setInternalViewState;
+    const setViewState = useMemo(() => {
+        return externalViewState ? () => {} : setInternalViewState;
+    }, [externalViewState]);
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -83,33 +85,38 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [isDragging]);
+    }, [isDragging, setViewState]);
 
-    // Helper function to find 30-minute intervals
-    const getThirtyMinuteIntervals = (candles, visibleStart, visibleEnd) => {
+    // Helper function to find time intervals for labels
+    const getTimeIntervals = useCallback((candles, visibleStart, visibleEnd) => {
         const intervals = [];
-        const startTime = new Date(candles[visibleStart]?.time);
+        if (!candles || candles.length === 0) return intervals;
 
-        if (!startTime || isNaN(startTime.getTime())) return intervals;
+        // Calculate how many labels we want to show
+        const visibleCandles = visibleEnd - visibleStart;
+        const targetLabels = isMobile ? 3 : 6;
+        const step = Math.max(1, Math.floor(visibleCandles / targetLabels));
 
-        for (let i = visibleStart; i < visibleEnd; i++) {
+        for (let i = visibleStart; i < visibleEnd; i += step) {
+            if (i >= candles.length) break;
+            
             const candleTime = new Date(candles[i].time);
             if (isNaN(candleTime.getTime())) continue;
 
-            const candleMinutes = candleTime.getMinutes();
-            if (candleMinutes === 0 || candleMinutes === 30) {
-                if (isMobile) {
-                    if (candleMinutes === 0) {
-                        intervals.push({ index: i, time: candleTime });
-                    }
-                } else {
-                    intervals.push({ index: i, time: candleTime });
-                }
+            intervals.push({ index: i, time: candleTime });
+        }
+
+        // Always include the last visible candle if not already included
+        const lastIndex = Math.min(visibleEnd - 1, candles.length - 1);
+        if (lastIndex > visibleStart && !intervals.find(interval => interval.index === lastIndex)) {
+            const lastTime = new Date(candles[lastIndex].time);
+            if (!isNaN(lastTime.getTime())) {
+                intervals.push({ index: lastIndex, time: lastTime });
             }
         }
 
         return intervals;
-    };
+    }, [isMobile]);
 
     // Draw chart function - now using utilities
     const drawChart = useCallback(() => {
@@ -119,7 +126,15 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         if (!setup) return;
 
         const { ctx, width, height } = setup;
-        const padding = canvasUtils.getPadding(isMobile);
+        // Use larger bottom padding for smaller charts (like dashboard panels)
+        const basePadding = canvasUtils.getPadding(isMobile);
+        const padding = height < 400 ? {
+            ...basePadding,
+            bottom: Math.max(50, basePadding.bottom + 25), // Extra space for time labels in small charts
+            top: Math.max(20, basePadding.top),
+            left: Math.max(40, basePadding.left - 10),
+            right: Math.max(30, basePadding.right - 10)
+        } : basePadding;
         const { chartWidth, chartHeight } = canvasUtils.getChartDimensions(width, height, padding);
 
         // Clear canvas
@@ -160,8 +175,19 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
 
-        // Get 30-minute intervals for vertical grid lines
-        const timeIntervals = getThirtyMinuteIntervals(data.candles, visibleStart, visibleEnd);
+        // Get time intervals for vertical grid lines and labels
+        const timeIntervals = getTimeIntervals(data.candles, visibleStart, visibleEnd);
+        
+        // Debug logging for time intervals
+        if (timeIntervals.length === 0) {
+            console.log('No time intervals found', { 
+                hasCandles: !!data.candles, 
+                candlesLength: data.candles?.length,
+                visibleStart, 
+                visibleEnd,
+                sampleCandle: data.candles?.[0]
+            });
+        }
 
         // Vertical grid lines at time intervals
         timeIntervals.forEach(interval => {
@@ -225,11 +251,21 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
 
         // X-axis labels
         ctx.textAlign = 'center';
+        ctx.fillStyle = colors.text.secondary;
+        ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
+        
         timeIntervals.forEach(interval => {
             const x = xScale(interval.index);
             if (x >= padding.left && x <= width - padding.right) {
                 const timeString = format(interval.time, 'HH:mm');
-                ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
+                // Ensure labels are always visible - position within bottom padding
+                const labelY = height - padding.bottom + (height < 400 ? 20 : (isMobile ? 15 : 20));
+                
+                // Draw with contrasting color and ensure visibility
+                ctx.save();
+                ctx.fillStyle = colors.text.primary; // Use primary text color for better visibility
+                ctx.fillText(timeString, x, labelY);
+                ctx.restore();
             }
         });
 
@@ -320,7 +356,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
                 });
             }
         }
-    }, [data, viewState, mousePos, showCrosshair, colors, isMobile]);
+    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getTimeIntervals]);
 
     useEffect(() => {
         drawChart();
@@ -415,7 +451,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [data, viewState, isDragging, dragStart, isMobile, externalViewState]);
+    }, [data, viewState, isDragging, dragStart, isMobile, externalViewState, setViewState]);
 
     const handleReset = () => {
         setViewState({

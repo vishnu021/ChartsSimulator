@@ -880,21 +880,24 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
             // Simplified and stable zoom calculation
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Simple zoom in/out factor
+            // e.deltaY > 0 = scroll down = zoom out (smaller factor)
+            // e.deltaY < 0 = scroll up = zoom in (larger factor)
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
 
             // Check if Shift key is held for vertical zoom
             if (e.shiftKey) {
                 // Vertical zoom stable at cursor position
-                const newVerticalZoom = Math.max(0.2, Math.min(20, viewState.verticalZoom * zoomFactor));
+                const newVerticalZoom = Math.max(1.0, Math.min(20, viewState.verticalZoom * zoomFactor));
                 
                 // Calculate vertical offset to keep cursor position stable
                 const chartHeight = rect.height - chartSettings.padding.top - chartSettings.padding.bottom;
                 const mouseY = e.clientY - rect.top - chartSettings.padding.top;
-                const mouseRatioY = mouseY / chartHeight;
+                const mouseRatioY = Math.max(0, Math.min(1, mouseY / chartHeight));
                 
-                // Adjust vertical offset to zoom around cursor
-                const zoomChange = newVerticalZoom / viewState.verticalZoom;
-                const newVerticalOffset = viewState.verticalOffset + (mouseRatioY - 0.5) * chartHeight * (1 - 1/zoomChange);
+                // Simpler zoom offset calculation
+                const zoomRatio = newVerticalZoom / viewState.verticalZoom;
+                const offsetAdjustment = chartHeight * (mouseRatioY - 0.5) * (1 - 1/zoomRatio);
+                const newVerticalOffset = viewState.verticalOffset + offsetAdjustment;
                 
                 setViewState(prev => ({
                     ...prev,
@@ -905,7 +908,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 return; // Prevent horizontal zoom when shift is held
             } else {
                 // Horizontal zoom stable at cursor position
-                const newZoom = Math.max(0.2, Math.min(100, viewState.zoom * zoomFactor));
+                const newZoom = Math.max(1.0, Math.min(100, viewState.zoom * zoomFactor));
 
                 // Calculate horizontal offset to keep cursor position stable
                 const totalWidth = chartWidth * viewState.zoom;
@@ -1116,7 +1119,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                 <button
                     onClick={() => setViewState(prev => ({
                         ...prev,
-                        verticalZoom: Math.max(0.2, prev.verticalZoom / 1.2),
+                        verticalZoom: Math.max(1.0, prev.verticalZoom / 1.2),
                         targetVerticalOffset: prev.targetVerticalOffset // Preserve vertical position
                     }))}
                     className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"

@@ -354,7 +354,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
             const zoomSpeed = 0.002;
             const zoomDelta = -e.deltaY * zoomSpeed;
-            const newZoom = Math.max(0.5, Math.min(20, viewState.zoom + zoomDelta * viewState.zoom));
+            const newZoom = Math.max(1.0, Math.min(20, viewState.zoom + zoomDelta * viewState.zoom));
 
             const oldCandleWidth = chartWidth / data.candlesticks.length * viewState.zoom;
             const newCandleWidth = chartWidth / data.candlesticks.length * newZoom;

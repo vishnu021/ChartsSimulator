@@ -455,7 +455,7 @@ export default function Chart({ data, theme = 'dark' }) {
 
             // Simplified and stable zoom calculation
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Simple zoom in/out factor
-            const newZoom = Math.max(0.5, Math.min(20, viewState.zoom * zoomFactor));
+            const newZoom = Math.max(1.0, Math.min(20, viewState.zoom * zoomFactor));
 
             // Calculate horizontal offset to keep cursor position stable
             const totalWidth = chartWidth * viewState.zoom;

@@ -73,15 +73,18 @@ const SyncedChart = ({ data, theme, chartId }) => {
             const chartWidth = rect.width - 100;
             const mouseRatio = (x - 50) / chartWidth;
 
+            // Improved zoom behavior - minimum 100% (1.0x), maximum 20x zoom
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            // Prevent zoom below 100% (1.0)
             const newZoom = Math.max(1.0, Math.min(20, syncState.zoom * zoomFactor));
 
+            // Calculate offset adjustment to keep zoom centered on mouse position
             const totalWidth = chartWidth * syncState.zoom;
             const newTotalWidth = chartWidth * newZoom;
             const widthChange = newTotalWidth - totalWidth;
 
             const newOffset = syncState.offset - widthChange * mouseRatio;
+            
+            // Calculate proper bounds for offset
             const maxOffset = 0;
             const minOffset = Math.min(0, chartWidth - newTotalWidth);
             const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
@@ -275,67 +278,144 @@ export default function DashboardPage() {
     };
     const c = colors[theme];
 
+    // Utility functions for date navigation (skip weekends)
+    const getPreviousDate = (currentDate) => {
+        const date = new Date(currentDate);
+        do {
+            date.setDate(date.getDate() - 1);
+        } while (date.getDay() === 0 || date.getDay() === 6); // Skip Sunday (0) and Saturday (6)
+        return date.toISOString().split('T')[0];
+    };
+
+    const getNextDate = (currentDate) => {
+        const date = new Date(currentDate);
+        do {
+            date.setDate(date.getDate() + 1);
+        } while (date.getDay() === 0 || date.getDay() === 6); // Skip Sunday (0) and Saturday (6)
+        return date.toISOString().split('T')[0];
+    };
+
+    const handlePreviousDate = () => {
+        const prevDate = getPreviousDate(date);
+        updateDate(prevDate);
+    };
+
+    const handleNextDate = () => {
+        const nextDate = getNextDate(date);
+        updateDate(nextDate);
+    };
+
     return (
         <SyncProvider>
-            <div className="h-screen flex flex-col" style={{ backgroundColor: c.bg }}>
-                {/* Header */}
-                <div className="flex-shrink-0 p-2 border-b" style={{ backgroundColor: c.panel, borderColor: c.border }}>
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-lg font-bold" style={{ color: c.text }}>
-                            📋 Multi-Stock Dashboard
-                        </h1>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => updateDate(e.target.value)}
-                                className="px-3 py-1 rounded border"
-                                style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
-                            />
-                            <button
-                                onClick={loadAllCharts}
-                                className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                                title="Load All Charts"
-                            >
-                                ⚡📊
-                            </button>
-                            <button
-                                onClick={resetAllCharts}
-                                className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                                title="Reset All"
-                            >
-                                🧹
-                            </button>
-                            <button
-                                onClick={toggleTheme}
-                                className="px-3 py-1 rounded border"
-                                style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
-                            >
-                                {theme === 'dark' ? '☀️' : '🌙'}
-                            </button>
-                        </div>
+            <div 
+                className="flex flex-col"
+                style={{ 
+                    backgroundColor: c.bg, 
+                    height: 'calc(100vh - 64px)', // Account for main nav header (h-16 = 64px)
+                    width: '100vw',
+                    overflow: 'hidden'
+                }}
+            >
+                {/* Dashboard Header - Fixed height */}
+                <div 
+                    className="flex-shrink-0 border-b"
+                    style={{ 
+                        backgroundColor: c.panel, 
+                        borderColor: c.border,
+                        height: '56px',
+                        padding: '8px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}
+                >
+                    <h1 className="text-lg font-bold" style={{ color: c.text }}>
+                        📋 Multi-Stock Dashboard
+                    </h1>
+                    <div className="flex items-center gap-2">
+                        {/* Date Navigation */}
+                        <button
+                            onClick={handlePreviousDate}
+                            className="px-2 py-1 rounded text-sm font-medium transition-all hover:scale-105"
+                            style={{
+                                backgroundColor: c.bg,
+                                border: `1px solid ${c.border}`,
+                                color: c.text
+                            }}
+                            title="Previous Day"
+                        >
+                            ◀
+                        </button>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => updateDate(e.target.value)}
+                            className="px-3 py-1 rounded border"
+                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+                        />
+                        <button
+                            onClick={handleNextDate}
+                            className="px-2 py-1 rounded text-sm font-medium transition-all hover:scale-105"
+                            style={{
+                                backgroundColor: c.bg,
+                                border: `1px solid ${c.border}`,
+                                color: c.text
+                            }}
+                            title="Next Day"
+                        >
+                            ▶
+                        </button>
+                        <button
+                            onClick={loadAllCharts}
+                            className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                            title="Load All Charts"
+                        >
+                            ⚡📊
+                        </button>
+                        <button
+                            onClick={resetAllCharts}
+                            className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                            title="Reset All"
+                        >
+                            🧹
+                        </button>
+                        <button
+                            onClick={toggleTheme}
+                            className="px-3 py-1 rounded border"
+                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+                        >
+                            {theme === 'dark' ? '☀️' : '🌙'}
+                        </button>
                     </div>
                 </div>
 
-                {/* Chart Grid */}
-                <div className="flex-1 p-2 min-h-0">
-                    <div className="grid grid-cols-2 grid-rows-2 gap-2 h-full w-full" style={{ minHeight: '400px' }}>
-                        {[0, 1, 2, 3].map((index) => (
-                            <div
-                                key={`${index}-${refreshTrigger}`}
-                                className="border rounded-lg overflow-hidden flex flex-col"
-                                style={{ 
-                                    backgroundColor: c.panel, 
-                                    borderColor: c.border,
-                                    minHeight: '200px',
-                                    height: '100%',
-                                    width: '100%'
-                                }}
-                            >
-                                <SimpleChart index={index} theme={theme} globalDate={date} />
-                            </div>
-                        ))}
-                    </div>
+                {/* Chart Grid - Calculated height accounting for both headers */}
+                <div 
+                    style={{ 
+                        height: 'calc(100vh - 64px - 56px)', // 100vh - main nav (64px) - dashboard header (56px)
+                        padding: '2px',
+                        overflow: 'hidden',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gridTemplateRows: '1fr 1fr',
+                        gap: '2px'
+                    }}
+                >
+                    {[0, 1, 2, 3].map((index) => (
+                        <div
+                            key={`${index}-${refreshTrigger}`}
+                            className="border rounded overflow-hidden flex flex-col"
+                            style={{ 
+                                backgroundColor: c.panel, 
+                                borderColor: c.border,
+                                minHeight: 0,
+                                height: '100%',
+                                width: '100%'
+                            }}
+                        >
+                            <SimpleChart index={index} theme={theme} globalDate={date} />
+                        </div>
+                    ))}
                 </div>
             </div>
         </SyncProvider>
