@@ -182,33 +182,6 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
 
         // Get time intervals for vertical grid lines and labels
         const timeIntervals = getTimeIntervals(data.candles, visibleStart, visibleEnd);
-        
-        // Debug logging for time intervals and canvas dimensions
-        const calculatedLabelY = height - 5 - 14; // Same calculation as in the drawing loop
-        console.log('Canvas debug:', { 
-            width, 
-            height, 
-            area: width * height,
-            paddingBottom: padding.bottom,
-            timeIntervals: timeIntervals.length,
-            hasCandles: !!data.candles,
-            isDashboardPanel,
-            isSmallChart,
-            needsExtraPadding,
-            hasExternalViewState: !!externalViewState,
-            calculatedLabelY,
-            distanceFromBottom: height - calculatedLabelY
-        });
-        
-        if (timeIntervals.length === 0) {
-            console.log('No time intervals found', { 
-                hasCandles: !!data.candles, 
-                candlesLength: data.candles?.length,
-                visibleStart, 
-                visibleEnd,
-                sampleCandle: data.candles?.[0]
-            });
-        }
 
         // Vertical grid lines at time intervals
         timeIntervals.forEach(interval => {
@@ -265,12 +238,20 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
 
         canvasUtils.clearClippingRegion(ctx);
 
-        // Draw axes labels
+        // Draw axes labels (outside clipping region)
         ctx.fillStyle = colors.text.secondary;
         const labelFontSize = isMobile ? '10px' : '12px';
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
-        // X-axis labels
+        // Y-axis labels (left side)
+        ctx.textAlign = 'right';
+        for (let i = 0; i <= horizontalLines; i++) {
+            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
+            const y = yScale(price);
+            ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
+        }
+
+        // X-axis labels (bottom) - Draw these AFTER clearing clipping region
         ctx.textAlign = 'center';
         ctx.fillStyle = colors.text.secondary;
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
@@ -279,36 +260,27 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             const x = xScale(interval.index);
             if (x >= padding.left && x <= width - padding.right) {
                 const timeString = format(interval.time, 'HH:mm');
-                // Ensure labels are always visible - aggressive positioning
-                // Always position from the actual bottom, working backwards
-                const textHeight = 14; // Approximate text height
-                const minMargin = 5; // Minimum space from canvas edge
                 
-                // Calculate safe Y position from canvas bottom
-                const labelY = height - minMargin - textHeight;
+                // Position labels in the bottom padding area, below the chart
+                const labelY = height - padding.bottom + 15; // Place in bottom padding area
                 
-                // Draw with contrasting color and ensure visibility
+                // Draw with contrasting background for better visibility
                 ctx.save();
                 
-                // Draw background rectangle for better visibility
+                // Measure text for background rectangle
                 const textWidth = ctx.measureText(timeString).width;
-                ctx.fillStyle = colors.panelBackground || '#1e293b'; // Background color
-                ctx.fillRect(x - textWidth/2 - 2, labelY - textHeight + 2, textWidth + 4, textHeight + 2);
+                const textHeight = 12;
                 
-                // Draw text on top
-                ctx.fillStyle = colors.text.primary; // Use primary text color for better visibility
+                // Draw background rectangle
+                ctx.fillStyle = colors.panelBackground || colors.background;
+                ctx.fillRect(x - textWidth/2 - 2, labelY - textHeight, textWidth + 4, textHeight + 2);
+                
+                // Draw text on top with primary color for better visibility
+                ctx.fillStyle = colors.text.primary;
                 ctx.fillText(timeString, x, labelY);
                 ctx.restore();
             }
         });
-
-        // Y-axis labels
-        ctx.textAlign = 'right';
-        for (let i = 0; i <= horizontalLines; i++) {
-            const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
-            const y = yScale(price);
-            ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
-        }
 
         // Draw crosshair
         if (!isMobile && showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
@@ -389,7 +361,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
                 });
             }
         }
-    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getTimeIntervals]);
+    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getTimeIntervals, externalViewState]);
 
     useEffect(() => {
         drawChart();

@@ -858,7 +858,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             ctx.fillText(timeLabel, mousePos.x, height - padding.bottom + 20);
         }
 
-    }, [processedData, colors, symbol, viewState, mousePos, showCrosshair, isMobile, theme]);
+    }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme]);
 
     // Draw chart on data change
     useEffect(() => {

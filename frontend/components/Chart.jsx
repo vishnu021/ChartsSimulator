@@ -95,7 +95,7 @@ export default function Chart({ data, theme = 'dark' }) {
     }, [isDragging]);
 
     // Helper function to find 30-minute intervals
-    const getThirtyMinuteIntervals = (candles, visibleStart, visibleEnd) => {
+    const getThirtyMinuteIntervals = useCallback((candles, visibleStart, visibleEnd) => {
         const intervals = [];
         const startTime = new Date(candles[visibleStart]?.time);
 
@@ -126,7 +126,7 @@ export default function Chart({ data, theme = 'dark' }) {
         }
 
         return intervals;
-    };
+    }, [isMobile]);
 
     // Draw chart
     const drawChart = useCallback(() => {
@@ -432,7 +432,7 @@ export default function Chart({ data, theme = 'dark' }) {
                 });
             }
         }
-    }, [data, viewState, mousePos, showCrosshair, colors, isMobile]);
+    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getThirtyMinuteIntervals]);
 
     // Draw on every frame
     useEffect(() => {

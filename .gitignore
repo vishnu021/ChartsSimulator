@@ -77,3 +77,4 @@ logs/
 # TypeScript
 next-env.d.ts
 /output
+/src/main/resources/static

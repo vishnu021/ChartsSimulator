@@ -91,7 +91,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     }, [isDragging]);
 
     // Helper function to find time intervals
-    const getTimeIntervals = (candles, visibleStart, visibleEnd) => {
+    const getTimeIntervals = useCallback((candles, visibleStart, visibleEnd) => {
         const intervals = [];
 
         for (let i = visibleStart; i < visibleEnd; i++) {
@@ -113,7 +113,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         }
 
         return intervals;
-    };
+    }, [isMobile]);
 
     // Draw chart
     const drawChart = useCallback(() => {
@@ -333,7 +333,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
             ctx.setLineDash([]);
         }
 
-    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, showHeikinAshi]);
+    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, showHeikinAshi, getTimeIntervals]);
 
     // Draw on every frame
     useEffect(() => {
