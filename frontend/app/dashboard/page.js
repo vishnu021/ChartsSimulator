@@ -1,10 +1,139 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, createContext, useContext } from 'react';
 import { useAppState } from '@/contexts/AppStateContext';
 import CandleChart from '@/components/CandleChart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Sync context for chart synchronization
+const SyncContext = createContext();
+
+const useSyncContext = () => {
+    const context = useContext(SyncContext);
+    if (!context) {
+        throw new Error('useSyncContext must be used within SyncProvider');
+    }
+    return context;
+};
+
+const SyncProvider = ({ children }) => {
+    const [syncState, setSyncState] = useState({
+        zoom: 1,
+        offset: 0,
+        isDragging: false
+    });
+
+    const updateSyncState = useCallback((newState) => {
+        setSyncState(prev => ({ ...prev, ...newState }));
+    }, []);
+
+    // Listen for reset zoom event
+    useEffect(() => {
+        const handleResetZoom = () => {
+            setSyncState({ zoom: 1, offset: 0, isDragging: false });
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resetZoom', handleResetZoom);
+            return () => window.removeEventListener('resetZoom', handleResetZoom);
+        }
+    }, []);
+
+    return (
+        <SyncContext.Provider value={{ syncState, updateSyncState }}>
+            {children}
+        </SyncContext.Provider>
+    );
+};
+
+// Synchronized Chart Component
+const SyncedChart = ({ data, theme, chartId }) => {
+    const { syncState, updateSyncState } = useSyncContext();
+    const chartRef = useRef(null);
+    
+    const syncedViewState = {
+        zoom: syncState.zoom,
+        offset: syncState.offset,
+        targetOffset: syncState.offset,
+        velocity: 0
+    };
+
+    // Handle synchronized zoom and pan
+    useEffect(() => {
+        const chartElement = chartRef.current;
+        if (!chartElement || !data) return;
+
+        const handleWheel = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const rect = chartElement.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const chartWidth = rect.width - 100;
+            const mouseRatio = (x - 50) / chartWidth;
+
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            // Prevent zoom below 100% (1.0)
+            const newZoom = Math.max(1.0, Math.min(20, syncState.zoom * zoomFactor));
+
+            const totalWidth = chartWidth * syncState.zoom;
+            const newTotalWidth = chartWidth * newZoom;
+            const widthChange = newTotalWidth - totalWidth;
+
+            const newOffset = syncState.offset - widthChange * mouseRatio;
+            const maxOffset = 0;
+            const minOffset = Math.min(0, chartWidth - newTotalWidth);
+            const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+
+            updateSyncState({
+                zoom: newZoom,
+                offset: clampedOffset
+            });
+        };
+
+        const handleMouseDown = (e) => {
+            updateSyncState({ isDragging: true });
+            const startX = e.clientX;
+            const startOffset = syncState.offset;
+
+            const handleMouseMove = (e) => {
+                const dx = e.clientX - startX;
+                const newOffset = startOffset + dx;
+                updateSyncState({ offset: newOffset });
+            };
+
+            const handleMouseUp = () => {
+                updateSyncState({ isDragging: false });
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        };
+
+        chartElement.addEventListener('wheel', handleWheel, { passive: false });
+        chartElement.addEventListener('mousedown', handleMouseDown);
+
+        return () => {
+            chartElement.removeEventListener('wheel', handleWheel);
+            chartElement.removeEventListener('mousedown', handleMouseDown);
+        };
+    }, [data, syncState, updateSyncState]);
+
+    if (!data) return null;
+
+    return (
+        <div ref={chartRef} className="w-full h-full">
+            <CandleChart 
+                data={data} 
+                theme={theme}
+                externalViewState={syncedViewState}
+            />
+        </div>
+    );
+};
 
 // Simple chart component
 const SimpleChart = ({ index, theme, globalDate }) => {
@@ -84,7 +213,7 @@ const SimpleChart = ({ index, theme, globalDate }) => {
 
     return (
         <div className="h-full flex flex-col" style={{ backgroundColor: c.bg }}>
-            <div className="p-2 border-b flex items-center gap-2" style={{ borderColor: c.border }}>
+            <div className="p-1 border-b flex items-center gap-1" style={{ borderColor: c.border }}>
                 <input
                     type="text"
                     value={symbol}
@@ -110,7 +239,7 @@ const SimpleChart = ({ index, theme, globalDate }) => {
                         </div>
                     </div>
                 ) : stockData ? (
-                    <CandleChart data={stockData} theme={theme} />
+                    <SyncedChart data={stockData} theme={theme} chartId={index} />
                 ) : (
                     <div className="flex items-center justify-center h-full" style={{ color: c.text }}>
                         <div className="text-center">
@@ -147,60 +276,68 @@ export default function DashboardPage() {
     const c = colors[theme];
 
     return (
-        <div className="h-screen flex flex-col" style={{ backgroundColor: c.bg, paddingTop: '4rem' }}>
-            {/* Header */}
-            <div className="flex-shrink-0 p-4 border-b" style={{ backgroundColor: c.panel, borderColor: c.border }}>
-                <div className="flex items-center justify-between">
-                    <h1 className="text-xl font-bold" style={{ color: c.text }}>
-                        📋 Multi-Stock Dashboard
-                    </h1>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => updateDate(e.target.value)}
-                            className="px-3 py-1 rounded border"
-                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
-                        />
-                        <button
-                            onClick={loadAllCharts}
-                            className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                            title="Load All Charts"
-                        >
-                            ⚡📊
-                        </button>
-                        <button
-                            onClick={resetAllCharts}
-                            className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                            title="Reset All"
-                        >
-                            🧹
-                        </button>
-                        <button
-                            onClick={toggleTheme}
-                            className="px-3 py-1 rounded border"
-                            style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
-                        >
-                            {theme === 'dark' ? '☀️' : '🌙'}
-                        </button>
+        <SyncProvider>
+            <div className="h-screen flex flex-col" style={{ backgroundColor: c.bg }}>
+                {/* Header */}
+                <div className="flex-shrink-0 p-2 border-b" style={{ backgroundColor: c.panel, borderColor: c.border }}>
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-lg font-bold" style={{ color: c.text }}>
+                            📋 Multi-Stock Dashboard
+                        </h1>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => updateDate(e.target.value)}
+                                className="px-3 py-1 rounded border"
+                                style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+                            />
+                            <button
+                                onClick={loadAllCharts}
+                                className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+                                title="Load All Charts"
+                            >
+                                ⚡📊
+                            </button>
+                            <button
+                                onClick={resetAllCharts}
+                                className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                                title="Reset All"
+                            >
+                                🧹
+                            </button>
+                            <button
+                                onClick={toggleTheme}
+                                className="px-3 py-1 rounded border"
+                                style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+                            >
+                                {theme === 'dark' ? '☀️' : '🌙'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Chart Grid */}
+                <div className="flex-1 p-2 min-h-0">
+                    <div className="grid grid-cols-2 grid-rows-2 gap-2 h-full w-full" style={{ minHeight: '400px' }}>
+                        {[0, 1, 2, 3].map((index) => (
+                            <div
+                                key={`${index}-${refreshTrigger}`}
+                                className="border rounded-lg overflow-hidden flex flex-col"
+                                style={{ 
+                                    backgroundColor: c.panel, 
+                                    borderColor: c.border,
+                                    minHeight: '200px',
+                                    height: '100%',
+                                    width: '100%'
+                                }}
+                            >
+                                <SimpleChart index={index} theme={theme} globalDate={date} />
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-
-            {/* Chart Grid */}
-            <div className="flex-1 p-4">
-                <div className="grid grid-cols-2 gap-4 h-full">
-                    {[0, 1, 2, 3].map((index) => (
-                        <div
-                            key={`${index}-${refreshTrigger}`}
-                            className="border rounded-lg overflow-hidden"
-                            style={{ backgroundColor: c.panel, borderColor: c.border }}
-                        >
-                            <SimpleChart index={index} theme={theme} globalDate={date} />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
+        </SyncProvider>
     );
 }

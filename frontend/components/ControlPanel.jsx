@@ -86,8 +86,8 @@ export default function ControlPanel({
     };
 
     return (
-        <div className="p-2 md:p-3 rounded-lg shadow-lg" style={{ backgroundColor: colors.controlPanel }}>
-            <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 md:gap-3 items-end">
+        <div className="p-2 rounded-lg shadow-lg" style={{ backgroundColor: colors.controlPanel }}>
+            <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 min-w-[120px]">
                     <label className="block text-xs font-medium mb-1" style={{ color: colors.text.secondary }}>
                         Symbol

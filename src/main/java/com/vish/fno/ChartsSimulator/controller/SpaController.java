@@ -29,4 +29,9 @@ public class SpaController {
     public String extrema() {
         return "forward:/extrema/index.html";
     }
+
+    @GetMapping(value = {"/dashboard", "/dashboard/"})
+    public String dashboard() {
+        return "forward:/dashboard/index.html";
+    }
 }

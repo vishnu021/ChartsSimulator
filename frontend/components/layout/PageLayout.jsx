@@ -21,21 +21,21 @@ export const PageLayout = ({
         <div className={`flex flex-col h-[calc(100vh-4rem)] ${bgColor}`}>
             {/* Header with controls */}
             {controls && (
-                <div className="flex-shrink-0 p-4">
+                <div className="flex-shrink-0 p-2">
                     {controls}
                 </div>
             )}
 
             {/* Title and subtitle */}
             {(title || subtitle) && (
-                <div className="flex-shrink-0 px-4 mb-2">
+                <div className="flex-shrink-0 px-2 mb-1">
                     {title && (
-                        <h1 className={`text-xl md:text-2xl font-bold ${textColor}`}>
+                        <h1 className={`text-lg font-bold ${textColor}`}>
                             {title}
                         </h1>
                     )}
                     {subtitle && (
-                        <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
+                        <div className="flex flex-wrap gap-2 mt-1 text-xs">
                             {subtitle}
                         </div>
                     )}
@@ -44,7 +44,7 @@ export const PageLayout = ({
 
             {/* Stats component */}
             {stats && (
-                <div className="flex-shrink-0 px-4 mb-2">
+                <div className="flex-shrink-0 px-2 mb-1">
                     {stats}
                 </div>
             )}

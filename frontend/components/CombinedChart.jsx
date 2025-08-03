@@ -435,13 +435,13 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     if (!data) return null;
 
     return (
-        <div className="flex flex-col h-full p-2 md:p-4" style={{ backgroundColor: colors.background, minHeight: 0 }}>
-            <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 md:mb-4 gap-2">
+        <div className="flex flex-col h-full p-2" style={{ backgroundColor: colors.background, minHeight: 0 }}>
+            <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
                 <div>
-                    <h1 className={`text-xl md:text-2xl font-bold`} style={{ color: colors.text.primary }}>
+                    <h1 className={`text-lg font-bold`} style={{ color: colors.text.primary }}>
                         {data.symbol || 'Combined Chart'}
                     </h1>
-                    <div className="flex flex-wrap gap-2 md:gap-4 mt-1 md:mt-2 text-xs md:text-sm">
+                    <div className="flex flex-wrap gap-2 mt-1 text-xs">
                         <span style={{ color: colors.text.secondary }}>
                             Candlesticks: {data.candlesticks?.length || 0}
                         </span>
@@ -458,7 +458,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                 <div className="flex gap-2">
                     <button
                         onClick={toggleHeikinAshi}
-                        className={`px-3 py-1 md:px-4 md:py-2 rounded-md transition-all text-sm ${
+                        className={`px-3 py-1 rounded-md transition-all text-sm ${
                             showHeikinAshi ? 'opacity-100' : 'opacity-90'
                         }`}
                         style={{
@@ -472,7 +472,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
                     {!isMobile && (
                         <button
                             onClick={handleReset}
-                            className="px-3 py-1 md:px-4 md:py-2 rounded-md transition-all text-sm"
+                            className="px-3 py-1 rounded-md transition-all text-sm"
                             style={{
                                 backgroundColor: colors.panelBackground,
                                 border: `1px solid ${colors.grid}`,
@@ -486,7 +486,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
             </div>
 
             {/* Legend */}
-            <div className="flex-shrink-0 flex flex-wrap gap-4 mb-3 text-xs">
+            <div className="flex-shrink-0 flex flex-wrap gap-2 mb-2 text-xs">
                 <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                         <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bullish }}></div>

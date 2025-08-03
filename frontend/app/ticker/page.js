@@ -131,7 +131,7 @@ export default function TickerPage() {
             loadingMessage={isRealTime ? 'Connecting to real-time feed...' : 'Loading ticker data...'}
         >
             {/* Main chart area - no separate header */}
-            <div className="flex-1 min-h-0 p-4">
+            <div className="flex-1 min-h-0 p-2">
                 {tickerData.length > 0 ? (
                     <div className="h-full rounded-lg overflow-hidden shadow-lg">
                         <TickerChart

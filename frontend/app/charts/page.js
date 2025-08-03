@@ -79,22 +79,6 @@ export default function ChartsPage() {
         />
     );
 
-    const renderSubtitle = () => {
-        if (!chartData) return null;
-
-        const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
-
-        return (
-            <div className="flex flex-wrap gap-4">
-                <span className={textColor}>
-                    Candlesticks: {chartData.candlesticks?.length || 0}
-                </span>
-                <span className={textColor}>
-                    Heikin Ashi: {chartData.heikinAshi?.length || 0}
-                </span>
-            </div>
-        );
-    };
 
     const renderEmptyState = () => (
         <EmptyState
@@ -109,7 +93,6 @@ export default function ChartsPage() {
         <PageLayout
             theme={theme}
             title={chartData?.symbol || 'Combined Chart'}
-            subtitle={renderSubtitle()}
             controls={renderControls()}
             error={error}
             onErrorDismiss={() => setError(null)}

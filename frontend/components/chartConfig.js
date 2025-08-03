@@ -62,8 +62,8 @@ export const themes = {
 };
 
 export const chartSettings = {
-    padding: { top: 40, right: 80, bottom: 60, left: 80 },
-    mobilePadding: { top: 30, right: 40, bottom: 40, left: 60 }, // Smaller padding for mobile
+    padding: { top: 20, right: 40, bottom: 30, left: 50 },
+    mobilePadding: { top: 15, right: 25, bottom: 25, left: 35 }, // Smaller padding for mobile
     gridLines: {
         horizontal: 8,
         vertical: 10
