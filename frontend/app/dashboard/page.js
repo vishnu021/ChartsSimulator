@@ -258,7 +258,6 @@ const SimpleChart = ({ index, theme, globalDate }) => {
 
 export default function DashboardPage() {
     const { theme, toggleTheme, date, updateDate } = useAppState();
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const loadAllCharts = () => {
         const event = new CustomEvent('loadAllCharts', { detail: { date } });
@@ -266,10 +265,8 @@ export default function DashboardPage() {
     };
 
     const resetAllCharts = () => {
-        for (let i = 0; i < 4; i++) {
-            localStorage.removeItem(`dashboard_symbol_${i}`);
-        }
-        setRefreshTrigger(prev => prev + 1);
+        const event = new CustomEvent('resetZoom');
+        window.dispatchEvent(event);
     };
 
     const colors = {
@@ -403,7 +400,7 @@ export default function DashboardPage() {
                 >
                     {[0, 1, 2, 3].map((index) => (
                         <div
-                            key={`${index}-${refreshTrigger}`}
+                            key={index}
                             className="border rounded overflow-hidden flex flex-col"
                             style={{ 
                                 backgroundColor: c.panel, 
