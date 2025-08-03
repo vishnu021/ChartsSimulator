@@ -6,7 +6,7 @@ import { themes, chartSettings } from './chartConfig';
 import { CHART_CONSTANTS, UI_CONSTANTS } from '../utils/constants';
 import { canvasUtils, scalingUtils } from '../utils/chart';
 
-export default function CandleChart({ data, theme = 'dark', externalViewState = null }) {
+export default function CandleChart({ data, theme = 'dark', externalViewState = null, isDashboard = false }) {
     const canvasRef = useRef(null);
     const animationRef = useRef(null);
     const [internalViewState, setInternalViewState] = useState({
@@ -96,7 +96,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         if (!setup) return;
 
         const { ctx, width, height } = setup;
-        const padding = canvasUtils.getPadding(isMobile);
+        const padding = canvasUtils.getPadding(isMobile, isDashboard);
         const { chartWidth, chartHeight } = canvasUtils.getChartDimensions(width, height, padding);
 
         // Clear canvas and draw background
@@ -140,6 +140,17 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             ctx.stroke();
         }
 
+        // Vertical grid lines
+        const verticalGridLines = isMobile ? CHART_CONSTANTS.GRID_LINES.VERTICAL_MOBILE : CHART_CONSTANTS.GRID_LINES.VERTICAL_DESKTOP;
+        const verticalStepSize = Math.max(1, Math.floor(visibleCandles.length / verticalGridLines));
+        for (let i = 0; i < visibleCandles.length; i += verticalStepSize) {
+            const x = xScale(visibleStart + i);
+            ctx.beginPath();
+            ctx.moveTo(x, padding.top);
+            ctx.lineTo(x, height - padding.bottom);
+            ctx.stroke();
+        }
+
         ctx.setLineDash([]);
 
         // Draw candlesticks
@@ -174,7 +185,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
 
         // Draw axes labels
         ctx.fillStyle = colors.text.secondary;
-        const labelFontSize = isMobile ? '10px' : '12px';
+        const labelFontSize = isDashboard ? (isMobile ? '9px' : '10px') : (isMobile ? '10px' : '12px');
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
         // Y-axis labels
@@ -185,7 +196,22 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
         }
 
-    }, [data, viewState, colors, isMobile]);
+        // X-axis labels
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const xAxisGridLines = isMobile ? CHART_CONSTANTS.GRID_LINES.VERTICAL_MOBILE : CHART_CONSTANTS.GRID_LINES.VERTICAL_DESKTOP;
+        const xAxisStepSize = Math.max(1, Math.floor(visibleCandles.length / xAxisGridLines));
+        
+        for (let i = 0; i < visibleCandles.length; i += xAxisStepSize) {
+            const candle = visibleCandles[i];
+            if (candle && candle.time) {
+                const x = xScale(visibleStart + i);
+                const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
+                ctx.fillText(timeLabel, x, height - 8);
+            }
+        }
+
+    }, [data, viewState, colors, isMobile, isDashboard]);
 
     useEffect(() => {
         drawChart();
@@ -202,7 +228,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            const padding = canvasUtils.getPadding(isMobile);
+            const padding = canvasUtils.getPadding(isMobile, isDashboard);
             const chartWidth = rect.width - padding.left - padding.right;
             const mouseRatio = (x - padding.left) / chartWidth;
 
@@ -274,16 +300,21 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             canvas.removeEventListener('mouseenter', handleMouseEnter);
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [data, viewState, isDragging, dragStart, isMobile, externalViewState, setViewState]);
+    }, [data, viewState, isDragging, dragStart, isMobile, externalViewState, setViewState, isDashboard]);
 
     if (!data) return null;
 
     return (
-        <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
+        <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground, overflow: 'hidden' }}>
             <canvas
                 ref={canvasRef}
                 className="w-full h-full"
-                style={{ cursor: isMobile ? 'default' : 'crosshair' }}
+                style={{ 
+                    cursor: isMobile ? 'default' : 'crosshair',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    display: 'block'
+                }}
             />
         </div>
     );

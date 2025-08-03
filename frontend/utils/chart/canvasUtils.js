@@ -30,9 +30,12 @@ export const canvasUtils = {
   },
 
   /**
-   * Get padding based on device type
+   * Get padding based on device type and context
    */
-  getPadding(isMobile) {
+  getPadding(isMobile, isDashboard = false) {
+    if (isDashboard) {
+      return isMobile ? UI_CONSTANTS.PADDING.DASHBOARD_MOBILE : UI_CONSTANTS.PADDING.DASHBOARD_DESKTOP;
+    }
     return isMobile ? UI_CONSTANTS.PADDING.MOBILE : UI_CONSTANTS.PADDING.DESKTOP;
   },
 

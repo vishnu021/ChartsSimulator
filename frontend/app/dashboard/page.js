@@ -128,11 +128,12 @@ const SyncedChart = ({ data, theme, chartId }) => {
     if (!data) return null;
 
     return (
-        <div ref={chartRef} className="w-full h-full">
+        <div ref={chartRef} className="w-full h-full" style={{ overflow: 'visible' }}>
             <CandleChart 
                 data={data} 
                 theme={theme}
                 externalViewState={syncedViewState}
+                isDashboard={true}
             />
         </div>
     );
@@ -233,7 +234,7 @@ const SimpleChart = ({ index, theme, globalDate }) => {
                     {isLoading ? '⏳' : '⚡'}
                 </button>
             </div>
-            <div className="flex-1 relative">
+            <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
                 {error ? (
                     <div className="flex items-center justify-center h-full text-red-400">
                         <div className="text-center">
@@ -401,13 +402,14 @@ export default function DashboardPage() {
                     {[0, 1, 2, 3].map((index) => (
                         <div
                             key={index}
-                            className="border rounded overflow-hidden flex flex-col"
+                            className="border rounded flex flex-col"
                             style={{ 
                                 backgroundColor: c.panel, 
                                 borderColor: c.border,
                                 minHeight: 0,
                                 height: '100%',
-                                width: '100%'
+                                width: '100%',
+                                overflow: 'visible'
                             }}
                         >
                             <SimpleChart index={index} theme={theme} globalDate={date} />
