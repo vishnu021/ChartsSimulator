@@ -55,31 +55,6 @@ a {
   background: #64748b;
 }
 
-/* Animation utilities */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Custom button hover effects */
-.hover-scale {
-  transition: transform 0.2s ease;
-}
-
-.hover-scale:hover {
-  transform: scale(1.05);
-}
-
 /* Loading spinner */
 @keyframes spin {
   to {
@@ -91,95 +66,14 @@ a {
   animation: spin 1s linear infinite;
 }
 
-/* Custom focus styles */
-input:focus,
-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #3b82f6;
-}
-
 /* Mobile optimizations */
 @media (max-width: 768px) {
   body {
     font-size: 14px;
   }
-
-  .text-responsive {
-    font-size: 12px;
-  }
 }
 
-/* Gradient backgrounds */
-.gradient-bg {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-}
-
-.gradient-card {
-  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Glass effect */
-.glass-effect {
-  background: rgba(30, 41, 59, 0.8);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Navigation improvements */
-.nav-item {
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
-}
-
-.nav-item:hover::before {
-  left: 100%;
-}
-
-/* Chart container styles */
-.chart-container {
-  position: relative;
-  background: #0f172a;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.chart-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background: linear-gradient(
-          135deg,
-          rgba(59, 130, 246, 0.05) 0%,
-          transparent 50%,
-          rgba(16, 185, 129, 0.05) 100%
-  );
-}
-
-/* Ticker display styles */
-.ticker-row {
-  transition: background-color 0.2s ease;
-}
-
-.ticker-row:hover {
-  background-color: rgba(55, 65, 81, 0.5);
-}
-
+/* Price change animations */
 .price-up {
   color: #10b981;
   animation: pulse-green 0.5s ease-out;

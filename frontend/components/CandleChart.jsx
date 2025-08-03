@@ -3,8 +3,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { themes, chartSettings } from './chartConfig';
-import { CHART_CONSTANTS, UI_CONSTANTS } from '@/utils/constants';
-import { canvasUtils, scalingUtils } from '@/utils/chart';
+import { CHART_CONSTANTS, UI_CONSTANTS } from '../utils/constants';
+import { canvasUtils, scalingUtils } from '../utils/chart';
 
 export default function CandleChart({ data, theme = 'dark', externalViewState = null }) {
     const canvasRef = useRef(null);
@@ -21,6 +21,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
     const setViewState = useMemo(() => {
         return externalViewState ? () => {} : setInternalViewState;
     }, [externalViewState]);
+    
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -39,7 +40,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Canvas setup - now using canvasUtils
+    // Canvas setup
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -53,7 +54,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         return () => window.removeEventListener('resize', updateCanvasSize);
     }, [data]);
 
-    // Smooth animation loop
+    // Animation loop
     useEffect(() => {
         const animate = () => {
             setViewState(prev => {
@@ -87,38 +88,7 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         };
     }, [isDragging, setViewState]);
 
-    // Helper function to find time intervals for labels
-    const getTimeIntervals = useCallback((candles, visibleStart, visibleEnd) => {
-        const intervals = [];
-        if (!candles || candles.length === 0) return intervals;
-
-        // Calculate how many labels we want to show
-        const visibleCandles = visibleEnd - visibleStart;
-        const targetLabels = isMobile ? 3 : 6;
-        const step = Math.max(1, Math.floor(visibleCandles / targetLabels));
-
-        for (let i = visibleStart; i < visibleEnd; i += step) {
-            if (i >= candles.length) break;
-            
-            const candleTime = new Date(candles[i].time);
-            if (isNaN(candleTime.getTime())) continue;
-
-            intervals.push({ index: i, time: candleTime });
-        }
-
-        // Always include the last visible candle if not already included
-        const lastIndex = Math.min(visibleEnd - 1, candles.length - 1);
-        if (lastIndex > visibleStart && !intervals.find(interval => interval.index === lastIndex)) {
-            const lastTime = new Date(candles[lastIndex].time);
-            if (!isNaN(lastTime.getTime())) {
-                intervals.push({ index: lastIndex, time: lastTime });
-            }
-        }
-
-        return intervals;
-    }, [isMobile]);
-
-    // Draw chart function - now using utilities
+    // Draw chart function
     const drawChart = useCallback(() => {
         if (!data || !canvasRef.current) return;
 
@@ -126,49 +96,27 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         if (!setup) return;
 
         const { ctx, width, height } = setup;
-        // Use larger bottom padding for dashboard panels and small charts
-        const basePadding = canvasUtils.getPadding(isMobile);
-        // Detect dashboard panels: either small area or using external view state (dashboard sync)
-        const isDashboardPanel = externalViewState !== null || (width * height < 200000); // Small area indicates dashboard panel
-        const isSmallChart = height < 400;
-        const needsExtraPadding = isDashboardPanel || isSmallChart;
-        
-        const padding = needsExtraPadding ? {
-            ...basePadding,
-            bottom: Math.max(70, basePadding.bottom + 45), // Extra space to accommodate absolute positioning
-            top: Math.max(20, basePadding.top),
-            left: Math.max(40, basePadding.left - 10),
-            right: Math.max(30, basePadding.right - 10)
-        } : basePadding;
+        const padding = canvasUtils.getPadding(isMobile);
         const { chartWidth, chartHeight } = canvasUtils.getChartDimensions(width, height, padding);
 
-        // Clear canvas
-        ctx.fillStyle = colors.background;
-        ctx.fillRect(0, 0, width, height);
-
-        // Draw panel background
-        ctx.fillStyle = colors.panelBackground;
-        ctx.fillRect(
-            padding.left - 10,
-            padding.top - 10,
-            chartWidth + 20,
-            chartHeight + 20
-        );
+        // Clear canvas and draw background
+        canvasUtils.clearCanvas(ctx, colors, width, height);
+        canvasUtils.drawPanelBackground(ctx, colors, padding, width, height);
 
         if (!data.candles || data.candles.length === 0) return;
 
-        // Calculate visible range using utilities
+        // Calculate visible range
         const { visibleStart, visibleEnd, clampedOffset, candleWidth } =
             scalingUtils.calculateVisibleRange(data.candles.length, chartWidth, viewState.zoom, viewState.offset);
 
         const visibleCandles = data.candles.slice(visibleStart, visibleEnd);
         if (visibleCandles.length === 0) return;
 
-        // Calculate price range using utilities
+        // Calculate price range
         const prices = visibleCandles.flatMap(c => [c.high, c.low]);
         const { minPrice, maxPrice, priceRange, pricePadding } = scalingUtils.calculatePriceRange(prices);
 
-        // Create scaling functions using utilities
+        // Create scaling functions
         const yScale = scalingUtils.createYScale(minPrice, maxPrice, priceRange, pricePadding, padding, chartHeight);
         const xScale = scalingUtils.createXScale(padding, candleWidth, visibleStart);
 
@@ -179,20 +127,6 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
         ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
-
-        // Get time intervals for vertical grid lines and labels
-        const timeIntervals = getTimeIntervals(data.candles, visibleStart, visibleEnd);
-
-        // Vertical grid lines at time intervals
-        timeIntervals.forEach(interval => {
-            const x = xScale(interval.index);
-            if (x >= padding.left && x <= width - padding.right) {
-                ctx.beginPath();
-                ctx.moveTo(x, padding.top);
-                ctx.lineTo(x, height - padding.bottom);
-                ctx.stroke();
-            }
-        });
 
         // Horizontal grid lines
         const horizontalLines = isMobile ? CHART_CONSTANTS.GRID_LINES.HORIZONTAL_MOBILE : CHART_CONSTANTS.GRID_LINES.HORIZONTAL_DESKTOP;
@@ -238,12 +172,12 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
 
         canvasUtils.clearClippingRegion(ctx);
 
-        // Draw axes labels (outside clipping region)
+        // Draw axes labels
         ctx.fillStyle = colors.text.secondary;
         const labelFontSize = isMobile ? '10px' : '12px';
         ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
-        // Y-axis labels (left side)
+        // Y-axis labels
         ctx.textAlign = 'right';
         for (let i = 0; i <= horizontalLines; i++) {
             const price = minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
@@ -251,126 +185,16 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
         }
 
-        // X-axis labels (bottom) - Draw these AFTER clearing clipping region
-        ctx.textAlign = 'center';
-        ctx.fillStyle = colors.text.secondary;
-        ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
-        
-        timeIntervals.forEach(interval => {
-            const x = xScale(interval.index);
-            if (x >= padding.left && x <= width - padding.right) {
-                const timeString = format(interval.time, 'HH:mm');
-                
-                // Position labels in the bottom padding area, below the chart
-                const labelY = height - padding.bottom + 15; // Place in bottom padding area
-                
-                // Draw with contrasting background for better visibility
-                ctx.save();
-                
-                // Measure text for background rectangle
-                const textWidth = ctx.measureText(timeString).width;
-                const textHeight = 12;
-                
-                // Draw background rectangle
-                ctx.fillStyle = colors.panelBackground || colors.background;
-                ctx.fillRect(x - textWidth/2 - 2, labelY - textHeight, textWidth + 4, textHeight + 2);
-                
-                // Draw text on top with primary color for better visibility
-                ctx.fillStyle = colors.text.primary;
-                ctx.fillText(timeString, x, labelY);
-                ctx.restore();
-            }
-        });
-
-        // Draw crosshair
-        if (!isMobile && showCrosshair && mousePos.x > padding.left && mousePos.x < width - padding.right &&
-            mousePos.y > padding.top && mousePos.y < height - padding.bottom) {
-
-            ctx.strokeStyle = colors.lines.crosshair;
-            ctx.lineWidth = CHART_CONSTANTS.CROSSHAIR_LINE_WIDTH;
-            ctx.setLineDash([5, 5]);
-
-            // Vertical line
-            ctx.beginPath();
-            ctx.moveTo(mousePos.x, padding.top);
-            ctx.lineTo(mousePos.x, height - padding.bottom);
-            ctx.stroke();
-
-            // Horizontal line
-            ctx.beginPath();
-            ctx.moveTo(padding.left, mousePos.y);
-            ctx.lineTo(width - padding.right, mousePos.y);
-            ctx.stroke();
-
-            ctx.setLineDash([]);
-
-            // Calculate values at crosshair
-            const price = maxPrice + pricePadding - ((mousePos.y - padding.top) / chartHeight) * (priceRange + 2 * pricePadding);
-            const candleIndex = Math.floor((mousePos.x - padding.left - clampedOffset) / candleWidth);
-
-            // Price label
-            ctx.fillStyle = colors.tooltip.background;
-            ctx.fillRect(width - padding.right + 5, mousePos.y - 10, 75, 20);
-            ctx.strokeStyle = colors.tooltip.border;
-            ctx.strokeRect(width - padding.right + 5, mousePos.y - 10, 75, 20);
-            ctx.fillStyle = colors.text.primary;
-            ctx.font = chartSettings.fonts.labels;
-            ctx.textAlign = 'left';
-            ctx.fillText(price.toFixed(2), width - padding.right + 10, mousePos.y + 4);
-
-            // Date label and candle info
-            if (candleIndex >= 0 && candleIndex < data.candles.length) {
-                const candle = data.candles[candleIndex];
-                const time = format(new Date(candle.time), 'HH:mm');
-
-                // Time label
-                ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
-                ctx.strokeRect(mousePos.x - 30, height - padding.bottom + 5, 60, 20);
-                ctx.fillStyle = colors.text.primary;
-                ctx.textAlign = 'center';
-                ctx.fillText(time, mousePos.x, height - padding.bottom + 20);
-
-                // OHLC tooltip
-                const tooltipX = mousePos.x + 15;
-                const tooltipY = mousePos.y - 70;
-
-                ctx.fillStyle = colors.tooltip.background;
-                ctx.fillRect(tooltipX, tooltipY, 180, 110);
-                ctx.strokeStyle = colors.tooltip.border;
-                ctx.lineWidth = 1;
-                ctx.strokeRect(tooltipX, tooltipY, 180, 110);
-
-                ctx.fillStyle = colors.text.primary;
-                ctx.font = chartSettings.fonts.tooltip;
-                ctx.textAlign = 'left';
-
-                const texts = [
-                    { label: 'O:', value: candle.open.toFixed(2), color: colors.text.primary },
-                    { label: 'H:', value: candle.high.toFixed(2), color: colors.text.maxima },
-                    { label: 'L:', value: candle.low.toFixed(2), color: colors.text.minima },
-                    { label: 'C:', value: candle.close.toFixed(2), color: candle.close >= candle.open ? colors.text.maxima : colors.text.minima },
-                    { label: 'Vol:', value: candle.volume.toLocaleString(), color: colors.text.secondary }
-                ];
-
-                texts.forEach((text, i) => {
-                    ctx.fillStyle = colors.text.secondary;
-                    ctx.fillText(text.label, tooltipX + 10, tooltipY + 25 + i * 20);
-                    ctx.fillStyle = text.color;
-                    ctx.fillText(text.value, tooltipX + 40, tooltipY + 25 + i * 20);
-                });
-            }
-        }
-    }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getTimeIntervals, externalViewState]);
+    }, [data, viewState, colors, isMobile]);
 
     useEffect(() => {
         drawChart();
     }, [drawChart]);
 
-    // Mouse event handlers (keeping existing logic but using constants)
+    // Mouse event handlers
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !data || isMobile || externalViewState) return; // Skip if using external view state
+        if (!canvas || !data || isMobile || externalViewState) return;
 
         const handleWheel = (e) => {
             e.preventDefault();
@@ -382,21 +206,15 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             const chartWidth = rect.width - padding.left - padding.right;
             const mouseRatio = (x - padding.left) / chartWidth;
 
-            // Simplified and stable zoom calculation
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Simple zoom in/out factor
-            const newZoom = Math.max(CHART_CONSTANTS.MIN_ZOOM, Math.min(CHART_CONSTANTS.MAX_ZOOM, viewState.zoom * zoomFactor));
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = scalingUtils.applyZoomConstraints(viewState.zoom * zoomFactor);
 
-            // Calculate horizontal offset to keep cursor position stable
             const totalWidth = chartWidth * viewState.zoom;
             const newTotalWidth = chartWidth * newZoom;
             const widthChange = newTotalWidth - totalWidth;
             
-            // Zoom around cursor position
             const newOffset = viewState.offset - widthChange * mouseRatio;
-            
-            // Calculate offset limits
-            const maxOffset = 0;
-            const minOffset = Math.min(0, chartWidth - newTotalWidth);
+            const { maxOffset, minOffset } = scalingUtils.calculateOffsetLimits(chartWidth, newTotalWidth);
             const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
 
             setViewState(prev => ({
@@ -457,15 +275,6 @@ export default function CandleChart({ data, theme = 'dark', externalViewState = 
             canvas.removeEventListener('mouseleave', handleMouseLeave);
         };
     }, [data, viewState, isDragging, dragStart, isMobile, externalViewState, setViewState]);
-
-    const handleReset = () => {
-        setViewState({
-            zoom: 1,
-            offset: 0,
-            targetOffset: 0,
-            velocity: 0
-        });
-    };
 
     if (!data) return null;
 
