@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/config")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class ConfigController {
 
     @Value("${server.port:9090}")

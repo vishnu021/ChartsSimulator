@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useWebSocket } from './websocket/useWebSocket';
+import { configService } from '@/services/config/configService';
 
 export const useChartData = () => {
     const [isRealTime, setIsRealTime] = useState(false);
@@ -24,9 +25,10 @@ export const useChartData = () => {
         setInstantData(null);
 
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+            await configService.loadConfig();
+            const apiUrl = configService.getApiUrl();
             const queryParams = new URLSearchParams(params);
-            const response = await fetch(`${API_BASE_URL}/ohlc?${queryParams}`);
+            const response = await fetch(`${apiUrl}/api/ohlc?${queryParams}`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

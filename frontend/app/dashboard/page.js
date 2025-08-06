@@ -3,8 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef, createContext, useContext } from 'react';
 import { useAppState } from '@/contexts/AppStateContext';
 import CandleChart from '@/components/CandleChart';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import { configService } from '@/services/config/configService';
 
 // Sync context for chart synchronization
 const SyncContext = createContext();
@@ -161,8 +160,10 @@ const SimpleChart = ({ index, theme, globalDate }) => {
         setError(null);
         
         try {
+            await configService.loadConfig();
+            const apiUrl = configService.getApiUrl();
             const params = new URLSearchParams({ symbol: stockSymbol, date });
-            const response = await fetch(`${API_BASE_URL}/charts?${params}`);
+            const response = await fetch(`${apiUrl}/api/charts?${params}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

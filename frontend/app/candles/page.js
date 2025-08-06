@@ -7,6 +7,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
 import { usePageState } from '@/hooks/common/usePageState';
+import { configService } from '@/services/config/configService';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
     ssr: false,
@@ -19,8 +20,6 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), {
         </div>
     )
 });
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CandlesPage() {
     const { theme, toggleTheme } = useAppState();
@@ -38,8 +37,10 @@ export default function CandlesPage() {
         handleLoadStart();
 
         try {
+            await configService.loadConfig();
+            const apiUrl = configService.getApiUrl();
             const params = new URLSearchParams({ symbol, date });
-            const response = await fetch(`${API_BASE_URL}/charts?${params}`);
+            const response = await fetch(`${apiUrl}/api/charts?${params}`);
 
             if (!response.ok) {
                 // Try to get detailed error information from response

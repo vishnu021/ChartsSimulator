@@ -8,15 +8,15 @@ class ChartDataService {
 
     // API methods
     async getCandleData(symbol, date) {
-        return apiClient.get('/charts', { symbol, date });
+        return apiClient.get('/api/charts', { symbol, date });
     }
 
     async getExtremaData(symbol, date, lookbackPeriod) {
-        return apiClient.get('/ohlc', { symbol, date, lookbackPeriod });
+        return apiClient.get('/api/ohlc', { symbol, date, lookbackPeriod });
     }
 
     async getChartComparison(symbol, date, chartTypes = 'CANDLESTICK,HEIKIN_ASHI') {
-        return apiClient.get('/charts', { symbol, date, chartTypes });
+        return apiClient.get('/api/charts', { symbol, date, chartTypes });
     }
 
     // WebSocket methods

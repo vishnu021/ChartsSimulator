@@ -66,9 +66,9 @@ export const UI_CONSTANTS = {
 
 export const API_CONSTANTS = {
     ENDPOINTS: {
-        CHARTS: '/charts',
-        OHLC: '/ohlc',
-        TICKER: '/ticker'
+        CHARTS: '/api/charts',
+        OHLC: '/api/ohlc',
+        TICKER: '/api/ticker'
     },
 
     WEBSOCKET_DESTINATIONS: {

@@ -6,6 +6,7 @@ import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
+import { configService } from '@/services/config/configService';
 
 const CombinedChart = dynamic(() => import('@/components/CombinedChart'), {
     ssr: false,
@@ -19,8 +20,6 @@ const CombinedChart = dynamic(() => import('@/components/CombinedChart'), {
     )
 });
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
 export default function ChartsPage() {
     const { theme, toggleTheme } = useAppState();
     const [chartData, setChartData] = useState(null);
@@ -33,12 +32,14 @@ export default function ChartsPage() {
         setChartData(null);
 
         try {
+            await configService.loadConfig();
+            const apiUrl = configService.getApiUrl();
             const params = new URLSearchParams({
                 symbol,
                 date,
                 chartTypes: 'CANDLESTICK,HEIKIN_ASHI'
             });
-            const response = await fetch(`${API_BASE_URL}/charts?${params}`);
+            const response = await fetch(`${apiUrl}/api/charts?${params}`);
 
             if (!response.ok) {
                 // Try to get detailed error information from response

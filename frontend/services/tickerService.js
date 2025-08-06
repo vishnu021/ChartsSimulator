@@ -1,5 +1,6 @@
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { configService } from './config/configService.js';
 
 let tickerStompClient = null;
 let tickerIsConnecting = false;
@@ -8,7 +9,6 @@ let tickerIsCleaningUp = false;
 let tickerGlobalListenersAdded = false;
 
 const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL;
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Add global event listeners only once
 const setupTickerGlobalEventListeners = () => {
@@ -50,8 +50,10 @@ export const tickerService = {
     async getTickerData(symbol, date) {
         try {
             console.log(`Fetching ticker data for ${symbol} on ${date}`);
+            await configService.loadConfig();
+            const apiUrl = configService.getApiUrl();
             const params = new URLSearchParams({ symbol, date });
-            const url = `${API_BASE_URL}/ticker?${params}`;
+            const url = `${apiUrl}/api/ticker?${params}`;
             console.log(`API URL: ${url}`);
 
             const response = await fetch(url, {
