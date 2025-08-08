@@ -84,7 +84,7 @@ class ConfigService {
         
         return {
             apiUrl: baseUrl,
-            wsUrl: baseUrl.replace(/^http/, 'ws') + '/ws',
+            wsUrl: baseUrl + '/ws',
             environment: 'fallback',
             wsEndpoint: '/ws',
             version: 'unknown'
@@ -94,9 +94,17 @@ class ConfigService {
     normalizeConfig(config) {
         const baseUrl = this.detectBaseUrl();
         
+        // Convert ws:// URLs to http:// for SockJS compatibility
+        let wsUrl = config.wsUrl || (baseUrl + '/ws');
+        if (wsUrl.startsWith('ws://')) {
+            wsUrl = wsUrl.replace('ws://', 'http://');
+        } else if (wsUrl.startsWith('wss://')) {
+            wsUrl = wsUrl.replace('wss://', 'https://');
+        }
+        
         return {
             apiUrl: config.apiUrl || baseUrl,
-            wsUrl: config.wsUrl || (baseUrl.replace(/^http/, 'ws') + '/ws'),
+            wsUrl: wsUrl,
             environment: config.environment || 'unknown',
             wsEndpoint: config.wsEndpoint || '/ws',
             version: config.version || 'unknown'
@@ -125,7 +133,7 @@ class ConfigService {
     }
 
     getWsUrl() {
-        return this.config?.wsUrl || (this.detectBaseUrl().replace(/^http/, 'ws') + '/ws');
+        return this.config?.wsUrl || (this.detectBaseUrl() + '/ws');
     }
 
     getEnvironment() {

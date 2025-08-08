@@ -8,7 +8,7 @@ let tickerCurrentSubscription = null;
 let tickerIsCleaningUp = false;
 let tickerGlobalListenersAdded = false;
 
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WS_URL;
+let WEBSOCKET_URL = null;
 
 // Add global event listeners only once
 const setupTickerGlobalEventListeners = () => {
@@ -81,7 +81,7 @@ export const tickerService = {
     },
 
     // Stream ticker data via WebSocket for real-time visualization
-    connectAndStream(symbol, date, onData, onError) {
+    async connectAndStream(symbol, date, onData, onError) {
         // Setup global listeners on first use
         setupTickerGlobalEventListeners();
 
@@ -95,6 +95,13 @@ export const tickerService = {
         tickerIsCleaningUp = false;
 
         try {
+            // Load WebSocket URL from config if not already loaded
+            if (!WEBSOCKET_URL) {
+                await configService.loadConfig();
+                WEBSOCKET_URL = configService.getWsUrl();
+                console.log('Loaded WebSocket URL for ticker:', WEBSOCKET_URL);
+            }
+
             tickerStompClient = new Client({
                 webSocketFactory: () => new SockJS(WEBSOCKET_URL),
                 reconnectDelay: 5000,

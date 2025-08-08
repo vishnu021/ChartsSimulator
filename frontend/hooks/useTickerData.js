@@ -53,9 +53,9 @@ export const useTickerData = () => {
 
         tickerService.disconnect();
 
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                tickerService.connectAndStream(
+                await tickerService.connectAndStream(
                     params.symbol,
                     params.date,
                     (tick) => {

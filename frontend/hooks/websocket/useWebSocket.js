@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import { configService } from '@/services/config/configService';
 
 export const useWebSocket = () => {
     const [isConnected, setIsConnected] = useState(false);
@@ -51,8 +52,13 @@ export const useWebSocket = () => {
         }
 
         try {
+            // Load WebSocket URL from config
+            await configService.loadConfig();
+            const wsUrl = configService.getWsUrl();
+            console.log('Loaded WebSocket URL for extrema:', wsUrl);
+
             const client = new Client({
-                webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_WS_URL),
+                webSocketFactory: () => new SockJS(wsUrl),
                 reconnectDelay: 5000,
                 heartbeatIncoming: 4000,
                 heartbeatOutgoing: 4000
