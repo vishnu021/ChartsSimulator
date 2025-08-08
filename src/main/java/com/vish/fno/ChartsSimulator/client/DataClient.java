@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
+import static org.apache.http.HttpStatus.SC_OK;
 
 @Slf4j
 @Component
@@ -111,7 +112,7 @@ public class DataClient {
                 responseJson = EntityUtils.toString(entity);
                 
                 // Check HTTP status code
-                if (statusCode != 200) {
+                if (statusCode != SC_OK) {
                     throw new DataFetchException("HTTP error", symbol, date, url, statusCode, responseJson);
                 }
                 

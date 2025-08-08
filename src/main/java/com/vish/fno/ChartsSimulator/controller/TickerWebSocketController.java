@@ -62,7 +62,7 @@ public class TickerWebSocketController {
             log.info("Completed ticker stream for session: {} - symbol: {} with {} ticks",
                     sessionId, req.symbol(), tickers.size());
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error during ticker streaming for session: {}", sessionId, e);
             messagingTemplate.convertAndSendToUser(sessionId, "/queue/error",
                     "Error streaming ticker data: " + e.getMessage());

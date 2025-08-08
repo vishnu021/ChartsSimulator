@@ -12,6 +12,8 @@ import java.util.List;
 @Slf4j
 @Component
 public class ConfigurationValidator {
+    private static final String ENV_PRODUCTION = "production";
+    private static final String ENV_UNKNOWN = "unknown";
 
     @Value("${app.environment:unknown}")
     private String environment;
@@ -31,12 +33,12 @@ public class ConfigurationValidator {
         List<String> errors = new ArrayList<>();
 
         // Validate environment
-        if ("unknown".equals(environment)) {
+        if (ENV_UNKNOWN.equals(environment)) {
             warnings.add("Environment not explicitly set, defaulting to 'unknown'");
         }
 
         // Validate CORS origins for production
-        if ("production".equals(environment)) {
+        if (ENV_PRODUCTION.equals(environment)) {
             if (corsOrigins.isEmpty() || corsOrigins.contains("*")) {
                 errors.add("Production environment requires explicit CORS origins (no wildcards)");
             }
@@ -48,7 +50,7 @@ public class ConfigurationValidator {
         // Validate port
         try {
             int port = Integer.parseInt(serverPort);
-            if (port < 1024 && "production".equals(environment)) {
+            if (port < 1024 && ENV_PRODUCTION.equals(environment)) {
                 warnings.add("Using privileged port " + port + " in production");
             }
         } catch (NumberFormatException e) {

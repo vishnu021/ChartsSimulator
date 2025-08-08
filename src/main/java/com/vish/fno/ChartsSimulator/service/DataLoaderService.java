@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -99,7 +100,7 @@ public class DataLoaderService {
                     filePath, totalTickers, filteredOut, sortedTickers.size());
 
             return sortedTickers;
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Error loading data from file: {}", filePath, e);
         }
         return tickers;
@@ -123,4 +124,3 @@ public class DataLoaderService {
                 .toLocalDateTime();
     }
 }
-

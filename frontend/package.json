@@ -10,7 +10,7 @@
     "build:static": "next build",
     "clean": "rm -rf .next out",
     "build:prod": "npm run clean && npm run build:static",
-    "export": "next build && next export"
+    "export": "next build"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.0.0",

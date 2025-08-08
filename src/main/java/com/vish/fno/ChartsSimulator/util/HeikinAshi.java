@@ -4,13 +4,11 @@ package com.vish.fno.ChartsSimulator.util;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-@Slf4j
 public final class HeikinAshi {
 
     public static List<Candle> getCandles(List<Candle> candles) {

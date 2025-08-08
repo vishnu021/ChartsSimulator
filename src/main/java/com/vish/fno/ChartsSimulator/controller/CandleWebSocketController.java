@@ -3,6 +3,7 @@ package com.vish.fno.ChartsSimulator.controller;
 import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.CandleRequest;
+import com.vish.fno.ChartsSimulator.model.Extrema;
 import com.vish.fno.ChartsSimulator.service.CandleService;
 import com.vish.fno.ChartsSimulator.service.WebSocketSessionManager;
 import com.vish.fno.ChartsSimulator.util.FileUtil;
@@ -49,7 +50,7 @@ public class CandleWebSocketController {
                 return;
             }
 
-            Object finalResponse = null;
+            Extrema finalResponse = null;
             for (int i = 0; i < candles.size(); i++) {
                 // Check if session is still active before sending each message
                 if (!sessionManager.isSessionActive(sessionId)) {
@@ -72,7 +73,7 @@ public class CandleWebSocketController {
 
             log.info("Completed candle stream for session: {} - symbol: {}", sessionId, req.symbol());
 
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Error during candle streaming for session: {}", sessionId, e);
             messagingTemplate.convertAndSendToUser(sessionId, "/queue/error",
                     "Error streaming candle data: " + e.getMessage());

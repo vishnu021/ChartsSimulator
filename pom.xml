@@ -98,6 +98,7 @@
 					<!-- Install Node.js and npm -->
 					<execution>
 						<id>install node and npm</id>
+						<phase>generate-resources</phase>
 						<goals>
 							<goal>install-node-and-npm</goal>
 						</goals>
@@ -110,6 +111,7 @@
 					<!-- npm install -->
 					<execution>
 						<id>npm install</id>
+						<phase>generate-resources</phase>
 						<goals>
 							<goal>npm</goal>
 						</goals>
@@ -118,20 +120,20 @@
 						</configuration>
 					</execution>
 
-					<!-- npm run build -->
+					<!-- Build static site: next build + export -->
 					<execution>
-						<id>npm run build</id>
+						<id>npm run export</id>
+						<phase>generate-resources</phase>
 						<goals>
 							<goal>npm</goal>
 						</goals>
 						<configuration>
-							<arguments>run build</arguments>
+							<arguments>run export</arguments>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 
-			<!-- Copy frontend build to Spring Boot static resources -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-resources-plugin</artifactId>

@@ -145,7 +145,8 @@ public class TickDataProcessor implements CommandLineRunner {
                                              Map<String, Integer> timeOccurrences) {
         int occurrence = timeOccurrences.getOrDefault(timeKey, 0) + 1;
         timeOccurrences.put(timeKey, occurrence);
-        long adjustedTimestamp = originalTimestamp + (occurrence * 600L);
+        final long duplicateOffsetMs = 600L;
+        long adjustedTimestamp = originalTimestamp + (occurrence * duplicateOffsetMs);
         return formatTime(adjustedTimestamp);
     }
 

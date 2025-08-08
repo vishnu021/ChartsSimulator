@@ -3,6 +3,7 @@ package com.vish.fno.ChartsSimulator.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -14,6 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 public class SecurityConfig implements WebMvcConfigurer {
+    private static final int RETRY_AFTER_SECONDS = 60;
+    private static final long ONE_MINUTE_MS = 60_000L;
 
     @Value("${app.security.rate-limit.enabled:true}")
     private boolean rateLimitEnabled;
@@ -27,7 +30,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             registry.addInterceptor(rateLimitInterceptor())
                     .addPathPatterns("/api/**", "/ws/**");
         }
-        
+
         registry.addInterceptor(securityHeadersInterceptor())
                 .addPathPatterns("/**");
     }
@@ -56,8 +59,8 @@ public class SecurityConfig implements WebMvcConfigurer {
             ClientRequestTracker tracker = clients.computeIfAbsent(clientId, k -> new ClientRequestTracker());
 
             if (tracker.exceedsLimit(requestsPerMinute)) {
-                response.setStatus(429); // Too Many Requests
-                response.setHeader("Retry-After", "60");
+                response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                response.setHeader("Retry-After", String.valueOf(RETRY_AFTER_SECONDS));
                 response.setHeader("X-RateLimit-Limit", String.valueOf(requestsPerMinute));
                 response.setHeader("X-RateLimit-Remaining", "0");
                 return false;
@@ -66,7 +69,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             tracker.addRequest();
             response.setHeader("X-RateLimit-Limit", String.valueOf(requestsPerMinute));
             response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, requestsPerMinute - tracker.getRequestCount())));
-            
+
             return true;
         }
 
@@ -87,7 +90,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             response.setHeader("X-Frame-Options", "DENY");
             response.setHeader("X-XSS-Protection", "1; mode=block");
             response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-            response.setHeader("Content-Security-Policy", 
+            response.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
                 "script-src 'self' 'unsafe-inline'; " +
                 "style-src 'self' 'unsafe-inline'; " +
@@ -105,7 +108,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 
         public boolean exceedsLimit(int limit) {
             long now = System.currentTimeMillis();
-            if (now - windowStart > 60000) { // 1 minute window
+            if (now - windowStart > ONE_MINUTE_MS) { // 1 minute window
                 reset();
             }
             return requestCount.get() >= limit;

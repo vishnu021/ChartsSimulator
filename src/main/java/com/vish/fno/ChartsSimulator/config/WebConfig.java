@@ -7,6 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+    private static final String ENV_PRODUCTION = "production";
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -30,7 +31,7 @@ public class WebConfig implements WebMvcConfigurer {
         String[] headers = allowedHeaders.split(",");
 
         // More restrictive CORS for production
-        if ("production".equals(environment)) {
+        if (ENV_PRODUCTION.equals(environment)) {
             registry.addMapping("/api/**")
                     .allowedOrigins(origins)
                     .allowedMethods(methods)
