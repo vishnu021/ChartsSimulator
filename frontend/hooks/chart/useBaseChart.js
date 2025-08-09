@@ -124,7 +124,10 @@ export function useBaseChart({
       const mouseRatioX = (x - padding.left) / chartWidth;
       const mouseRatioY = (y - padding.top) / chartHeight;
 
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      // Determine dominant wheel delta to support Shift+Scroll where deltaX is used
+      const dominantDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
+      const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
 
       if (e.shiftKey) {
         // Vertical zoom

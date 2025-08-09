@@ -775,9 +775,11 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
             // Simplified and stable zoom calculation
-            // e.deltaY > 0 = scroll down = zoom out (smaller factor)
-            // e.deltaY < 0 = scroll up = zoom in (larger factor)
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            // Determine dominant wheel delta (fix Shift+Scroll on some browsers where deltaY=0 and deltaX is used)
+            const dominantDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+            const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
+            // effectiveDelta > 0 = scroll down/right = zoom out; < 0 = scroll up/left = zoom in
+            const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
 
             // Check if Shift key is held for vertical zoom
             if (e.shiftKey) {
