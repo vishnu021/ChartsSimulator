@@ -14,7 +14,9 @@ export const renderXAxis = (ctx, {
   isMobile,
   visibleStart,
   visibleEnd,
-  candleWidth
+  candleWidth,
+  xAxisY,
+  xAxisHeight
 }) => {
   if (!data.candles || data.candles.length === 0) return;
 
@@ -26,11 +28,11 @@ export const renderXAxis = (ctx, {
     isMobile
   );
 
-  // Position x-axis labels properly within viewport
-  const labelY = height - 35; // Fixed position near bottom
+  // Use provided Y position for tight integration with chart
+  const labelY = xAxisY + (xAxisHeight / 2) + 4; // Center in the X-axis area
 
   ctx.fillStyle = colors.text.secondary;
-  const labelFontSize = isMobile ? '10px' : '12px';
+  const labelFontSize = isMobile ? '12px' : '14px'; // Increased font sizes
   ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = 'center';
 
@@ -57,7 +59,7 @@ export const renderYAxis = (ctx, {
   const horizontalLines = isMobile ? 4 : 8;
 
   ctx.fillStyle = colors.text.secondary;
-  const labelFontSize = isMobile ? '10px' : '12px';
+  const labelFontSize = isMobile ? '12px' : '14px'; // Increased font sizes
   ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = 'right';
 

@@ -1,7 +1,10 @@
+import React from 'react';
+import UnifiedChart from './UnifiedChart';
+
 // Export all chart components for easy importing
 export { default as ChartContainer } from './ChartContainer';
 export { default as UnifiedChart } from './UnifiedChart';
-import UnifiedChart from './UnifiedChart';
+export { default as ChartPanel } from './ChartPanel';
 export { renderXAxis, renderYAxis, renderGrid } from './AxisRenderer';
 export { renderWyckoffPhases } from './WyckoffPhaseRenderer';
 export { renderCandlesticks, renderHeikinAshi } from './CandlestickRenderer';

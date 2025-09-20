@@ -4,9 +4,10 @@ import React from 'react';
 import { themes, chartSettings } from '../chartConfig';
 import ChartContainer from './ChartContainer';
 import { renderXAxis, renderYAxis, renderGrid } from './AxisRenderer';
-import { renderWyckoffPhases } from './WyckoffPhaseRenderer';
+import { renderWyckoffPhases, renderWyckoffTooltip } from './WyckoffPhaseRenderer';
 import { renderCandlesticks, renderHeikinAshi } from './CandlestickRenderer';
 import { renderExtrema } from './ExtremaRenderer';
+import { drawEnhancedCrosshair } from '../common/CrosshairRenderer';
 
 /**
  * UnifiedChart - A reusable chart component that can render:
@@ -38,30 +39,59 @@ export const UnifiedChart = ({
     width,
     height,
     viewState,
-    isMobile
+    isMobile,
+    mousePos,
+    showCrosshair,
+    isDragging
   }) => {
     if (!data || !data.candles || data.candles.length === 0) return;
 
     // Setup padding based on mobile/desktop
     const padding = isMobile ? chartSettings.mobilePadding : chartSettings.padding;
 
-    // Reserve space for bottom elements (axes + wyckoff phases)
-    const bottomReservedSpace = 70; // Space for x-axis (35px) + wyckoff phases (25px) + margin
-    const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
+    // Define fixed heights for bottom elements
+    const xAxisHeight = 25; // Height for X-axis labels
+    const phaseStripHeight = 22; // Height for Wyckoff phase strip
+    const elementSpacing = 3; // Small spacing between elements
+
+    // Calculate chart area (reserve space for bottom elements)
+    const bottomElementsHeight = xAxisHeight + phaseStripHeight + (elementSpacing * 2);
+    const chartHeight = height - padding.top - padding.bottom - bottomElementsHeight;
+
+    // Define Y positions for bottom elements (immediately after chart)
+    const chartBottom = padding.top + chartHeight;
+    const xAxisY = chartBottom + elementSpacing;
+    const phaseStripY = xAxisY + xAxisHeight + elementSpacing;
     const chartWidth = width - padding.left - padding.right;
 
     // Clear canvas
     ctx.fillStyle = colors.background;
     ctx.fillRect(0, 0, width, height);
 
-    // Draw panel background
+    // Draw unified panel background that includes chart + axes + phases
+    const panelPadding = 10;
+    const panelWidth = chartWidth + 20;
+    const panelHeight = chartHeight + bottomElementsHeight + 20;
+
     ctx.fillStyle = colors.panelBackground;
     ctx.fillRect(
-      padding.left - 10,
-      padding.top - 10,
-      chartWidth + 20,
-      chartHeight + 20
+      padding.left - panelPadding,
+      padding.top - panelPadding,
+      panelWidth,
+      panelHeight
     );
+
+    // Draw subtle border around the unified panel
+    ctx.strokeStyle = colors.grid || colors.text.secondary;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.3;
+    ctx.strokeRect(
+      padding.left - panelPadding,
+      padding.top - panelPadding,
+      panelWidth,
+      panelHeight
+    );
+    ctx.globalAlpha = 1;
 
     // Calculate visible range
     const candleWidth = (chartWidth / data.candles.length) * viewState.zoom;
@@ -184,7 +214,9 @@ export const UnifiedChart = ({
         isMobile,
         visibleStart,
         visibleEnd,
-        candleWidth
+        candleWidth,
+        xAxisY,
+        xAxisHeight
       });
 
       renderYAxis(ctx, {
@@ -212,7 +244,58 @@ export const UnifiedChart = ({
         visibleStart,
         visibleEnd,
         candleWidth,
-        isMobile
+        isMobile,
+        phaseStripY,
+        phaseStripHeight
+      });
+    }
+
+    // Render crosshair (after all chart elements)
+    if (showCrosshair && mousePos && enableInteraction && !isMobile) {
+      // Helper function to get price at Y coordinate
+      const getPriceAtY = (y) => {
+        const chartBottom = padding.top + chartHeight;
+        if (y < padding.top || y > chartBottom) return null;
+        const priceY = (y - padding.top) / chartHeight;
+        return maxPrice + pricePadding - priceY * (priceRange + 2 * pricePadding);
+      };
+
+      // Helper function to get time at X coordinate
+      const getTimeAtX = (x) => {
+        if (x < padding.left || x > width - padding.right) return null;
+        const candleIndex = Math.floor((x - padding.left - clampedOffset) / candleWidth);
+        const adjustedIndex = candleIndex + visibleStart;
+        if (adjustedIndex < 0 || adjustedIndex >= data.candles.length) return null;
+        return data.candles[adjustedIndex]?.time;
+      };
+
+      // Draw enhanced crosshair with price and time labels
+      drawEnhancedCrosshair(ctx, width, height, mousePos, padding, {
+        colors,
+        showCrosshair: true,
+        isDragging,
+        isMobile,
+        getPriceAtY,
+        getTimeAtX,
+        lineWidth: 1,
+        opacity: 0.8
+      });
+    }
+
+    // Render phase tooltips on hover
+    if (showWyckoffPhases && data.wyckoffPhases && mousePos && !isDragging) {
+      renderWyckoffTooltip(ctx, {
+        width,
+        height,
+        data,
+        padding,
+        mousePos,
+        visibleStart,
+        visibleEnd,
+        candleWidth,
+        isMobile,
+        phaseStripY,
+        phaseStripHeight
       });
     }
 

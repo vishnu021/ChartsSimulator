@@ -21,13 +21,15 @@ export const renderWyckoffPhases = (ctx, {
   visibleStart,
   visibleEnd,
   candleWidth,
-  isMobile
+  isMobile,
+  phaseStripY,
+  phaseStripHeight
 }) => {
   if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
-  const stripHeight = 25; // Reduced height for better fit
-  // Position strip at very bottom but ensure it's visible within viewport
-  const stripY = height - stripHeight - 2;
+  // Use provided positioning for tight integration with chart
+  const stripHeight = phaseStripHeight || 20;
+  const stripY = phaseStripY;
 
   // Draw background for the strip
   ctx.fillStyle = colors.panel || colors.background;
@@ -84,8 +86,8 @@ export const renderWyckoffPhases = (ctx, {
       ctx.strokeRect(startX + 1, stripY + 3, phaseWidth - 2, stripHeight - 6);
       ctx.shadowBlur = 0;
 
-      // Draw phase label if there's enough space
-      if (phaseWidth > 50) {
+      // Draw phase label if there's enough space, otherwise rely on tooltip
+      if (phaseWidth > 40) {
         const labelX = startX + phaseWidth / 2;
         const labelY = stripY + stripHeight / 2;
 
@@ -98,7 +100,7 @@ export const renderWyckoffPhases = (ctx, {
         // Phase name with bold styling
         ctx.fillStyle = '#FFFFFF';
         ctx.font = `bold ${
-          isMobile ? '10px' : '11px'
+          isMobile ? '12px' : '13px'
         } -apple-system, BlinkMacSystemFont, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -107,7 +109,7 @@ export const renderWyckoffPhases = (ctx, {
         // Confidence if there's space
         if (phaseWidth > 80 && phase.confidence) {
           ctx.font = `${
-            isMobile ? '8px' : '9px'
+            isMobile ? '10px' : '11px'
           } -apple-system, BlinkMacSystemFont, sans-serif`;
           ctx.fillStyle = '#E0E0E0';
           ctx.fillText(
@@ -151,7 +153,7 @@ export const renderWyckoffPhases = (ctx, {
     // Text
     ctx.fillStyle = colors.text.primary;
     ctx.font = `${
-      isMobile ? '8px' : '9px'
+      isMobile ? '10px' : '11px'
     } -apple-system, BlinkMacSystemFont, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -161,4 +163,102 @@ export const renderWyckoffPhases = (ctx, {
       indicatorY + indicatorHeight / 2
     );
   }
+};
+
+/**
+ * Renders tooltip for Wyckoff phases on hover
+ */
+export const renderWyckoffTooltip = (ctx, {
+  width,
+  height,
+  data,
+  padding,
+  mousePos,
+  visibleStart,
+  visibleEnd,
+  candleWidth,
+  isMobile,
+  phaseStripY,
+  phaseStripHeight
+}) => {
+  if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return null;
+  if (!mousePos || isMobile) return null;
+
+  const stripHeight = phaseStripHeight || 20;
+  const stripY = phaseStripY;
+
+  // Check if mouse is over the phase strip
+  if (mousePos.y < stripY || mousePos.y > stripY + stripHeight) return null;
+  if (mousePos.x < padding.left || mousePos.x > width - padding.right) return null;
+
+  // Find which phase the mouse is over
+  let hoveredPhase = null;
+  for (const phase of data.wyckoffPhases) {
+    const phaseStart = Math.max(phase.startIndex, visibleStart);
+    const phaseEnd = Math.min(phase.endIndex, visibleEnd);
+
+    if (phaseStart <= phaseEnd && phaseEnd >= visibleStart && phaseStart <= visibleEnd) {
+      const startX = padding.left + (phaseStart - visibleStart) * candleWidth;
+      const endX = padding.left + (phaseEnd - visibleStart + 1) * candleWidth;
+
+      if (mousePos.x >= startX && mousePos.x <= endX) {
+        hoveredPhase = phase;
+        break;
+      }
+    }
+  }
+
+  if (!hoveredPhase) return null;
+
+  // Draw tooltip
+  const tooltipText = `${hoveredPhase.phase.replace('_', ' ')}`;
+  const confidenceText = hoveredPhase.confidence ?
+    ` (${(hoveredPhase.confidence * 100).toFixed(0)}%)` : '';
+  const fullText = tooltipText + confidenceText;
+
+  // Measure text to size tooltip
+  ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif';
+  const textMetrics = ctx.measureText(fullText);
+  const tooltipWidth = textMetrics.width + 16;
+  const tooltipHeight = 24;
+
+  // Position tooltip above the mouse
+  let tooltipX = mousePos.x - tooltipWidth / 2;
+  let tooltipY = mousePos.y - tooltipHeight - 10;
+
+  // Ensure tooltip stays within bounds
+  if (tooltipX < padding.left) tooltipX = padding.left;
+  if (tooltipX + tooltipWidth > width - padding.right) {
+    tooltipX = width - padding.right - tooltipWidth;
+  }
+  if (tooltipY < padding.top) tooltipY = mousePos.y + 10;
+
+  // Draw tooltip background
+  ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+  ctx.beginPath();
+  // Use roundRect if available, otherwise fallback to rect
+  if (ctx.roundRect) {
+    ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6);
+  } else {
+    ctx.rect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+  }
+  ctx.fill();
+
+  // Draw tooltip border
+  const phaseColor = WYCKOFF_COLORS[hoveredPhase.phase] || WYCKOFF_COLORS.UNKNOWN;
+  ctx.strokeStyle = phaseColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Draw tooltip text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(
+    fullText,
+    tooltipX + tooltipWidth / 2,
+    tooltipY + tooltipHeight / 2
+  );
+
+  return hoveredPhase;
 };
