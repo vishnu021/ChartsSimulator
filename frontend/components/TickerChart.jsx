@@ -310,11 +310,12 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const timeSpan = processedData.timeRange.end - processedData.timeRange.start;
         const visibleStart = processedData.timeRange.start + timeSpan * visibleStartRatio;
         const visibleEnd = processedData.timeRange.start + timeSpan * visibleEndRatio;
+        const visibleSpan = Math.max(1, visibleEnd - visibleStart);
 
-        // X-axis scaling for timestamps
+        // X-axis scaling for timestamps within the visible window
         const xScaleTime = (timestamp) => {
-            const ratio = (timestamp - processedData.timeRange.start) / timeSpan;
-            return padding.left + ratio * totalWidth + clampedOffset;
+            const ratio = (timestamp - visibleStart) / visibleSpan;
+            return padding.left + ratio * chartWidth;
         };
 
         // Set clipping region for chart area
@@ -377,8 +378,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                         const nextX = xScaleTime(visibleCandles[i + 1].timestamp);
                         candleWidth = Math.max(1, nextX - candleX);
                     } else {
-                        // Single candle case - use 1 minute width
-                        candleWidth = (60 * 1000 / timeSpan) * totalWidth;
+                        // Single candle case - use 1 minute width relative to visible span
+                        candleWidth = (60 * 1000 / visibleSpan) * chartWidth;
                     }
 
                     // Position candle body to START at previous minute and END at current minute
@@ -741,8 +742,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             ctx.fillText(price.toFixed(2), width - padding.right + 10, mousePos.y + 4);
 
             // Time label
-            const hoveredTime = processedData.timeRange.start +
-                ((mousePos.x - padding.left - clampedOffset) / totalWidth) * timeSpan;
+            const hoveredTime = visibleStart +
+                ((mousePos.x - padding.left) / chartWidth) * visibleSpan;
             const timeLabel = formatTime(new Date(hoveredTime), 'HH:mm:ss');
 
             ctx.fillStyle = colors.tooltip.background;
@@ -768,65 +769,78 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const handleWheel = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const chartWidth = rect.width - chartSettings.padding.left - chartSettings.padding.right;
             const mouseRatio = (x - chartSettings.padding.left) / chartWidth;
 
-            // Simplified and stable zoom calculation
-            // Determine dominant wheel delta (fix Shift+Scroll on some browsers where deltaY=0 and deltaX is used)
-            const dominantDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-            const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
-            // effectiveDelta > 0 = scroll down/right = zoom out; < 0 = scroll up/left = zoom in
-            const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
+            // Determine deltas (some devices report primarily deltaX for horizontal gestures)
+            const absX = Math.abs(e.deltaX || 0);
+            const absY = Math.abs(e.deltaY || 0);
 
-            // Check if Shift key is held for vertical zoom
+            // Shift+wheel → vertical zoom (unchanged)
             if (e.shiftKey) {
-                // Vertical zoom stable at cursor position
+                const dominantDelta = absY > absX ? e.deltaY : e.deltaX; // support devices where Y is 0
+                const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
+                const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
+
                 const newVerticalZoom = Math.max(1.0, Math.min(20, viewState.verticalZoom * zoomFactor));
-                
-                // Calculate vertical offset to keep cursor position stable
+
+                // Keep cursor-aligned while zooming vertically
                 const chartHeight = rect.height - chartSettings.padding.top - chartSettings.padding.bottom;
                 const mouseY = e.clientY - rect.top - chartSettings.padding.top;
                 const mouseRatioY = Math.max(0, Math.min(1, mouseY / chartHeight));
-                
-                // Simpler zoom offset calculation
                 const zoomRatio = newVerticalZoom / viewState.verticalZoom;
-                const offsetAdjustment = chartHeight * (mouseRatioY - 0.5) * (1 - 1/zoomRatio);
+                const offsetAdjustment = chartHeight * (mouseRatioY - 0.5) * (1 - 1 / zoomRatio);
                 const newVerticalOffset = viewState.verticalOffset + offsetAdjustment;
-                
+
                 setViewState(prev => ({
                     ...prev,
                     verticalZoom: newVerticalZoom,
                     verticalOffset: newVerticalOffset,
                     targetVerticalOffset: newVerticalOffset
                 }));
-                return; // Prevent horizontal zoom when shift is held
-            } else {
-                // Horizontal zoom stable at cursor position
-                const newZoom = Math.max(1.0, Math.min(100, viewState.zoom * zoomFactor));
+                return;
+            }
 
-                // Calculate horizontal offset to keep cursor position stable
+            // If the gesture is predominantly horizontal → smooth pan, not zoom
+            if (absX > absY) {
                 const totalWidth = chartWidth * viewState.zoom;
-                const newTotalWidth = chartWidth * newZoom;
-                const widthChange = newTotalWidth - totalWidth;
-                
-                // Zoom around cursor position
-                const newOffset = viewState.offset - widthChange * mouseRatio;
-                
-                // Calculate offset limits
                 const maxOffset = 0;
-                const minOffset = Math.min(0, chartWidth - newTotalWidth);
-                const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+                const minOffset = Math.min(0, chartWidth - totalWidth);
+
+                // Positive deltaX means user scrolls right; move content left (offset more negative)
+                const panDelta = -e.deltaX; // invert to match intuitive scroll direction
+                const newTarget = Math.max(minOffset, Math.min(maxOffset, viewState.targetOffset + panDelta));
 
                 setViewState(prev => ({
                     ...prev,
-                    zoom: newZoom,
-                    offset: clampedOffset,
-                    targetOffset: clampedOffset
+                    targetOffset: newTarget
                 }));
+                return;
             }
+
+            // Otherwise treat as horizontal zoom (vertical wheel gesture)
+            const dominantDelta = absY >= absX ? e.deltaY : e.deltaX;
+            const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
+            const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
+
+            const newZoom = Math.max(1.0, Math.min(100, viewState.zoom * zoomFactor));
+            const totalWidth = chartWidth * viewState.zoom;
+            const newTotalWidth = chartWidth * newZoom;
+            const widthChange = newTotalWidth - totalWidth;
+            const newOffset = viewState.offset - widthChange * mouseRatio; // zoom around cursor
+            const maxOffset = 0;
+            const minOffset = Math.min(0, chartWidth - newTotalWidth);
+            const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+
+            setViewState(prev => ({
+                ...prev,
+                zoom: newZoom,
+                offset: clampedOffset,
+                targetOffset: clampedOffset
+            }));
         };
 
         const handleMouseDown = (e) => {
@@ -945,7 +959,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
                     <div className="flex items-center gap-2" style={{ color: colors.text.secondary }}>
                         {!isMobile && (
                             <>
-                                <span>Scroll:H Shift+Scroll:V Drag:Pan</span>
+                                <span>Pan:H-scroll/Drag Zoom:Wheel V-zoom:Shift+Wheel</span>
                                 <span>H:{(viewState.zoom * 100).toFixed(0)}% V:{(viewState.verticalZoom * 100).toFixed(0)}%</span>
                                 <span>|</span>
                             </>
