@@ -9,104 +9,103 @@ import ControlPanel from '@/components/ControlPanel';
 import { configService } from '@/services/config/configService';
 
 const CombinedChart = dynamic(() => import('@/components/CombinedChart'), {
-    ssr: false,
-    loading: () => (
-        <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                Loading charts...
-            </div>
-        </div>
-    )
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        Loading charts...
+      </div>
+    </div>
+  ),
 });
 
 export default function ChartsPage() {
-    const { theme, toggleTheme } = useAppState();
-    const [chartData, setChartData] = useState(null);
-    const [error, setError] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+  const { theme, toggleTheme } = useAppState();
+  const [chartData, setChartData] = useState(null);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleLoadChart = useCallback(async ({ symbol, date }) => {
-        setIsLoading(true);
-        setError(null);
-        setChartData(null);
+  const handleLoadChart = useCallback(async ({ symbol, date }) => {
+    setIsLoading(true);
+    setError(null);
+    setChartData(null);
 
+    try {
+      await configService.loadConfig();
+      const apiUrl = configService.getApiUrl();
+      const params = new URLSearchParams({
+        symbol,
+        date,
+        chartTypes: 'CANDLESTICK,HEIKIN_ASHI',
+      });
+      const response = await fetch(`${apiUrl}/api/charts?${params}`);
+
+      if (!response.ok) {
+        // Try to get detailed error information from response
+        let errorData;
         try {
-            await configService.loadConfig();
-            const apiUrl = configService.getApiUrl();
-            const params = new URLSearchParams({
-                symbol,
-                date,
-                chartTypes: 'CANDLESTICK,HEIKIN_ASHI'
-            });
-            const response = await fetch(`${apiUrl}/api/charts?${params}`);
-
-            if (!response.ok) {
-                // Try to get detailed error information from response
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { 
-                        message: `HTTP error! status: ${response.status}`,
-                        context: { symbol, date, httpStatusCode: response.status }
-                    };
-                }
-                console.error('Error loading charts:', errorData);
-                setError(JSON.stringify(errorData));
-                return;
-            }
-
-            const data = await response.json();
-            setChartData({ ...data, symbol });
-        } catch (error) {
-            console.error('Error loading charts:', error);
-            const errorData = {
-                message: 'Failed to load chart data: ' + error.message,
-                context: { symbol, date, error: error.message }
-            };
-            setError(JSON.stringify(errorData));
-        } finally {
-            setIsLoading(false);
+          errorData = await response.json();
+        } catch (e) {
+          errorData = {
+            message: `HTTP error! status: ${response.status}`,
+            context: { symbol, date, httpStatusCode: response.status },
+          };
         }
-    }, []);
+        console.error('Error loading charts:', errorData);
+        setError(JSON.stringify(errorData));
+        return;
+      }
 
-    const renderControls = () => (
-        <ControlPanel
-            onSubmit={handleLoadChart}
-            theme={theme}
-            onThemeToggle={toggleTheme}
-            hideLookbackPeriod={true}
-        />
-    );
+      const data = await response.json();
+      setChartData({ ...data, symbol });
+    } catch (error) {
+      console.error('Error loading charts:', error);
+      const errorData = {
+        message: 'Failed to load chart data: ' + error.message,
+        context: { symbol, date, error: error.message },
+      };
+      setError(JSON.stringify(errorData));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
+  const renderControls = () => (
+    <ControlPanel
+      onSubmit={handleLoadChart}
+      theme={theme}
+      onThemeToggle={toggleTheme}
+      hideLookbackPeriod={true}
+    />
+  );
 
-    const renderEmptyState = () => (
-        <EmptyState
-            icon="📉"
-            title="No charts loaded"
-            description="Enter a symbol and date to compare chart types"
-            theme={theme}
-        />
-    );
+  const renderEmptyState = () => (
+    <EmptyState
+      icon="📉"
+      title="No charts loaded"
+      description="Enter a symbol and date to compare chart types"
+      theme={theme}
+    />
+  );
 
-    return (
-        <PageLayout
-            theme={theme}
-            title={chartData?.symbol || 'Combined Chart'}
-            controls={renderControls()}
-            error={error}
-            onErrorDismiss={() => setError(null)}
-            loading={isLoading}
-            loadingMessage="Loading chart comparison..."
-        >
-            {chartData ? (
-                <div className="flex-1 min-h-0">
-                    <CombinedChart data={chartData} theme={theme} />
-                </div>
-            ) : (
-                renderEmptyState()
-            )}
-        </PageLayout>
-    );
+  return (
+    <PageLayout
+      theme={theme}
+      title={chartData?.symbol || 'Combined Chart'}
+      controls={renderControls()}
+      error={error}
+      onErrorDismiss={() => setError(null)}
+      loading={isLoading}
+      loadingMessage="Loading chart comparison..."
+    >
+      {chartData ? (
+        <div className="flex-1 min-h-0">
+          <CombinedChart data={chartData} theme={theme} />
+        </div>
+      ) : (
+        renderEmptyState()
+      )}
+    </PageLayout>
+  );
 }

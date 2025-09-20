@@ -22,7 +22,7 @@ const getStoredState = () => {
     return {
       symbol: 'NIFTY 50',
       date: getDefaultDate(),
-      theme: 'dark'
+      theme: 'dark',
     };
   }
 
@@ -33,7 +33,7 @@ const getStoredState = () => {
       return {
         symbol: parsed.symbol || 'NIFTY 50',
         date: parsed.date || getDefaultDate(),
-        theme: parsed.theme || 'dark'
+        theme: parsed.theme || 'dark',
       };
     }
   } catch (error) {
@@ -43,7 +43,7 @@ const getStoredState = () => {
   return {
     symbol: 'NIFTY 50',
     date: getDefaultDate(),
-    theme: 'dark'
+    theme: 'dark',
   };
 };
 
@@ -51,7 +51,7 @@ export const AppStateProvider = ({ children }) => {
   const [state, setState] = useState(() => ({
     symbol: 'NIFTY 50',
     date: getDefaultDate(),
-    theme: 'dark'
+    theme: 'dark',
   }));
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -65,7 +65,7 @@ export const AppStateProvider = ({ children }) => {
           setState({
             symbol: parsed.symbol || 'NIFTY 50',
             date: parsed.date || getDefaultDate(),
-            theme: parsed.theme || 'dark'
+            theme: parsed.theme || 'dark',
           });
         }
       } catch (error) {
@@ -86,11 +86,11 @@ export const AppStateProvider = ({ children }) => {
     }
   }, [state, isHydrated]);
 
-  const updateSymbol = (symbol) => {
+  const updateSymbol = symbol => {
     setState(prev => ({ ...prev, symbol }));
   };
 
-  const updateDate = (date) => {
+  const updateDate = date => {
     setState(prev => ({ ...prev, date }));
   };
 
@@ -98,7 +98,7 @@ export const AppStateProvider = ({ children }) => {
     setState(prev => ({ ...prev, symbol, date }));
   };
 
-  const updateTheme = (theme) => {
+  const updateTheme = theme => {
     setState(prev => ({ ...prev, theme }));
   };
 
@@ -110,7 +110,7 @@ export const AppStateProvider = ({ children }) => {
     setState({
       symbol: 'NIFTY 50',
       date: getDefaultDate(),
-      theme: 'dark'
+      theme: 'dark',
     });
   };
 
@@ -123,12 +123,8 @@ export const AppStateProvider = ({ children }) => {
     updateBoth,
     updateTheme,
     toggleTheme,
-    resetToDefaults
+    resetToDefaults,
   };
 
-  return (
-    <AppStateContext.Provider value={value}>
-      {children}
-    </AppStateContext.Provider>
-  );
+  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 };

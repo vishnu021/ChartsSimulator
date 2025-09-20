@@ -1,50 +1,53 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Disable React strict mode to avoid legacy lifecycle warnings
-    reactStrictMode: false,
+  // Disable React strict mode to avoid legacy lifecycle warnings
+  reactStrictMode: false,
 
-    // Enable static export for integration with Spring Boot
-    output: 'export',
+  // Enable static export for integration with Spring Boot
+  output: 'export',
 
-    // Disable image optimization for static export
-    images: {
-        unoptimized: true
-    },
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
 
-    // Configure trailing slash behavior
-    trailingSlash: true,
+  // Configure trailing slash behavior
+  trailingSlash: true,
 
-    // Configure asset prefix for production if needed
-    // assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+  // Configure asset prefix for production if needed
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
 
-    // Optimize for production build
-    compiler: {
-        // Remove console logs in production
-        removeConsole: process.env.NODE_ENV === 'production' ? {
-            exclude: ['error']
-        } : false,
-    },
+  // Optimize for production build
+  compiler: {
+    // Remove console logs in production
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? {
+            exclude: ['error'],
+          }
+        : false,
+  },
 
-    // Configure webpack for optimization
-    webpack: (config, { isServer }) => {
-        // Optimize bundle size
-        if (!isServer) {
-            config.resolve.fallback = {
-                ...config.resolve.fallback,
-                fs: false,
-                net: false,
-                tls: false,
-            };
-        }
+  // Configure webpack for optimization
+  webpack: (config, { isServer }) => {
+    // Optimize bundle size
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
 
-        return config;
-    },
+    return config;
+  },
 
-    // Configure environment variables
-    env: {
-        NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    },
+  // Configure environment variables
+  env: {
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
 };
 
 module.exports = nextConfig;

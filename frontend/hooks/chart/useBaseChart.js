@@ -5,15 +5,10 @@ import { canvasUtils } from '../../utils/chart';
 /**
  * Base chart hook providing common chart functionality
  */
-export function useBaseChart({ 
-  data, 
-  enableZoom = true, 
-  enablePan = true,
-  onViewStateChange 
-}) {
+export function useBaseChart({ data, enableZoom = true, enablePan = true, onViewStateChange }) {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  
+
   const [viewState, setViewState] = useState({
     zoom: 1,
     verticalZoom: 1,
@@ -22,9 +17,9 @@ export function useBaseChart({
     velocity: 0,
     verticalOffset: 0,
     targetVerticalOffset: 0,
-    verticalVelocity: 0
+    verticalVelocity: 0,
   });
-  
+
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, offset: 0, verticalOffset: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -59,7 +54,8 @@ export function useBaseChart({
   useEffect(() => {
     const animate = () => {
       setViewState(prev => {
-        const { FRICTION, SPRING_STRENGTH, VELOCITY_THRESHOLD, OFFSET_THRESHOLD } = CHART_CONSTANTS.ANIMATION;
+        const { FRICTION, SPRING_STRENGTH, VELOCITY_THRESHOLD, OFFSET_THRESHOLD } =
+          CHART_CONSTANTS.ANIMATION;
 
         if (!isDragging) {
           // Horizontal animation
@@ -67,17 +63,24 @@ export function useBaseChart({
           prev.velocity = prev.velocity * FRICTION + offsetDiff * SPRING_STRENGTH;
           prev.offset += prev.velocity;
 
-          if (Math.abs(prev.velocity) < VELOCITY_THRESHOLD && Math.abs(offsetDiff) < OFFSET_THRESHOLD) {
+          if (
+            Math.abs(prev.velocity) < VELOCITY_THRESHOLD &&
+            Math.abs(offsetDiff) < OFFSET_THRESHOLD
+          ) {
             prev.offset = prev.targetOffset;
             prev.velocity = 0;
           }
 
           // Vertical animation
           const verticalOffsetDiff = prev.targetVerticalOffset - prev.verticalOffset;
-          prev.verticalVelocity = prev.verticalVelocity * FRICTION + verticalOffsetDiff * SPRING_STRENGTH;
+          prev.verticalVelocity =
+            prev.verticalVelocity * FRICTION + verticalOffsetDiff * SPRING_STRENGTH;
           prev.verticalOffset += prev.verticalVelocity;
 
-          if (Math.abs(prev.verticalVelocity) < VELOCITY_THRESHOLD && Math.abs(verticalOffsetDiff) < OFFSET_THRESHOLD) {
+          if (
+            Math.abs(prev.verticalVelocity) < VELOCITY_THRESHOLD &&
+            Math.abs(verticalOffsetDiff) < OFFSET_THRESHOLD
+          ) {
             prev.verticalOffset = prev.targetVerticalOffset;
             prev.verticalVelocity = 0;
           }
@@ -107,51 +110,55 @@ export function useBaseChart({
     const canvas = canvasRef.current;
     if (!canvas || !data || isMobile || (!enableZoom && !enablePan)) return;
 
-    const handleWheel = (e) => {
+    const handleWheel = e => {
       if (!enableZoom) return;
-      
+
       e.preventDefault();
       e.stopPropagation();
-      
+
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const padding = canvasUtils.getPadding(isMobile);
       const chartWidth = rect.width - padding.left - padding.right;
       const chartHeight = rect.height - padding.top - padding.bottom;
-      
+
       const mouseRatioX = (x - padding.left) / chartWidth;
       const mouseRatioY = (y - padding.top) / chartHeight;
 
       // Determine dominant wheel delta to support Shift+Scroll where deltaX is used
       const dominantDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-      const effectiveDelta = dominantDelta !== 0 ? dominantDelta : (e.deltaY || e.deltaX || 0);
+      const effectiveDelta = dominantDelta !== 0 ? dominantDelta : e.deltaY || e.deltaX || 0;
       const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
 
       if (e.shiftKey) {
         // Vertical zoom
-        const newVerticalZoom = Math.max(CHART_CONSTANTS.MIN_VERTICAL_ZOOM, 
-          Math.min(CHART_CONSTANTS.MAX_VERTICAL_ZOOM, viewState.verticalZoom * zoomFactor));
-        
+        const newVerticalZoom = Math.max(
+          CHART_CONSTANTS.MIN_VERTICAL_ZOOM,
+          Math.min(CHART_CONSTANTS.MAX_VERTICAL_ZOOM, viewState.verticalZoom * zoomFactor)
+        );
+
         const zoomRatio = newVerticalZoom / viewState.verticalZoom;
-        const offsetAdjustment = chartHeight * (mouseRatioY - 0.5) * (1 - 1/zoomRatio);
-        
+        const offsetAdjustment = chartHeight * (mouseRatioY - 0.5) * (1 - 1 / zoomRatio);
+
         setViewState(prev => ({
           ...prev,
           verticalZoom: newVerticalZoom,
           verticalOffset: prev.verticalOffset + offsetAdjustment,
-          targetVerticalOffset: prev.targetVerticalOffset + offsetAdjustment
+          targetVerticalOffset: prev.targetVerticalOffset + offsetAdjustment,
         }));
       } else {
         // Horizontal zoom
-        const newZoom = Math.max(CHART_CONSTANTS.MIN_ZOOM, 
-          Math.min(CHART_CONSTANTS.MAX_ZOOM, viewState.zoom * zoomFactor));
+        const newZoom = Math.max(
+          CHART_CONSTANTS.MIN_ZOOM,
+          Math.min(CHART_CONSTANTS.MAX_ZOOM, viewState.zoom * zoomFactor)
+        );
 
         const totalWidth = chartWidth * viewState.zoom;
         const newTotalWidth = chartWidth * newZoom;
         const widthChange = newTotalWidth - totalWidth;
-        
+
         const newOffset = viewState.offset - widthChange * mouseRatioX;
         const maxOffset = 0;
         const minOffset = Math.min(0, chartWidth - newTotalWidth);
@@ -161,36 +168,36 @@ export function useBaseChart({
           ...prev,
           zoom: newZoom,
           offset: clampedOffset,
-          targetOffset: clampedOffset
+          targetOffset: clampedOffset,
         }));
       }
     };
 
-    const handleMouseDown = (e) => {
+    const handleMouseDown = e => {
       if (!enablePan) return;
-      
+
       setIsDragging(true);
       setDragStart({
         x: e.clientX,
         y: e.clientY,
         offset: viewState.targetOffset,
-        verticalOffset: viewState.targetVerticalOffset
+        verticalOffset: viewState.targetVerticalOffset,
       });
       canvas.style.cursor = 'grabbing';
     };
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = e => {
       const rect = canvas.getBoundingClientRect();
       setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 
       if (isDragging && enablePan) {
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
-        
+
         setViewState(prev => ({
           ...prev,
           targetOffset: dragStart.offset + dx,
-          targetVerticalOffset: dragStart.verticalOffset - dy
+          targetVerticalOffset: dragStart.verticalOffset - dy,
         }));
       }
     };
@@ -243,7 +250,7 @@ export function useBaseChart({
       velocity: 0,
       verticalOffset: 0,
       targetVerticalOffset: 0,
-      verticalVelocity: 0
+      verticalVelocity: 0,
     });
   }, []);
 
@@ -254,6 +261,6 @@ export function useBaseChart({
     showCrosshair,
     isMobile,
     isDragging,
-    resetView
+    resetView,
   };
 }

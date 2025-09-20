@@ -48,12 +48,12 @@ export const canvasUtils = {
       const {
         enableAntiAliasing = true,
         enableImageSmoothing = true,
-        pixelDensityOptimization = true
+        pixelDensityOptimization = true,
       } = config;
 
       const ctx = canvas.getContext('2d', {
         alpha: false, // Performance optimization for opaque content
-        desynchronized: true // Reduce input latency
+        desynchronized: true, // Reduce input latency
       });
 
       if (!ctx) {
@@ -61,7 +61,7 @@ export const canvasUtils = {
       }
 
       const rect = canvas.getBoundingClientRect();
-      const dpr = pixelDensityOptimization ? (window.devicePixelRatio || 1) : 1;
+      const dpr = pixelDensityOptimization ? window.devicePixelRatio || 1 : 1;
 
       // Validate dimensions
       if (rect.width <= 0 || rect.height <= 0) {
@@ -102,8 +102,8 @@ export const canvasUtils = {
         performance: {
           setupTime,
           scaledWidth,
-          scaledHeight
-        }
+          scaledHeight,
+        },
       };
     } catch (error) {
       if (error instanceof CanvasUtilsError) {
@@ -131,9 +131,7 @@ export const canvasUtils = {
         : { ...UI_CONSTANTS.PADDING.DASHBOARD_DESKTOP };
     }
 
-    return isMobile
-      ? { ...UI_CONSTANTS.PADDING.MOBILE }
-      : { ...UI_CONSTANTS.PADDING.DESKTOP };
+    return isMobile ? { ...UI_CONSTANTS.PADDING.MOBILE } : { ...UI_CONSTANTS.PADDING.DESKTOP };
   },
 
   /**
@@ -165,7 +163,7 @@ export const canvasUtils = {
 
     return {
       chartWidth: Math.max(0, chartWidth),
-      chartHeight: Math.max(0, chartHeight)
+      chartHeight: Math.max(0, chartHeight),
     };
   },
 
@@ -194,7 +192,10 @@ export const canvasUtils = {
       ctx.clip();
     } catch (error) {
       ctx.restore(); // Cleanup on error
-      throw new CanvasUtilsError(`Failed to set clipping region: ${error.message}`, 'CLIPPING_ERROR');
+      throw new CanvasUtilsError(
+        `Failed to set clipping region: ${error.message}`,
+        'CLIPPING_ERROR'
+      );
     }
   },
 
@@ -230,12 +231,7 @@ export const canvasUtils = {
       return;
     }
 
-    const {
-      borderRadius = 0,
-      shadowBlur = 0,
-      shadowColor = 'transparent',
-      margin = 10
-    } = options;
+    const { borderRadius = 0, shadowBlur = 0, shadowColor = 'transparent', margin = 10 } = options;
 
     try {
       ctx.save();
@@ -250,8 +246,8 @@ export const canvasUtils = {
 
       const x = padding.left - margin;
       const y = padding.top - margin;
-      const w = width - padding.left - padding.right + (margin * 2);
-      const h = height - padding.top - padding.bottom + (margin * 2);
+      const w = width - padding.left - padding.right + margin * 2;
+      const h = height - padding.top - padding.bottom + margin * 2;
 
       if (borderRadius > 0) {
         this._drawRoundedRect(ctx, x, y, w, h, borderRadius);
@@ -334,7 +330,7 @@ export const canvasUtils = {
 
       // Add color stops
       colors.forEach((colorStop, index) => {
-        const position = colorStop.position ?? (index / (colors.length - 1));
+        const position = colorStop.position ?? index / (colors.length - 1);
         gradient.addColorStop(position, colorStop.color);
       });
 
@@ -368,7 +364,7 @@ export const canvasUtils = {
       const metrics = ctx.measureText(text);
       const result = {
         width: metrics.width,
-        height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || 12
+        height: metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || 12,
       };
 
       ctx.font = originalFont;
@@ -393,16 +389,18 @@ export const canvasUtils = {
    * @returns {boolean} Whether padding is valid
    */
   _isValidPadding(padding) {
-    return padding &&
-           typeof padding === 'object' &&
-           typeof padding.top === 'number' &&
-           typeof padding.right === 'number' &&
-           typeof padding.bottom === 'number' &&
-           typeof padding.left === 'number' &&
-           padding.top >= 0 &&
-           padding.right >= 0 &&
-           padding.bottom >= 0 &&
-           padding.left >= 0;
+    return (
+      padding &&
+      typeof padding === 'object' &&
+      typeof padding.top === 'number' &&
+      typeof padding.right === 'number' &&
+      typeof padding.bottom === 'number' &&
+      typeof padding.left === 'number' &&
+      padding.top >= 0 &&
+      padding.right >= 0 &&
+      padding.bottom >= 0 &&
+      padding.left >= 0
+    );
   },
 
   /**
@@ -437,7 +435,7 @@ export const canvasUtils = {
     if (this._textMetricsCache) {
       this._textMetricsCache.clear();
     }
-  }
+  },
 };
 
 // Export error class for external use

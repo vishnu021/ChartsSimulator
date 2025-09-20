@@ -14,13 +14,16 @@ export const scalingUtils = {
     const clampedOffset = Math.max(minOffset, Math.min(maxOffset, offset));
 
     const visibleStart = Math.max(0, Math.floor(-clampedOffset / candleWidth));
-    const visibleEnd = Math.min(totalCandles, Math.ceil((chartWidth - clampedOffset) / candleWidth));
+    const visibleEnd = Math.min(
+      totalCandles,
+      Math.ceil((chartWidth - clampedOffset) / candleWidth)
+    );
 
     return {
       visibleStart,
       visibleEnd,
       clampedOffset,
-      candleWidth
+      candleWidth,
     };
   },
 
@@ -44,8 +47,11 @@ export const scalingUtils = {
    * Create Y-axis scaling function
    */
   createYScale(minPrice, maxPrice, priceRange, pricePadding, padding, chartHeight) {
-    return (price) => {
-      return padding.top + ((maxPrice + pricePadding - price) / (priceRange + 2 * pricePadding)) * chartHeight;
+    return price => {
+      return (
+        padding.top +
+        ((maxPrice + pricePadding - price) / (priceRange + 2 * pricePadding)) * chartHeight
+      );
     };
   },
 
@@ -53,7 +59,7 @@ export const scalingUtils = {
    * Create X-axis scaling function for candles
    */
   createXScale(padding, candleWidth, visibleStart) {
-    return (index) => {
+    return index => {
       return padding.left + (index - visibleStart) * candleWidth + candleWidth / 2;
     };
   },
@@ -63,7 +69,7 @@ export const scalingUtils = {
    */
   createTimeXScale(timeRange, totalWidth, clampedOffset, padding) {
     const timeSpan = timeRange.end - timeRange.start;
-    return (timestamp) => {
+    return timestamp => {
       const ratio = (timestamp - timeRange.start) / timeSpan;
       return padding.left + ratio * totalWidth + clampedOffset;
     };
@@ -85,5 +91,5 @@ export const scalingUtils = {
     const maxOffset = 0;
     const minOffset = Math.min(0, chartWidth - totalWidth);
     return { maxOffset, minOffset };
-  }
+  },
 };

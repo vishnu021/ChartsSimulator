@@ -78,5 +78,4 @@ logs/
 next-env.d.ts
 /output
 /src/main/resources/static
-*.md
 /node_modules

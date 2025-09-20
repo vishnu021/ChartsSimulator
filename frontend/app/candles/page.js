@@ -10,122 +10,121 @@ import { usePageState } from '@/hooks/common/usePageState';
 import { configService } from '@/services/config/configService';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
-    ssr: false,
-    loading: () => (
-        <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                Loading chart...
-            </div>
-        </div>
-    )
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        Loading chart...
+      </div>
+    </div>
+  ),
 });
 
 export default function CandlesPage() {
-    const { theme, toggleTheme } = useAppState();
-    const {
-        data,
-        error,
-        isLoading,
-        handleLoadStart,
-        handleLoadSuccess,
-        handleLoadError,
-        clearError
-    } = usePageState();
+  const { theme, toggleTheme } = useAppState();
+  const {
+    data,
+    error,
+    isLoading,
+    handleLoadStart,
+    handleLoadSuccess,
+    handleLoadError,
+    clearError,
+  } = usePageState();
 
-    const handleLoadChart = useCallback(async ({ symbol, date }) => {
-        handleLoadStart();
+  const handleLoadChart = useCallback(
+    async ({ symbol, date }) => {
+      handleLoadStart();
 
-        try {
-            await configService.loadConfig();
-            const apiUrl = configService.getApiUrl();
-            const params = new URLSearchParams({ symbol, date });
-            const response = await fetch(`${apiUrl}/api/charts?${params}`);
+      try {
+        await configService.loadConfig();
+        const apiUrl = configService.getApiUrl();
+        const params = new URLSearchParams({ symbol, date });
+        const response = await fetch(`${apiUrl}/api/charts?${params}`);
 
-            if (!response.ok) {
-                // Try to get detailed error information from response
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    errorData = { 
-                        message: `HTTP error! status: ${response.status}`,
-                        context: { symbol, date, httpStatusCode: response.status }
-                    };
-                }
-                console.error('Error loading chart:', errorData);
-                handleLoadError(JSON.stringify(errorData));
-                return;
-            }
-
-            const result = await response.json();
-            handleLoadSuccess({
-                candles: result.candlesticks,
-                symbol
-            });
-        } catch (error) {
-            console.error('Error loading chart:', error);
-            const errorData = {
-                message: 'Failed to load chart data: ' + error.message,
-                context: { symbol, date, error: error.message }
+        if (!response.ok) {
+          // Try to get detailed error information from response
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            errorData = {
+              message: `HTTP error! status: ${response.status}`,
+              context: { symbol, date, httpStatusCode: response.status },
             };
-            handleLoadError(JSON.stringify(errorData));
+          }
+          console.error('Error loading chart:', errorData);
+          handleLoadError(JSON.stringify(errorData));
+          return;
         }
-    }, [handleLoadStart, handleLoadSuccess, handleLoadError]);
 
-    const renderControls = () => (
-        <ControlPanel
-            onSubmit={handleLoadChart}
-            theme={theme}
-            onThemeToggle={toggleTheme}
-            hideLookbackPeriod={true}
-        />
-    );
+        const result = await response.json();
+        handleLoadSuccess({
+          candles: result.candlesticks,
+          symbol,
+        });
+      } catch (error) {
+        console.error('Error loading chart:', error);
+        const errorData = {
+          message: 'Failed to load chart data: ' + error.message,
+          context: { symbol, date, error: error.message },
+        };
+        handleLoadError(JSON.stringify(errorData));
+      }
+    },
+    [handleLoadStart, handleLoadSuccess, handleLoadError]
+  );
 
-    const renderSubtitle = () => {
-        if (!data) return null;
+  const renderControls = () => (
+    <ControlPanel
+      onSubmit={handleLoadChart}
+      theme={theme}
+      onThemeToggle={toggleTheme}
+      hideLookbackPeriod={true}
+    />
+  );
 
-        const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+  const renderSubtitle = () => {
+    if (!data) return null;
 
-        return (
-            <span className={textColor}>
-                Total: {data.candles?.length || 0} candles
-            </span>
-        );
-    };
+    const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
-    const renderEmptyState = () => (
-        <EmptyState
-            icon="📊"
-            title="No chart loaded"
-            description="Enter a symbol and date above to load candlestick data"
-            theme={theme}
-        />
-    );
+    return <span className={textColor}>Total: {data.candles?.length || 0} candles</span>;
+  };
 
-    const handleErrorDismiss = useCallback(() => {
-        console.log('Dismissing error'); // Debug log
-        clearError();
-    }, [clearError]);
+  const renderEmptyState = () => (
+    <EmptyState
+      icon="📊"
+      title="No chart loaded"
+      description="Enter a symbol and date above to load candlestick data"
+      theme={theme}
+    />
+  );
 
-    return (
-        <PageLayout
-            theme={theme}
-            title={data?.symbol || 'Candlestick Chart'}
-            subtitle={renderSubtitle()}
-            controls={renderControls()}
-            error={error}
-            onErrorDismiss={handleErrorDismiss} // Use the callback wrapper
-            loading={isLoading}
-            loadingMessage="Loading chart data..."
-        >
-            {data ? (
-                <div className="flex-1 min-h-0">
-                    <CandleChart data={data} theme={theme} />
-                </div>
-            ) : (
-                renderEmptyState()
-            )}
-        </PageLayout>
-    );
+  const handleErrorDismiss = useCallback(() => {
+    console.log('Dismissing error'); // Debug log
+    clearError();
+  }, [clearError]);
+
+  return (
+    <PageLayout
+      theme={theme}
+      title={data?.symbol || 'Candlestick Chart'}
+      subtitle={renderSubtitle()}
+      controls={renderControls()}
+      error={error}
+      onErrorDismiss={handleErrorDismiss} // Use the callback wrapper
+      loading={isLoading}
+      loadingMessage="Loading chart data..."
+    >
+      {data ? (
+        <div className="flex-1 min-h-0">
+          <CandleChart data={data} theme={theme} />
+        </div>
+      ) : (
+        renderEmptyState()
+      )}
+    </PageLayout>
+  );
 }
