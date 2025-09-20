@@ -37,8 +37,8 @@ mvn spring-boot:run
 * **Services:** All business logic; SOLID enforced
 * **Models/DTOs:** Prefer Java **records**; Lombok `@Builder` for complex structures
 * **Config:**
-    * Use `@ConfigurationProperties` records bound from `application.yml`
-    * Avoid `@Value` for >2 properties
+  * Use `@ConfigurationProperties` records bound from `application.yml`
+  * Avoid `@Value` for >2 properties
 * **Timezone:** Always `Asia/Kolkata`
 * **WebSocket:** Configured in `config/WebSocketConfig.java` (STOMP endpoints at `/ws`)
 * **Exceptions:** Domain-specific classes + centralized `@ControllerAdvice`
@@ -52,13 +52,13 @@ mvn spring-boot:run
 * **Services:** Abstract API/WebSocket calls in `services/` layer
 * **Hooks:** Custom React hooks for data + connection state
 * **Standards:**
-    * Pure JavaScript codebase with ESLint + Prettier for best-practice linting and formatting
-    * ESLint + Prettier enforced
-    * Unit tests (Jest/RTL recommended)
+  * Pure JavaScript codebase with ESLint + Prettier for best-practice linting and formatting
+  * ESLint + Prettier enforced
+  * Unit tests (Jest/RTL recommended)
 * **Build Tools:**
-    * Managed with `package.json` scripts
-    * Integrated with Maven build via `frontend-maven-plugin`
-    * Commands: `npm run build`, `npm run export`, `npm run lint`
+  * Managed with `package.json` scripts
+  * Integrated with Maven build via `frontend-maven-plugin`
+  * Commands: `npm run build`, `npm run export`, `npm run lint`
 
 ---
 

@@ -16,7 +16,7 @@ const formatTime = (date, format) => {
   return `${hours}:${minutes}`;
 };
 
-export default function TickerChart({ data, theme = 'dark', symbol, stats, isRealTime }) {
+export default function TickerChart({ data, theme = 'dark', symbol, stats, isRealTime, wyckoffPhases, currentPhase }) {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -35,6 +35,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showCrosshair, setShowCrosshair] = useState(false);
   const colors = themes[theme];
+
+  // Wyckoff phase colors
+  const wyckoffColors = {
+    ACCUMULATION: '#4CAF50',
+    MARKUP: '#2196F3',
+    DISTRIBUTION: '#FF9800',
+    MARKDOWN: '#F44336',
+    UNKNOWN: '#9E9E9E'
+  };
 
   // Check for mobile
   useEffect(() => {
@@ -240,6 +249,74 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
     return intervals;
   };
+
+  // Draw Wyckoff phase strip function
+  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, padding) => {
+    if (!wyckoffPhases || wyckoffPhases.length === 0) return;
+
+    const stripHeight = 35;
+    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+
+    // Draw background for the strip
+    ctx.fillStyle = colors.panel || colors.background;
+    ctx.fillRect(padding.left, stripY, width - padding.left - padding.right, stripHeight);
+
+    // Draw border around the strip
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding.left, stripY, width - padding.left - padding.right, stripHeight);
+
+    // For ticker chart, we'll create a simplified phase display
+    // Since we don't have exact index mapping, we'll show a general phase indicator
+    if (currentPhase && currentPhase !== 'UNKNOWN') {
+      const currentPhaseColor = wyckoffColors[currentPhase] || wyckoffColors.UNKNOWN;
+
+      // Draw a full-width current phase indicator
+      const phaseWidth = width - padding.left - padding.right;
+
+      // Draw phase background with gradient effect
+      const gradient = ctx.createLinearGradient(padding.left, stripY + 2, padding.left, stripY + stripHeight - 2);
+      gradient.addColorStop(0, currentPhaseColor + '40'); // More transparent at top
+      gradient.addColorStop(1, currentPhaseColor + '80'); // More opaque at bottom
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(padding.left, stripY + 2, phaseWidth, stripHeight - 4);
+
+      // Draw phase border
+      ctx.strokeStyle = currentPhaseColor;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(padding.left, stripY + 2, phaseWidth, stripHeight - 4);
+
+      // Add inner glow effect
+      ctx.shadowColor = currentPhaseColor;
+      ctx.shadowBlur = 5;
+      ctx.strokeRect(padding.left + 1, stripY + 3, phaseWidth - 2, stripHeight - 6);
+      ctx.shadowBlur = 0;
+
+      // Draw phase label
+      const labelX = padding.left + phaseWidth / 2;
+      const labelY = stripY + stripHeight / 2;
+
+      // Add text shadow for better readability
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+
+      // Phase name with bold styling
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${isMobile ? '11px' : '13px'} -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`Current Phase: ${currentPhase.replace('_', ' ')}`, labelX, labelY);
+
+      // Reset shadow
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+  }, [wyckoffPhases, currentPhase, colors, wyckoffColors, isMobile]);
 
   // Main drawing function
   const drawChart = useCallback(() => {
@@ -712,9 +789,12 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       if (i % labelStep === 0) {
         const x = xScaleTime(interval.timestamp);
         const timeString = formatTime(interval.time, 'HH:mm');
-        ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
+        ctx.fillText(timeString, x, height - 15); // Position x-axis labels at bottom
       }
     });
+
+    // Draw Wyckoff phase bottom strip
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, padding);
 
     // Y-axis labels
     ctx.textAlign = 'right';
@@ -779,7 +859,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       ctx.textAlign = 'center';
       ctx.fillText(timeLabel, mousePos.x, height - padding.bottom + 20);
     }
-  }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme]);
+  }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme, drawWyckoffPhaseStrip]);
 
   // Draw chart on data change
   useEffect(() => {

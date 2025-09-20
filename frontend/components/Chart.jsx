@@ -21,6 +21,15 @@ export default function Chart({ data, theme = 'dark' }) {
 
   const colors = themes[theme];
 
+  // Wyckoff phase colors
+  const wyckoffColors = {
+    ACCUMULATION: '#4CAF50',
+    MARKUP: '#2196F3',
+    DISTRIBUTION: '#FF9800',
+    MARKDOWN: '#F44336',
+    UNKNOWN: '#9E9E9E'
+  };
+
   // Detect mobile device
   useEffect(() => {
     const checkMobile = () => {
@@ -133,6 +142,120 @@ export default function Chart({ data, theme = 'dark' }) {
     },
     [isMobile]
   );
+
+  // Draw Wyckoff phase strip function
+  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
+    if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
+
+    const stripHeight = 35;
+    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+
+    // Draw background for the strip
+    ctx.fillStyle = colors.panel || colors.background;
+    ctx.fillRect(padding.left, stripY, width - padding.left - padding.right, stripHeight);
+
+    // Draw border around the strip
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(padding.left, stripY, width - padding.left - padding.right, stripHeight);
+
+    // Draw phase segments
+    data.wyckoffPhases.forEach(phase => {
+      const phaseStart = Math.max(phase.startIndex, visibleStart);
+      const phaseEnd = Math.min(phase.endIndex, visibleEnd);
+
+      if (phaseStart <= phaseEnd && phaseEnd >= visibleStart && phaseStart <= visibleEnd) {
+        const startX = padding.left + (phaseStart - visibleStart) * candleWidth;
+        const endX = padding.left + (phaseEnd - visibleStart + 1) * candleWidth;
+        const phaseWidth = Math.max(endX - startX, 2);
+
+        // Draw phase background with gradient effect
+        const gradient = ctx.createLinearGradient(startX, stripY + 2, startX, stripY + stripHeight - 2);
+        const phaseColor = wyckoffColors[phase.phase] || wyckoffColors.UNKNOWN;
+        gradient.addColorStop(0, phaseColor + '40'); // More transparent at top
+        gradient.addColorStop(1, phaseColor + '80'); // More opaque at bottom
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(startX, stripY + 2, phaseWidth, stripHeight - 4);
+
+        // Draw phase border with rounded corners effect
+        ctx.strokeStyle = phaseColor;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(startX, stripY + 2, phaseWidth, stripHeight - 4);
+
+        // Add inner glow effect
+        ctx.shadowColor = phaseColor;
+        ctx.shadowBlur = 5;
+        ctx.strokeRect(startX + 1, stripY + 3, phaseWidth - 2, stripHeight - 6);
+        ctx.shadowBlur = 0;
+
+        // Draw phase label if there's enough space
+        if (phaseWidth > 60) {
+          const labelX = startX + phaseWidth / 2;
+          const labelY = stripY + stripHeight / 2;
+
+          // Add text shadow for better readability
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 3;
+          ctx.shadowOffsetX = 1;
+          ctx.shadowOffsetY = 1;
+
+          // Phase name with bold styling
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `bold ${isMobile ? '11px' : '13px'} -apple-system, BlinkMacSystemFont, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(phase.phase.replace('_', ' '), labelX, labelY - 6);
+
+          // Confidence if there's space
+          if (phaseWidth > 100 && phase.confidence) {
+            ctx.font = `${isMobile ? '9px' : '11px'} -apple-system, BlinkMacSystemFont, sans-serif`;
+            ctx.fillStyle = '#E0E0E0';
+            ctx.fillText(`${(phase.confidence * 100).toFixed(0)}%`, labelX, labelY + 6);
+          }
+
+          // Reset shadow
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+        }
+      }
+    });
+
+    // Draw current phase indicator
+    if (data.currentPhase && data.currentPhase !== 'UNKNOWN') {
+      const currentPhaseColor = wyckoffColors[data.currentPhase] || wyckoffColors.UNKNOWN;
+
+      // Draw current phase indicator at the right side
+      const indicatorX = width - padding.right - 100;
+      const indicatorY = stripY + 5;
+      const indicatorWidth = 90;
+      const indicatorHeight = 20;
+
+      // Background
+      ctx.fillStyle = currentPhaseColor;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+      ctx.globalAlpha = 1.0;
+
+      // Border
+      ctx.strokeStyle = currentPhaseColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(indicatorX, indicatorY, indicatorWidth, indicatorHeight);
+
+      // Text
+      ctx.fillStyle = colors.text.primary;
+      ctx.font = `${isMobile ? '9px' : '11px'} -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        `Now: ${data.currentPhase.replace('_', ' ')}`,
+        indicatorX + indicatorWidth / 2,
+        indicatorY + indicatorHeight / 2
+      );
+    }
+  }, [data, colors, wyckoffColors, isMobile]);
 
   // Draw chart
   const drawChart = useCallback(() => {
@@ -358,9 +481,12 @@ export default function Chart({ data, theme = 'dark' }) {
       if (x >= padding.left && x <= width - padding.right) {
         // Format time only (HH:mm)
         const timeString = format(interval.time, 'HH:mm');
-        ctx.fillText(timeString, x, height - padding.bottom + (isMobile ? 15 : 20));
+        ctx.fillText(timeString, x, height - 15); // Position x-axis labels at bottom
       }
     });
+
+    // Draw Wyckoff phase bottom strip
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth, padding);
 
     // Y-axis labels
     ctx.textAlign = 'right';
@@ -462,7 +588,7 @@ export default function Chart({ data, theme = 'dark' }) {
         });
       }
     }
-  }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getThirtyMinuteIntervals]);
+  }, [data, viewState, mousePos, showCrosshair, colors, isMobile, getThirtyMinuteIntervals, drawWyckoffPhaseStrip]);
 
   // Draw on every frame
   useEffect(() => {

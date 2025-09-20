@@ -62,6 +62,8 @@ export default function CandlesPage() {
         const result = await response.json();
         handleLoadSuccess({
           candles: result.candlesticks,
+          wyckoffPhases: result.wyckoffPhases || [],
+          currentPhase: result.currentPhase || 'UNKNOWN',
           symbol,
         });
       } catch (error) {

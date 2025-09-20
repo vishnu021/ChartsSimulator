@@ -3,19 +3,20 @@ package com.vish.fno.ChartsSimulator.service;
 import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.Extrema;
+import com.vish.fno.ChartsSimulator.model.WyckoffPhase;
+import com.vish.fno.ChartsSimulator.model.WyckoffPhaseData;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CandleService {
 
     private final DataClient dataClient;
-
-    public CandleService(DataClient dataClient) {
-        this.dataClient = dataClient;
-    }
+    private final WyckoffAnalysisService wyckoffAnalysisService;
 
     public Extrema getCandleAndExtrema(String symbol, String date, int lookbackPeriod) {
         List<Candle> candles = dataClient.getCandleData(symbol, date);
@@ -26,7 +27,11 @@ public class CandleService {
         List<Candle> maxima = findLocalExtrema(candles, true, lookbackPeriod);
         List<Candle> minima = findLocalExtrema(candles, false, lookbackPeriod);
 
-        return new Extrema(candles, maxima, minima);
+        // Calculate Wyckoff phases
+        List<WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(candles);
+        WyckoffPhase currentPhase = wyckoffAnalysisService.getCurrentPhase(candles);
+
+        return new Extrema(candles, maxima, minima, wyckoffPhases, currentPhase);
     }
 
     private List<Candle> findLocalExtrema(List<Candle> data, boolean findMaxima, int order) {

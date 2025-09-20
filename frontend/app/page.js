@@ -6,7 +6,7 @@ import { useAppState } from '@/contexts/AppStateContext';
 
 export default function HomePage() {
   const router = useRouter();
-  const { theme } = useAppState();
+  const { theme, toggleTheme } = useAppState();
 
   const features = [
     {
@@ -33,6 +33,12 @@ export default function HomePage() {
       path: '/ticker',
       icon: '⚡',
     },
+    {
+      title: 'Multi-Stock Dashboard',
+      description: 'View multiple stocks simultaneously with synchronized controls',
+      path: '/dashboard',
+      icon: '📋',
+    },
   ];
 
   // Theme-aware styles
@@ -52,9 +58,26 @@ export default function HomePage() {
   const currentTheme = themeStyles[theme];
 
   return (
-    <div className={`min-h-screen p-8 ${currentTheme.background}`}>
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className={`min-h-screen ${currentTheme.background}`}>
+      {/* Header with theme toggle */}
+      <div className="flex justify-between items-center p-4 border-b border-gray-700">
+        <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          Charts Simulator
+        </h1>
+        <button
+          onClick={toggleTheme}
+          className={`px-3 py-1.5 rounded transition-all text-sm whitespace-nowrap ${
+            theme === 'dark'
+              ? 'bg-gray-800 border border-gray-600 text-white hover:bg-gray-700'
+              : 'bg-gray-100 border border-gray-300 text-gray-900 hover:bg-gray-200'
+          }`}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+      </div>
+
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map(feature => (
             <div
               key={feature.path}

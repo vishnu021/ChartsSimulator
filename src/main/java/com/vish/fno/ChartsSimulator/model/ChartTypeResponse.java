@@ -4,5 +4,7 @@ import java.util.List;
 
 public record ChartTypeResponse(
         List<Candle> candlesticks,
-        List<Candle> heikinAshi
+        List<Candle> heikinAshi,
+        List<WyckoffPhaseData> wyckoffPhases,
+        WyckoffPhase currentPhase
 ) {}
