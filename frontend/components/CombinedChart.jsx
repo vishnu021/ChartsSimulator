@@ -133,10 +133,9 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    // Position strip right after the adjusted chart area
-    const reservedSpace = 85;
-    const adjustedHeight = height - reservedSpace;
-    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
+    // Position strip just below x-axis labels for proper visual hierarchy
+    const xAxisLabelY = height - 65; // Same as x-axis label position
+    const stripY = xAxisLabelY + 15; // Position just below x-axis labels
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;

@@ -256,10 +256,9 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    // Position strip right after the adjusted chart area
-    const reservedSpace = 85;
-    const adjustedHeight = height - reservedSpace;
-    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
+    // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
+    const availableHeight = height - 120; // Account for bottom reserved space
+    const stripY = availableHeight - stripHeight - 10; // Position closer to bottom
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -796,8 +795,10 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       if (i % labelStep === 0) {
         const x = xScaleTime(interval.timestamp);
         const timeString = formatTime(interval.time, 'HH:mm');
-        // Position x-axis labels at bottom
-        ctx.fillText(timeString, x, height - 15);
+        // Position x-axis labels ensuring visibility and proper spacing from Wyckoff strip
+        const availableHeight = height - 120; // Account for bottom reserved space
+        const labelY = availableHeight - 80; // Position higher to avoid overlap with Wyckoff strip
+        ctx.fillText(timeString, x, labelY);
       }
     });
 

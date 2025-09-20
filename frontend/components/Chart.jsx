@@ -136,7 +136,7 @@ export default function Chart({ data, theme = 'dark' }) {
   );
 
   // Draw Wyckoff phase strip function
-  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
+  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding, chartHeight) => {
     // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
       ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
@@ -149,10 +149,10 @@ export default function Chart({ data, theme = 'dark' }) {
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    // Position strip right after the adjusted chart area
-    const reservedSpace = 85;
-    const adjustedHeight = height - reservedSpace;
-    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
+    // Position strip at bottom of visible canvas area (within viewport)
+    const visibleCanvasHeight = height - 20; // Minimal reserve, position near bottom
+    const xAxisLabelY = visibleCanvasHeight - 45; // X-axis labels
+    const stripY = visibleCanvasHeight - 10; // Wyckoff strip at very bottom
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -285,9 +285,8 @@ export default function Chart({ data, theme = 'dark' }) {
       height - padding.top - padding.bottom + 20
     );
 
-    // Reserve space for Wyckoff phase strip (35px) + x-axis labels (30px) + margins (15px) = 80px
-    // Reserve fixed space for bottom elements
-    const bottomReservedSpace = 70;
+    // Reserve space for Wyckoff phase strip + x-axis labels = 50px at bottom
+    const bottomReservedSpace = 50;
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
 
@@ -488,13 +487,15 @@ export default function Chart({ data, theme = 'dark' }) {
       if (x >= padding.left && x <= width - padding.right) {
         // Format time only (HH:mm)
         const timeString = format(interval.time, 'HH:mm');
-        // Position x-axis labels above Wyckoff strip
-        ctx.fillText(timeString, x, height - 65);
+        // Position x-axis labels at bottom of visible canvas area
+        const visibleCanvasHeight = height - 20; // Minimal reserve, position near bottom
+        const labelY = visibleCanvasHeight - 45; // X-axis labels
+        ctx.fillText(timeString, x, labelY);
       }
     });
 
     // Draw Wyckoff phase bottom strip
-    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth, padding);
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth, padding, chartHeight);
 
     // Y-axis labels
     ctx.textAlign = 'right';

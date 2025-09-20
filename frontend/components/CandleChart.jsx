@@ -51,8 +51,9 @@ export default function CandleChart({
     const stripHeight = 35;
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
-    // Position strip ensuring it's visible in viewport
-    const stripY = Math.max(padding.top + 100, height - stripHeight - 60); // Ensure minimum distance from top
+    // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
+    const availableHeight = height - 120; // Account for bottom reserved space
+    const stripY = availableHeight - stripHeight - 10; // Position closer to bottom
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -167,7 +168,8 @@ export default function CandleChart({
 
     const rect = canvas.getBoundingClientRect();
     const stripHeight = 35;
-    const stripY = rect.height - stripHeight - 50;
+    const availableHeight = rect.height - 120; // Account for bottom reserved space
+    const stripY = availableHeight - stripHeight - 10; // Match the drawing position
 
     // Check if mouse is in the phase strip area
     if (mouseY < stripY || mouseY > stripY + stripHeight) return null;
@@ -462,8 +464,9 @@ export default function CandleChart({
       if (candle && candle.time) {
         const x = xScale(visibleStart + i);
         const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
-        // Position x-axis labels ensuring visibility
-        const labelY = Math.max(padding.top + 50, height - 100);
+        // Position x-axis labels ensuring visibility and proper spacing from Wyckoff strip
+        const availableHeight = height - 120; // Account for bottom reserved space
+        const labelY = availableHeight - 80; // Position higher to avoid overlap with Wyckoff strip
         ctx.fillText(timeLabel, x, labelY);
       }
     }

@@ -9,7 +9,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { StatsBar } from '@/components/ui/StatsBar';
 import ControlPanel from '@/components/ControlPanel';
 
-const Chart = dynamic(() => import('@/components/Chart'), {
+const ExtremaChart = dynamic(() =>
+  import('@/components/charts').then(mod => ({ default: mod.ExtremaChart })), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
@@ -88,8 +89,8 @@ export default function ExtremaPage() {
       }
     >
       {currentData ? (
-        <div className="flex-1 min-h-0">
-          <Chart data={currentData} theme={theme} />
+        <div className="flex-1 min-h-0" style={{ height: 'calc(100vh - 250px)', maxHeight: 'calc(100vh - 250px)' }}>
+          <ExtremaChart data={currentData} theme={theme} />
         </div>
       ) : (
         <EmptyState
