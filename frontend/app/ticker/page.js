@@ -6,8 +6,8 @@ import { useTickerData } from '@/hooks/useTickerData';
 import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatsBar } from '@/components/ui/StatsBar';
-import { Card } from '@/components/ui/Card';
+// import { StatsBar } from '@/components/ui/StatsBar';
+// import { Card } from '@/components/ui/Card';
 import ControlPanel from '@/components/ControlPanel';
 
 const TickerChart = dynamic(() => import('@/components/TickerChart'), {
@@ -15,7 +15,8 @@ const TickerChart = dynamic(() => import('@/components/TickerChart'), {
   loading: () => (
     <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4">
+        </div>
         Loading ticker chart...
       </div>
     </div>
@@ -36,42 +37,7 @@ export default function TickerPage() {
     clearError,
   } = useTickerData();
 
-  const generateHeaderStats = () => {
-    if (tickerData.length === 0) return [];
-
-    return [
-      {
-        label: 'Symbol',
-        value: currentSymbol,
-        color: 'text-white',
-      },
-      {
-        label: 'Current',
-        value: `₹${stats.currentPrice.toFixed(2)}`,
-        color: 'text-white',
-      },
-      {
-        label: 'Change',
-        value: `${stats.change >= 0 ? '+' : ''}₹${stats.change.toFixed(2)} (${stats.changePercent >= 0 ? '+' : ''}${stats.changePercent.toFixed(2)}%)`,
-        color: stats.change >= 0 ? 'text-green-400' : 'text-red-400',
-      },
-      {
-        label: 'Range',
-        value: `₹${stats.low.toFixed(2)} - ₹${stats.high.toFixed(2)}`,
-        color: 'text-white',
-      },
-      {
-        label: 'Volume',
-        value: stats.volume.toLocaleString(),
-        color: 'text-white',
-      },
-      {
-        label: 'Data',
-        value: `${stats.count.toLocaleString()} ticks`,
-        color: 'text-blue-400',
-      },
-    ];
-  };
+  // Unused function removed to fix ESLint warnings
 
   const renderControls = () => (
     <ControlPanel

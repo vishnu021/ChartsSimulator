@@ -22,14 +22,6 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
   const colors = themes[theme];
 
-  // Wyckoff phase colors
-  const wyckoffColors = {
-    ACCUMULATION: '#4CAF50',
-    MARKUP: '#2196F3',
-    DISTRIBUTION: '#FF9800',
-    MARKDOWN: '#F44336',
-    UNKNOWN: '#9E9E9E'
-  };
 
   // Detect mobile device
   useEffect(() => {
@@ -129,6 +121,15 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
+    // Wyckoff phase colors
+    const wyckoffColors = {
+      ACCUMULATION: '#4CAF50',
+      MARKUP: '#2196F3',
+      DISTRIBUTION: '#FF9800',
+      MARKDOWN: '#F44336',
+      UNKNOWN: '#9E9E9E'
+    };
+
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
@@ -239,7 +240,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         indicatorY + indicatorHeight / 2
       );
     }
-  }, [data, colors, wyckoffColors, isMobile]);
+  }, [data, colors, isMobile]);
 
   // Draw chart
   const drawChart = useCallback(() => {

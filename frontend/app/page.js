@@ -82,7 +82,8 @@ export default function HomePage() {
             <div
               key={feature.path}
               onClick={() => router.push(feature.path)}
-              className={`rounded-lg p-6 cursor-pointer transition-all transform hover:scale-105 ${currentTheme.card}`}
+              className={`rounded-lg p-6 cursor-pointer transition-all transform
+                         hover:scale-105 ${currentTheme.card}`}
             >
               <div className="text-4xl mb-4">{feature.icon}</div>
               <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>

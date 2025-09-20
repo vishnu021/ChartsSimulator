@@ -4,11 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { themes } from './chartConfig';
 
-export default function TickerDisplay({ data, theme = 'dark', symbol }) {
-  const [currentPrice, setCurrentPrice] = useState(0);
-  const [priceChange, setPriceChange] = useState(0);
-  const [volume, setVolume] = useState(0);
-  const [tickCount, setTickCount] = useState(0);
+export default function TickerDisplay({ data, theme = 'dark' }) {
+  const [/* currentPrice */, setCurrentPrice] = useState(0);
+  const [/* priceChange */, setPriceChange] = useState(0);
+  const [/* volume */, setVolume] = useState(0);
+  const [/* tickCount */, setTickCount] = useState(0);
   const [lastTicks, setLastTicks] = useState([]);
 
   const colors = themes[theme];

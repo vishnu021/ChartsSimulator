@@ -36,14 +36,6 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
   const [showCrosshair, setShowCrosshair] = useState(false);
   const colors = themes[theme];
 
-  // Wyckoff phase colors
-  const wyckoffColors = {
-    ACCUMULATION: '#4CAF50',
-    MARKUP: '#2196F3',
-    DISTRIBUTION: '#FF9800',
-    MARKDOWN: '#F44336',
-    UNKNOWN: '#9E9E9E'
-  };
 
   // Check for mobile
   useEffect(() => {
@@ -252,6 +244,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, padding) => {
+    // Wyckoff phase colors
+    const wyckoffColors = {
+      ACCUMULATION: '#4CAF50',
+      MARKUP: '#2196F3',
+      DISTRIBUTION: '#FF9800',
+      MARKDOWN: '#F44336',
+      UNKNOWN: '#9E9E9E'
+    };
+
     if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
@@ -316,7 +317,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     }
-  }, [wyckoffPhases, currentPhase, colors, wyckoffColors, isMobile]);
+  }, [wyckoffPhases, currentPhase, colors, isMobile]);
 
   // Main drawing function
   const drawChart = useCallback(() => {

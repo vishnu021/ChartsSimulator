@@ -35,17 +35,16 @@ export default function CandleChart({
 
   const colors = themes[theme];
 
-  // Wyckoff phase colors
-  const wyckoffColors = {
-    ACCUMULATION: '#4CAF50',
-    MARKUP: '#2196F3',
-    DISTRIBUTION: '#FF9800',
-    MARKDOWN: '#F44336',
-    UNKNOWN: '#9E9E9E'
-  };
-
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth) => {
+    // Wyckoff phase colors
+    const wyckoffColors = {
+      ACCUMULATION: '#4CAF50',
+      MARKUP: '#2196F3',
+      DISTRIBUTION: '#FF9800',
+      MARKDOWN: '#F44336',
+      UNKNOWN: '#9E9E9E'
+    };
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
@@ -157,7 +156,7 @@ export default function CandleChart({
         indicatorY + indicatorHeight / 2
       );
     }
-  }, [data, colors, wyckoffColors, isMobile, isDashboard]);
+  }, [data, colors, isMobile, isDashboard]);
 
   // Mobile detection
   useEffect(() => {
@@ -390,7 +389,7 @@ export default function CandleChart({
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     }
-  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging]);
+  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging, drawWyckoffPhaseStrip]);
 
   useEffect(() => {
     drawChart();

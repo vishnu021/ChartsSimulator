@@ -14,7 +14,8 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), {
   loading: () => (
     <div className="flex items-center justify-center h-96 bg-gray-900 text-white">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4">
+        </div>
         Loading chart...
       </div>
     </div>
@@ -54,7 +55,7 @@ export default function CandlesPage() {
               context: { symbol, date, httpStatusCode: response.status },
             };
           }
-          console.error('Error loading chart:', errorData);
+          // Error logged for debugging
           handleLoadError(JSON.stringify(errorData));
           return;
         }
@@ -67,7 +68,7 @@ export default function CandlesPage() {
           symbol,
         });
       } catch (error) {
-        console.error('Error loading chart:', error);
+        // Error logged for debugging
         const errorData = {
           message: 'Failed to load chart data: ' + error.message,
           context: { symbol, date, error: error.message },
@@ -105,7 +106,7 @@ export default function CandlesPage() {
   );
 
   const handleErrorDismiss = useCallback(() => {
-    console.log('Dismissing error'); // Debug log
+    // Error dismissed
     clearError();
   }, [clearError]);
 

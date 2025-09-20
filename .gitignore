@@ -79,3 +79,4 @@ next-env.d.ts
 /output
 /src/main/resources/static
 /node_modules
+AGENTS.md

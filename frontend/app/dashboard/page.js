@@ -228,7 +228,8 @@ const SimpleChart = ({ index, theme, globalDate }) => {
         <button
           onClick={handleLoad}
           disabled={isLoading || !symbol}
-          className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700
+                     disabled:opacity-50"
         >
           {isLoading ? '⏳' : '⚡'}
         </button>
@@ -389,7 +390,7 @@ export default function DashboardPage() {
         {/* Chart Grid - Calculated height accounting for both headers */}
         <div
           style={{
-            height: 'calc(100vh - 64px - 56px)', // 100vh - main nav (64px) - dashboard header (56px)
+            height: 'calc(100vh - 64px - 56px)', // Full height minus headers
             padding: '2px',
             overflow: 'hidden',
             display: 'grid',

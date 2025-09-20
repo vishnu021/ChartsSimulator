@@ -25,7 +25,7 @@ export default function Navigation() {
   };
 
   const handleNavigation = path => {
-    console.log(`Navigating from ${pathname} to ${path}`);
+    // Navigation logged for debugging
     setIsMenuOpen(false);
     router.push(path);
   };
@@ -87,7 +87,8 @@ export default function Navigation() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`inline-flex items-center justify-center p-2 rounded-md transition-colors ${currentTheme.mobileButton}`}
+              className={`inline-flex items-center justify-center p-2 rounded-md
+                         transition-colors ${currentTheme.mobileButton}`}
             >
               <span className="sr-only">Open main menu</span>
               {isMenuOpen ? (

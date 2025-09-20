@@ -434,14 +434,14 @@ export const timeUtils = {
     const seconds = date.getSeconds().toString().padStart(2, '0');
 
     switch (format) {
-      case 'HH:mm:ss':
-        return `${hours}:${minutes}:${seconds}`;
-      case 'HH:mm':
-        return `${hours}:${minutes}`;
-      case 'HH':
-        return hours;
-      default:
-        return `${hours}:${minutes}`;
+    case 'HH:mm:ss':
+      return `${hours}:${minutes}:${seconds}`;
+    case 'HH:mm':
+      return `${hours}:${minutes}`;
+    case 'HH':
+      return hours;
+    default:
+      return `${hours}:${minutes}`;
     }
   },
 
