@@ -11,9 +11,9 @@ import java.util.List;
 @Service
 public class WyckoffAnalysisService {
 
-    private static final int MIN_PHASE_LENGTH = 10;
-    private static final int TREND_LOOKBACK = 20;
-    private static final double VOLUME_THRESHOLD_MULTIPLIER = 1.2;
+    private static final int MIN_PHASE_LENGTH = 8;  // Shorter minimum phase length
+    private static final int TREND_LOOKBACK = 15;  // Shorter lookback for more responsive detection
+    private static final double VOLUME_THRESHOLD_MULTIPLIER = 1.15;  // Lower volume threshold
 
     public List<WyckoffPhaseData> analyzeWyckoffPhases(List<Candle> candles) {
         if (candles.size() < MIN_PHASE_LENGTH * 2) {
@@ -84,22 +84,26 @@ public class WyckoffAnalysisService {
     private WyckoffPhase classifyPhase(double priceChange, double volumeRatio,
                                      double currentPrice, double movingAverage) {
         boolean isAboveMA = currentPrice > movingAverage;
-        boolean isRising = priceChange > 0.02; // 2% threshold
-        boolean isFalling = priceChange < -0.02; // -2% threshold
+        boolean isRising = priceChange > 0.015; // 1.5% threshold - more sensitive
+        boolean isFalling = priceChange < -0.015; // -1.5% threshold - more sensitive
         boolean isHighVolume = volumeRatio > VOLUME_THRESHOLD_MULTIPLIER;
         boolean isLowVolume = volumeRatio < (1.0 / VOLUME_THRESHOLD_MULTIPLIER);
 
-        // Wyckoff phase classification
-        if (isLowVolume && Math.abs(priceChange) < 0.01) {
+        // Wyckoff phase classification - prioritize trending phases
+        if (isRising && (isHighVolume || isAboveMA)) {
+            // Rising price with either high volume OR above MA
+            return WyckoffPhase.MARKUP;
+        } else if (isFalling && (isHighVolume || !isAboveMA)) {
+            // Falling price with either high volume OR below MA
+            return WyckoffPhase.MARKDOWN;
+        } else if (isLowVolume && Math.abs(priceChange) < 0.01) {
             // Low volume, sideways movement
             return isAboveMA ? WyckoffPhase.DISTRIBUTION : WyckoffPhase.ACCUMULATION;
-        } else if (isRising && isHighVolume && isAboveMA) {
-            return WyckoffPhase.MARKUP;
-        } else if (isFalling && isHighVolume && !isAboveMA) {
-            return WyckoffPhase.MARKDOWN;
-        } else if (isLowVolume && isAboveMA && !isRising) {
+        } else if (isAboveMA && !isFalling) {
+            // Above MA, not falling - potential distribution
             return WyckoffPhase.DISTRIBUTION;
-        } else if (isLowVolume && !isAboveMA && !isFalling) {
+        } else if (!isAboveMA && !isRising) {
+            // Below MA, not rising - potential accumulation
             return WyckoffPhase.ACCUMULATION;
         }
 

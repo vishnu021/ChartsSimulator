@@ -55,7 +55,7 @@ export default function CandlesPage() {
               context: { symbol, date, httpStatusCode: response.status },
             };
           }
-          // Error logged for debugging
+          console.error('Error loading chart:', errorData);
           handleLoadError(JSON.stringify(errorData));
           return;
         }
@@ -68,7 +68,7 @@ export default function CandlesPage() {
           symbol,
         });
       } catch (error) {
-        // Error logged for debugging
+        console.error('Error loading chart:', error);
         const errorData = {
           message: 'Failed to load chart data: ' + error.message,
           context: { symbol, date, error: error.message },
@@ -106,7 +106,7 @@ export default function CandlesPage() {
   );
 
   const handleErrorDismiss = useCallback(() => {
-    // Error dismissed
+    console.log('Dismissing error');
     clearError();
   }, [clearError]);
 
@@ -122,9 +122,7 @@ export default function CandlesPage() {
       loadingMessage="Loading chart data..."
     >
       {data ? (
-        <div className="flex-1 min-h-0">
-          <CandleChart data={data} theme={theme} />
-        </div>
+        <CandleChart data={data} theme={theme} />
       ) : (
         renderEmptyState()
       )}

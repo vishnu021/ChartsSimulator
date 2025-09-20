@@ -25,7 +25,7 @@ export default function Navigation() {
   };
 
   const handleNavigation = path => {
-    // Navigation logged for debugging
+    console.log(`Navigating from ${pathname} to ${path}`);
     setIsMenuOpen(false);
     router.push(path);
   };

@@ -3,13 +3,13 @@
  * Provides consistent phase visualization with enhanced styling
  */
 
-// Wyckoff phase colors configuration
+// Wyckoff phase colors configuration - distinct and vibrant
 export const wyckoffColors = {
-  ACCUMULATION: '#4CAF50',
-  MARKUP: '#2196F3',
-  DISTRIBUTION: '#FF9800',
-  MARKDOWN: '#F44336',
-  UNKNOWN: '#9E9E9E'
+  ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
+  MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
+  DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
+  MARKDOWN: '#EF4444',     // Red - downtrend/bearish
+  UNKNOWN: '#6B7280'       // Gray - unknown
 };
 
 /**
@@ -40,7 +40,9 @@ export const drawWyckoffPhaseStrip = (ctx, width, height, visibleStart, visibleE
   if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
   const stripHeight = 35;
-  const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+  // Position strip at the bottom of the visible viewport
+  // Leave space for the strip itself plus a small margin
+  const stripY = height - stripHeight - 10; // 10px from bottom edge
 
   // Draw background for the strip
   ctx.fillStyle = colors.panel || colors.background;

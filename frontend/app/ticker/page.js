@@ -6,8 +6,6 @@ import { useTickerData } from '@/hooks/useTickerData';
 import { useAppState } from '@/contexts/AppStateContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/ui/EmptyState';
-// import { StatsBar } from '@/components/ui/StatsBar';
-// import { Card } from '@/components/ui/Card';
 import ControlPanel from '@/components/ControlPanel';
 
 const TickerChart = dynamic(() => import('@/components/TickerChart'), {
@@ -37,7 +35,6 @@ export default function TickerPage() {
     clearError,
   } = useTickerData();
 
-  // Unused function removed to fix ESLint warnings
 
   const renderControls = () => (
     <ControlPanel

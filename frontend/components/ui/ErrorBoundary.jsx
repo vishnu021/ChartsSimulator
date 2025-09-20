@@ -25,7 +25,7 @@ class ErrorBoundary extends React.Component {
     });
 
     // Log to console for development
-    // Error logged for debugging in development
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
 
     // Report error to monitoring service in production
     if (process.env.NODE_ENV === 'production') {
@@ -39,21 +39,19 @@ class ErrorBoundary extends React.Component {
 
   reportError(error, errorInfo, errorId) {
     // In a real application, you would send this to your monitoring service
-    // Commented out to fix ESLint warning - would be used for error reporting
-    // const errorReport = {
-    //   errorId,
-    //   message: error.message,
-    //   stack: error.stack,
-    //   componentStack: errorInfo.componentStack,
-    //   timestamp: new Date().toISOString(),
-    //   userAgent: navigator.userAgent,
-    //   url: window.location.href,
-    // };
+    const errorReport = {
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    };
 
-    // Error report logged for debugging
+    console.log('Error report:', errorReport);
     // Example: send to monitoring service
     // fetch('/api/errors', { method: 'POST', body: JSON.stringify(errorReport) });
-    // Error reported for debugging
   }
 
   render() {

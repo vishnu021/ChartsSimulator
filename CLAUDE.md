@@ -319,12 +319,38 @@ playwright console_messages  # Check for errors
 - Breaks project documentation standards
 - Creates confusion about what changed
 
+### ⚠️ MANDATORY SCROLLBAR PREVENTION
+
+**🔴 ABSOLUTE REQUIREMENT**: The application MUST NEVER show vertical or horizontal scrollbars.
+
+#### Scrollbar Prevention Rules:
+- ✅ All pages must fit within viewport without scrolling
+- ✅ Use `overflow: hidden` on containers when necessary
+- ✅ Chart components must size correctly within their containers
+- ✅ Mobile and desktop views must both prevent scrollbars
+- ✅ Use `h-[calc(100vh-4rem)]` or similar viewport-relative heights
+- ✅ Content must be properly contained within flex/grid layouts
+
+#### Common Scrollbar Causes to Avoid:
+- ❌ Fixed pixel heights that exceed viewport
+- ❌ Content overflow from containers
+- ❌ Missing `overflow: hidden` on chart containers
+- ❌ Improper flex/grid sizing
+- ❌ Padding/margins causing container overflow
+
+#### Testing Requirements:
+- Test all screen sizes (mobile, tablet, desktop)
+- Verify no scrollbars appear in any theme
+- Check all pages and components
+- Test with different chart data sizes
+
 ### Other Enforcement Rules:
 1. **Testing**: NEVER skip Playwright MCP verification after changes
 2. **JavaScript**: MAINTAIN ESLint compliance and code quality
 3. **Themes**: PRESERVE all theme functionality
 4. **Build**: ALWAYS verify successful compilation
+5. **Scrollbars**: NEVER allow vertical or horizontal scrollbars to appear
 
 ---
 
-✅ **This file is binding: NO CHANGE IS COMPLETE without CHANGELOG update, Playwright MCP verification PASS, Maven package PASS, and Frontend linting PASS.**
+✅ **This file is binding: NO CHANGE IS COMPLETE without CHANGELOG update, Playwright MCP verification PASS, Maven package PASS, Frontend linting PASS, and NO SCROLLBARS verification.**

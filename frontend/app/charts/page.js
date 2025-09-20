@@ -53,7 +53,7 @@ export default function ChartsPage() {
             context: { symbol, date, httpStatusCode: response.status },
           };
         }
-        // Error logged for debugging
+        console.error('Error loading charts:', errorData);
         setError(JSON.stringify(errorData));
         return;
       }
@@ -61,7 +61,7 @@ export default function ChartsPage() {
       const data = await response.json();
       setChartData({ ...data, symbol });
     } catch (error) {
-      // Error logged for debugging
+      console.error('Error loading charts:', error);
       const errorData = {
         message: 'Failed to load chart data: ' + error.message,
         context: { symbol, date, error: error.message },
@@ -101,9 +101,7 @@ export default function ChartsPage() {
       loadingMessage="Loading chart comparison..."
     >
       {chartData ? (
-        <div className="flex-1 min-h-0">
-          <CombinedChart data={chartData} theme={theme} />
-        </div>
+        <CombinedChart data={chartData} theme={theme} />
       ) : (
         renderEmptyState()
       )}

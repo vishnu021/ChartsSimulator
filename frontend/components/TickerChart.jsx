@@ -244,19 +244,22 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, padding) => {
-    // Wyckoff phase colors
+    // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
-      ACCUMULATION: '#4CAF50',
-      MARKUP: '#2196F3',
-      DISTRIBUTION: '#FF9800',
-      MARKDOWN: '#F44336',
-      UNKNOWN: '#9E9E9E'
+      ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
+      MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
+      DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
+      MARKDOWN: '#EF4444',     // Red - downtrend/bearish
+      UNKNOWN: '#6B7280'       // Gray - unknown
     };
 
     if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+    // Position strip right after the adjusted chart area
+    const reservedSpace = 85;
+    const adjustedHeight = height - reservedSpace;
+    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -344,8 +347,11 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       height - padding.top - padding.bottom + 20
     );
 
+    // Reserve space for Wyckoff phase strip (35px) + x-axis labels (30px) + margins (15px) = 80px
+    // Reserve fixed space for bottom elements
+    const bottomReservedSpace = 70;
     const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
+    const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
 
     // Calculate price range from both candles and price data
     const allPrices = [
@@ -790,7 +796,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       if (i % labelStep === 0) {
         const x = xScaleTime(interval.timestamp);
         const timeString = formatTime(interval.time, 'HH:mm');
-        ctx.fillText(timeString, x, height - 15); // Position x-axis labels at bottom
+        // Position x-axis labels at bottom
+        ctx.fillText(timeString, x, height - 15);
       }
     });
 
@@ -894,7 +901,9 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const newVerticalZoom = Math.max(1.0, Math.min(20, viewState.verticalZoom * zoomFactor));
 
         // Keep cursor-aligned while zooming vertically
-        const chartHeight = rect.height - chartSettings.padding.top - chartSettings.padding.bottom;
+        // Reserve fixed space for bottom elements
+        const bottomReservedSpace = 70;
+        const chartHeight = rect.height - chartSettings.padding.top - chartSettings.padding.bottom - bottomReservedSpace;
         const mouseY = e.clientY - rect.top - chartSettings.padding.top;
         const mouseRatioY = Math.max(0, Math.min(1, mouseY / chartHeight));
         const zoomRatio = newVerticalZoom / viewState.verticalZoom;
@@ -1049,7 +1058,16 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
   }
 
   return (
-    <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
+    <div
+      className="relative"
+      style={{
+        width: '100%',
+        height: '100%',
+        maxHeight: '100%',
+        backgroundColor: colors.panelBackground,
+        overflow: 'hidden'
+      }}
+    >
       {/* ULTRA COMPACT HEADER - ALL INFO IN ONE LINE */}
       <div className="px-2 py-1 border-b text-xs" style={{ borderColor: colors.grid }}>
         <div className="flex justify-between items-center">

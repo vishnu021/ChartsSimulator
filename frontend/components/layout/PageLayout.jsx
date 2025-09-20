@@ -14,11 +14,11 @@ export const PageLayout = ({
   loadingMessage,
   stats,
 }) => {
-  const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
-  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-slate-50';
+  const textColor = theme === 'dark' ? 'text-white' : 'text-slate-700';
 
   return (
-    <div className={`flex flex-col h-[calc(100vh-4rem)] ${bgColor}`}>
+    <div className={`flex flex-col h-full ${bgColor}`} style={{ height: '100%' }}>
       {/* Header with controls */}
       {controls && <div className="flex-shrink-0 p-2">{controls}</div>}
 
@@ -39,8 +39,10 @@ export const PageLayout = ({
       {/* Loading message */}
       {loading && <LoadingMessage message={loadingMessage || 'Loading...'} />}
 
-      {/* Main content */}
-      {children}
+      {/* Main content with proper sizing */}
+      <div className="flex-1 min-h-0" style={{ overflow: 'hidden' }}>
+        {children}
+      </div>
     </div>
   );
 };

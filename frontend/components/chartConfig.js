@@ -48,20 +48,20 @@ export const themes = {
     glow: 'rgba(79, 70, 229, 0.3)',
   },
   light: {
-    background: '#fafbfc',  // Slightly cooler white
+    background: '#f8fafc',  // Softer off-white background
     panelBackground: '#f1f5f9',  // Light blue-gray panels
     controlPanel: '#e2e8f0',  // Refined control panel
     panel: '#f1f5f9',
-    grid: '#cbd5e1',  // Better contrast grid
+    grid: '#d1d9e0',  // Softer grid lines
     text: {
-      primary: '#1e293b',  // Darker primary text for better contrast
-      secondary: '#475569',  // Refined secondary text
+      primary: '#334155',  // Softer primary text - less harsh
+      secondary: '#64748b',  // Warmer secondary text
       maxima: '#0891b2',  // Professional teal for highs
-      minima: '#dc2626',  // Strong red for lows
+      minima: '#e11d48',  // Slightly softer red for lows
     },
     candle: {
-      bullish: '#059669',  // Professional green
-      bearish: '#dc2626',  // Professional red
+      bullish: '#16a34a',  // Softer professional green
+      bearish: '#e11d48',  // Softer professional red
     },
     ticker: {
       line: '#1e293b',

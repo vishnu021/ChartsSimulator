@@ -32,24 +32,27 @@ export default function CandleChart({
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showCrosshair, setShowCrosshair] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hoveredPhase, setHoveredPhase] = useState(null);
 
   const colors = themes[theme];
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth) => {
-    // Wyckoff phase colors
+    // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
-      ACCUMULATION: '#4CAF50',
-      MARKUP: '#2196F3',
-      DISTRIBUTION: '#FF9800',
-      MARKDOWN: '#F44336',
-      UNKNOWN: '#9E9E9E'
+      ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
+      MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
+      DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
+      MARKDOWN: '#EF4444',     // Red - downtrend/bearish
+      UNKNOWN: '#6B7280'       // Gray - unknown
     };
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
+
+    // Position strip ensuring it's visible in viewport
+    const stripY = Math.max(padding.top + 100, height - stripHeight - 60); // Ensure minimum distance from top
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -158,6 +161,99 @@ export default function CandleChart({
     }
   }, [data, colors, isMobile, isDashboard]);
 
+  // Helper function to get phase under mouse cursor
+  const getPhaseUnderMouse = useCallback((mouseX, mouseY, canvas) => {
+    if (!data.wyckoffPhases || !canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const stripHeight = 35;
+    const stripY = rect.height - stripHeight - 50;
+
+    // Check if mouse is in the phase strip area
+    if (mouseY < stripY || mouseY > stripY + stripHeight) return null;
+
+    const { visibleStart, visibleEnd, candleWidth } = scalingUtils.calculateVisibleRange(
+      data.candles.length,
+      rect.width - 180, // Account for padding
+      viewState.zoom,
+      viewState.offset
+    );
+
+    // Find which phase the mouse is over
+    for (const phase of data.wyckoffPhases) {
+      if (phase.startIndex >= visibleStart && phase.endIndex <= visibleEnd) {
+        const phaseStartX = 90 + (phase.startIndex - visibleStart) * candleWidth;
+        const phaseEndX = 90 + (phase.endIndex - visibleStart + 1) * candleWidth;
+
+        if (mouseX >= phaseStartX && mouseX <= phaseEndX) {
+          return phase;
+        }
+      }
+    }
+
+    return null;
+  }, [data, viewState]);
+
+  // Function to draw phase tooltip
+  const drawPhaseTooltip = useCallback((ctx, phase, mouseX, mouseY) => {
+    if (!phase) return;
+
+    const wyckoffColors = {
+      ACCUMULATION: '#10B981',
+      MARKUP: '#3B82F6',
+      DISTRIBUTION: '#F59E0B',
+      MARKDOWN: '#EF4444',
+      UNKNOWN: '#6B7280'
+    };
+
+    const phaseNames = {
+      ACCUMULATION: 'Accumulation Phase',
+      MARKUP: 'Markup Phase (Uptrend)',
+      DISTRIBUTION: 'Distribution Phase',
+      MARKDOWN: 'Markdown Phase (Downtrend)',
+      UNKNOWN: 'Unknown Phase'
+    };
+
+    const text = phaseNames[phase.phase] || 'Unknown Phase';
+    const phaseColor = wyckoffColors[phase.phase] || wyckoffColors.UNKNOWN;
+
+    // Tooltip dimensions
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+    const textWidth = ctx.measureText(text).width;
+    const tooltipWidth = textWidth + 16;
+    const tooltipHeight = 28;
+
+    // Position tooltip above mouse, but keep it within canvas bounds
+    let tooltipX = mouseX - tooltipWidth / 2;
+    let tooltipY = mouseY - tooltipHeight - 10;
+
+    // Boundary checks
+    if (tooltipX < 10) tooltipX = 10;
+    if (tooltipX + tooltipWidth > ctx.canvas.width - 10) {
+      tooltipX = ctx.canvas.width - tooltipWidth - 10;
+    }
+    if (tooltipY < 10) tooltipY = mouseY + 20;
+
+    // Draw tooltip background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6);
+    ctx.fill();
+
+    // Draw colored indicator
+    ctx.fillStyle = phaseColor;
+    ctx.beginPath();
+    ctx.roundRect(tooltipX + 8, tooltipY + 8, 12, 12, 2);
+    ctx.fill();
+
+    // Draw text
+    ctx.fillStyle = 'white';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, tooltipX + 26, tooltipY + tooltipHeight / 2);
+  }, []);
+
   // Mobile detection
   useEffect(() => {
     const checkMobile = () => {
@@ -229,7 +325,13 @@ export default function CandleChart({
 
     const { ctx, width, height } = setup;
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
-    const { chartWidth, chartHeight } = canvasUtils.getChartDimensions(width, height, padding);
+
+    // Calculate available space ensuring bottom elements are visible
+    const bottomReservedSpace = 120; // Increased space for x-axis and Wyckoff
+    const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
+    // Ensure chart doesn't extend beyond available space
+    const availableHeight = height - bottomReservedSpace;
+    const chartHeight = Math.max(100, availableHeight - padding.top - padding.bottom);
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);
@@ -360,7 +462,9 @@ export default function CandleChart({
       if (candle && candle.time) {
         const x = xScale(visibleStart + i);
         const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
-        ctx.fillText(timeLabel, x, height - 15); // Position x-axis labels at bottom
+        // Position x-axis labels ensuring visibility
+        const labelY = Math.max(padding.top + 50, height - 100);
+        ctx.fillText(timeLabel, x, labelY);
       }
     }
 
@@ -389,7 +493,12 @@ export default function CandleChart({
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     }
-  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging, drawWyckoffPhaseStrip]);
+
+    // Draw phase tooltip if hovering over a phase
+    if (hoveredPhase && showCrosshair && !isMobile) {
+      drawPhaseTooltip(ctx, hoveredPhase, mousePos.x, mousePos.y);
+    }
+  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging, drawWyckoffPhaseStrip, hoveredPhase, drawPhaseTooltip]);
 
   useEffect(() => {
     drawChart();
@@ -440,7 +549,13 @@ export default function CandleChart({
 
     const handleMouseMove = e => {
       const rect = canvas.getBoundingClientRect();
-      setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      setMousePos({ x: mouseX, y: mouseY });
+
+      // Check for phase hovering
+      const phase = getPhaseUnderMouse(mouseX, mouseY, canvas);
+      setHoveredPhase(phase);
 
       if (isDragging) {
         const dx = e.clientX - dragStart.x;
@@ -490,23 +605,25 @@ export default function CandleChart({
     externalViewState,
     setViewState,
     isDashboard,
+    getPhaseUnderMouse,
   ]);
 
   if (!data) return null;
 
   return (
     <div
-      className="h-full w-full"
-      style={{ backgroundColor: colors.panelBackground, overflow: 'hidden' }}
+      className="relative w-full h-full"
+      style={{
+        backgroundColor: colors.panelBackground,
+        overflow: 'hidden'
+      }}
     >
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
+        className="block w-full"
         style={{
-          cursor: isMobile ? 'default' : 'crosshair',
-          maxWidth: '100%',
-          maxHeight: '100%',
-          display: 'block',
+          height: '100%',
+          cursor: isMobile ? 'default' : 'crosshair'
         }}
       />
     </div>

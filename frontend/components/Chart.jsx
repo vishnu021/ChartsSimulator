@@ -137,19 +137,22 @@ export default function Chart({ data, theme = 'dark' }) {
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
-    // Wyckoff phase colors
+    // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
-      ACCUMULATION: '#4CAF50',
-      MARKUP: '#2196F3',
-      DISTRIBUTION: '#FF9800',
-      MARKDOWN: '#F44336',
-      UNKNOWN: '#9E9E9E'
+      ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
+      MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
+      DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
+      MARKDOWN: '#EF4444',     // Red - downtrend/bearish
+      UNKNOWN: '#6B7280'       // Gray - unknown
     };
 
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+    // Position strip right after the adjusted chart area
+    const reservedSpace = 85;
+    const adjustedHeight = height - reservedSpace;
+    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -282,8 +285,11 @@ export default function Chart({ data, theme = 'dark' }) {
       height - padding.top - padding.bottom + 20
     );
 
+    // Reserve space for Wyckoff phase strip (35px) + x-axis labels (30px) + margins (15px) = 80px
+    // Reserve fixed space for bottom elements
+    const bottomReservedSpace = 70;
     const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
+    const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
 
     // Calculate visible range with proper bounds
     const candleWidth = (chartWidth / data.candles.length) * viewState.zoom;
@@ -482,7 +488,8 @@ export default function Chart({ data, theme = 'dark' }) {
       if (x >= padding.left && x <= width - padding.right) {
         // Format time only (HH:mm)
         const timeString = format(interval.time, 'HH:mm');
-        ctx.fillText(timeString, x, height - 15); // Position x-axis labels at bottom
+        // Position x-axis labels above Wyckoff strip
+        ctx.fillText(timeString, x, height - 65);
       }
     });
 
@@ -636,7 +643,6 @@ export default function Chart({ data, theme = 'dark' }) {
     };
 
     const handleMouseDown = e => {
-      // const rect = canvas.getBoundingClientRect(); // Unused for now
       setIsDragging(true);
       setDragStart({ x: e.clientX, offset: viewState.targetOffset });
       canvas.style.cursor = 'grabbing';
@@ -687,12 +693,20 @@ export default function Chart({ data, theme = 'dark' }) {
     };
   }, [data, viewState, isDragging, dragStart, isMobile]);
 
-  // Unused function removed to fix ESLint warnings
 
   if (!data) return null;
 
   return (
-    <div className="h-full w-full" style={{ backgroundColor: colors.panelBackground }}>
+    <div
+      className="relative"
+      style={{
+        width: '100%',
+        height: '100%',
+        maxHeight: '100%',
+        backgroundColor: colors.panelBackground,
+        overflow: 'hidden'
+      }}
+    >
       <canvas
         ref={canvasRef}
         className="w-full h-full"

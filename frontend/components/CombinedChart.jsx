@@ -121,19 +121,22 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
-    // Wyckoff phase colors
+    // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
-      ACCUMULATION: '#4CAF50',
-      MARKUP: '#2196F3',
-      DISTRIBUTION: '#FF9800',
-      MARKDOWN: '#F44336',
-      UNKNOWN: '#9E9E9E'
+      ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
+      MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
+      DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
+      MARKDOWN: '#EF4444',     // Red - downtrend/bearish
+      UNKNOWN: '#6B7280'       // Gray - unknown
     };
 
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    const stripY = height - stripHeight - 50; // Move up more to make room for x-axis labels
+    // Position strip right after the adjusted chart area
+    const reservedSpace = 85;
+    const adjustedHeight = height - reservedSpace;
+    const stripY = adjustedHeight + padding.top + 15; // Position after chart with small gap
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -266,8 +269,11 @@ export default function CombinedChart({ data, theme = 'dark' }) {
       height - padding.top - padding.bottom + 20
     );
 
+    // Reserve space for Wyckoff phase strip (35px) + x-axis labels (30px) + margins (15px) = 80px
+    // Reserve fixed space for bottom elements
+    const bottomReservedSpace = 70;
     const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
+    const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
 
     if (!data.candlesticks || data.candlesticks.length === 0) return;
 
@@ -430,7 +436,8 @@ export default function CombinedChart({ data, theme = 'dark' }) {
       const x = xScale(interval.index);
       if (x >= padding.left && x <= width - padding.right) {
         const timeString = format(interval.time, 'HH:mm');
-        ctx.fillText(timeString, x, height - 15); // Position x-axis labels at bottom
+        // Position x-axis labels above Wyckoff strip
+        ctx.fillText(timeString, x, height - 65);
       }
     });
 
@@ -586,8 +593,13 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
   return (
     <div
-      className="flex flex-col h-full p-2"
-      style={{ backgroundColor: colors.background, minHeight: 0 }}
+      className="flex flex-col p-2"
+      style={{
+        height: '100%',
+        maxHeight: '100%',
+        backgroundColor: colors.background,
+        minHeight: 0
+      }}
     >
       <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
         <div>
@@ -661,8 +673,12 @@ export default function CombinedChart({ data, theme = 'dark' }) {
       >
         <canvas
           ref={canvasRef}
-          className="w-full h-full"
-          style={{ cursor: isMobile ? 'default' : 'crosshair', minHeight: 200 }}
+          className="w-full"
+          style={{
+            height: '100%',
+            cursor: isMobile ? 'default' : 'crosshair',
+            minHeight: 200
+          }}
         />
       </div>
     </div>
