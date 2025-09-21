@@ -12,7 +12,7 @@
     "format:check": "prettier --check .",
     "build:static": "next build",
     "clean": "rm -rf .next out",
-    "build:prod": "npm run clean && npm run build:static",
+    "build:prod": "pnpm run clean && pnpm run build:static",
     "export": "next build"
   },
   "dependencies": {

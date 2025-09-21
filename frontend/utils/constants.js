@@ -41,8 +41,8 @@ export const UI_CONSTANTS = {
   PADDING: {
     DESKTOP: { top: 40, right: 80, bottom: 60, left: 80 },
     MOBILE: { top: 30, right: 40, bottom: 40, left: 60 },
-    DASHBOARD_DESKTOP: { top: 20, right: 40, bottom: 25, left: 50 },
-    DASHBOARD_MOBILE: { top: 15, right: 25, bottom: 20, left: 35 },
+    DASHBOARD_DESKTOP: { top: 10, right: 20, bottom: 10, left: 30 },
+    DASHBOARD_MOBILE: { top: 8, right: 15, bottom: 8, left: 25 },
   },
 };
 

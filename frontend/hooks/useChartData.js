@@ -19,7 +19,7 @@ export const useChartData = () => {
   } = useWebSocket();
 
   // Load instant data via API
-  const loadInstantData = useCallback(async params => {
+  const loadInstantData = useCallback(async (params, chartType = 'default') => {
     setInstantLoading(true);
     setInstantError(null);
     setInstantData(null);
@@ -27,8 +27,23 @@ export const useChartData = () => {
     try {
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
-      const queryParams = new URLSearchParams(params);
-      const response = await fetch(`${apiUrl}/api/ohlc?${queryParams}`);
+
+      let endpoint, queryParams;
+
+      if (chartType === 'combined') {
+        // Use /api/charts endpoint with chartTypes for Heikin-Ashi data
+        queryParams = new URLSearchParams({
+          ...params,
+          chartTypes: 'CANDLESTICK,HEIKIN_ASHI'
+        });
+        endpoint = `${apiUrl}/api/charts?${queryParams}`;
+      } else {
+        // Use /api/ohlc endpoint for extrema data
+        queryParams = new URLSearchParams(params);
+        endpoint = `${apiUrl}/api/ohlc?${queryParams}`;
+      }
+
+      const response = await fetch(endpoint);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -37,7 +52,7 @@ export const useChartData = () => {
       const data = await response.json();
       setInstantData({ ...data, symbol: params.symbol });
     } catch (error) {
-      setInstantError('Failed to load extrema data');
+      setInstantError('Failed to load chart data');
     } finally {
       setInstantLoading(false);
     }
@@ -45,11 +60,11 @@ export const useChartData = () => {
 
   // Main load function
   const loadData = useCallback(
-    params => {
+    (params, chartType = 'default') => {
       if (isRealTime) {
         connectAndStream(params.symbol, params.date, params.lookbackPeriod);
       } else {
-        loadInstantData(params);
+        loadInstantData(params, chartType);
       }
     },
     [isRealTime, connectAndStream, loadInstantData]

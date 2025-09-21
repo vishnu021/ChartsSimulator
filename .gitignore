@@ -81,3 +81,4 @@ next-env.d.ts
 /node_modules
 AGENTS.md
 /.playwright-mcp
+frontend/pnpm-lock.yaml

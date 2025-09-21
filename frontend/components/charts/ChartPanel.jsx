@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useChartData } from '@/hooks/useChartData';
 import { useAppState } from '@/contexts/AppStateContext';
 import { StatsBar } from '@/components/ui/StatsBar';
@@ -141,6 +141,11 @@ export const ChartPanel = ({
     return config.statsGenerator(currentData);
   };
 
+  // Wrapper function to pass chart type to loadData
+  const handleLoadData = useCallback((params) => {
+    loadData(params, chartType);
+  }, [loadData, chartType]);
+
   // Determine title and empty state props
   const displayTitle = title || currentData?.symbol || config.defaultTitle;
   const displayEmptyIcon = emptyIcon || config.defaultEmptyIcon;
@@ -154,7 +159,7 @@ export const ChartPanel = ({
       {showControls && (
         <div className="mb-4">
           <ControlPanel
-            onSubmit={loadData}
+            onSubmit={handleLoadData}
             theme={theme}
             onThemeToggle={showThemeToggle ? toggleTheme : undefined}
             showModeToggle={showModeToggle}

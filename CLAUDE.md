@@ -24,6 +24,7 @@ mvn spring-boot:run
 * **Backend (Spring Boot):** APIs, WebSockets, tick data processing
 * **Frontend (Next.js with JavaScript):** Interactive chart UI, live updates, theme-driven styling
 * **Integration:** Single Maven build packages frontend into Spring Boot resources
+* **Package Manager:** pnpm for faster installs and better dependency management
 * **Realtime:** WebSocket-based candle/ticker streams, extrema detection
 
 ---
@@ -58,7 +59,8 @@ mvn spring-boot:run
 * **Build Tools:**
   * Managed with `package.json` scripts
   * Integrated with Maven build via `frontend-maven-plugin`
-  * Commands: `npm run build`, `npm run export`, `npm run lint`
+  * Package manager: **pnpm** (faster installs, better dependency isolation)
+  * Commands: `pnpm build`, `pnpm export`, `pnpm lint`
 
 ---
 
@@ -80,9 +82,9 @@ mvn spring-boot:run -Pdev   # skips frontend build
 ### Frontend Only
 ```bash
 cd frontend
-npm run dev     # Dev server on port 3000
-npm run build   # Production build
-npm run lint    # ESLint check
+pnpm dev        # Dev server on port 3000
+pnpm build      # Production build
+pnpm lint       # ESLint check
 
 # Env vars when running standalone:
 NEXT_PUBLIC_API_URL=http://localhost:9090
@@ -130,6 +132,11 @@ java -jar target/ChartsSimulator-0.0.1-SNAPSHOT.jar
 "lint": "next lint --max-warnings 0",
 "lint:fix": "next lint --fix",
 "format": "prettier --write ."
+
+# Run with pnpm
+pnpm lint
+pnpm lint:fix
+pnpm format
 ```
 
 ---
@@ -213,6 +220,7 @@ public record TickerProperties(
 
 ### Frontend Stack
 * **Next.js 15** with App Router and React 18
+* **pnpm** package manager (2-3x faster installs, 50% less disk usage)
 * **TailwindCSS** theme system with dark/light mode support
 * **Custom Chart Components** with advanced zoom controls and data management hooks
 * **STOMP over SockJS** for WebSocket communication with automatic reconnection
@@ -222,6 +230,7 @@ public record TickerProperties(
 
 ### Integration & Deployment
 * **Single Command Deployment** with integrated frontend/backend builds
+* **pnpm Integration** with Maven for optimized package management
 * **Docker Optimization** with multi-stage builds and production configurations
 * **Environment-Specific Configuration** with automatic detection
 * **Security Enhancements** including CSP headers, XSS protection, and secure CORS

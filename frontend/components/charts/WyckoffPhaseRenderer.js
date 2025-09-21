@@ -3,13 +3,13 @@
  * This is a pure function module for rendering Wyckoff phases
  */
 
-// Wyckoff phase colors - distinct and vibrant
+// Wyckoff phase colors - enhanced vibrancy and contrast
 const WYCKOFF_COLORS = {
-  ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
-  MARKUP: '#3B82F6',       // Bright blue - uptrend/bullish
-  DISTRIBUTION: '#F59E0B',  // Amber - selling/distributing
-  MARKDOWN: '#EF4444',     // Red - downtrend/bearish
-  UNKNOWN: '#6B7280'       // Gray - unknown
+  ACCUMULATION: '#00D9FF',  // Bright cyan - buying/accumulating (more vibrant)
+  MARKUP: '#00FF88',       // Bright green - uptrend/bullish (success green)
+  DISTRIBUTION: '#FFB800',  // Bright orange - selling/distributing (warning)
+  MARKDOWN: '#FF3366',     // Bright red - downtrend/bearish (danger red)
+  UNKNOWN: '#8B93A6'       // Lighter gray - unknown
 };
 
 export const renderWyckoffPhases = (ctx, {
