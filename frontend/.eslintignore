@@ -1,0 +1,8 @@
+.next/
+out/
+target/
+dist/
+build/
+coverage/
+*.min.js
+.DS_Store

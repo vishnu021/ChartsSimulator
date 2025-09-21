@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppState } from '@/contexts/AppStateContext';
+import { logger } from '@/utils/logger';
 
 export default function Navigation() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function Navigation() {
   };
 
   const handleNavigation = path => {
-    console.log(`Navigating from ${pathname} to ${path}`);
+    logger.info(`Navigating from ${pathname} to ${path}`);
     setIsMenuOpen(false);
     router.push(path);
   };

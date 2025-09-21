@@ -1,5 +1,6 @@
 import { apiClient } from '../api/apiClient';
 import { WebSocketManager } from '../websocket/WebSocketManager';
+import { logger } from '@/utils/logger';
 
 class TickerDataService {
   constructor() {
@@ -22,21 +23,21 @@ class TickerDataService {
           const data = JSON.parse(message.body);
           onData(data);
         } catch (error) {
-          console.error('Error parsing ticker message:', error);
+          logger.error('Error parsing ticker message:', error);
           onError('Error parsing ticker response');
         }
       });
 
       // Subscribe to errors
       this.wsManager.subscribe('/user/queue/error', message => {
-        console.error('Ticker server error:', message.body);
+        logger.error('Ticker server error:', message.body);
         onError(message.body);
       });
 
       // Start streaming
       this.wsManager.publish('/app/loadTicker', { symbol, date });
     } catch (error) {
-      console.error('Error setting up ticker stream:', error);
+      logger.error('Error setting up ticker stream:', error);
       onError(`Failed to connect: ${error.message}`);
     }
   }
@@ -48,7 +49,7 @@ class TickerDataService {
           reason: 'Client navigating away',
         });
       } catch (error) {
-        console.warn('Error sending disconnect message:', error);
+        logger.warn('Error sending disconnect message:', error);
       }
     }
   }

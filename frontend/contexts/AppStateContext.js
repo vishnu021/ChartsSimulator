@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 const AppStateContext = createContext();
 
@@ -17,35 +18,7 @@ const getDefaultDate = () => {
   return today.toISOString().split('T')[0];
 };
 
-const getStoredState = () => {
-  if (typeof window === 'undefined') {
-    return {
-      symbol: 'NIFTY 50',
-      date: getDefaultDate(),
-      theme: 'dark',
-    };
-  }
-
-  try {
-    const stored = localStorage.getItem('chartsimulator-app-state');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        symbol: parsed.symbol || 'NIFTY 50',
-        date: parsed.date || getDefaultDate(),
-        theme: parsed.theme || 'dark',
-      };
-    }
-  } catch (error) {
-    console.warn('Failed to parse stored app state:', error);
-  }
-
-  return {
-    symbol: 'NIFTY 50',
-    date: getDefaultDate(),
-    theme: 'dark',
-  };
-};
+// Note: state hydration handled in useEffect; no separate getStoredState needed
 
 export const AppStateProvider = ({ children }) => {
   const [state, setState] = useState(() => ({
@@ -69,7 +42,7 @@ export const AppStateProvider = ({ children }) => {
           });
         }
       } catch (error) {
-        console.warn('Failed to parse stored app state:', error);
+        logger.warn('Failed to parse stored app state:', error);
       }
       setIsHydrated(true);
     }
@@ -81,7 +54,7 @@ export const AppStateProvider = ({ children }) => {
       try {
         localStorage.setItem('chartsimulator-app-state', JSON.stringify(state));
       } catch (error) {
-        console.warn('Failed to save app state to localStorage:', error);
+        logger.warn('Failed to save app state to localStorage:', error);
       }
     }
   }, [state, isHydrated]);

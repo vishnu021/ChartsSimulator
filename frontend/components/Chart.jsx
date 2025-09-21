@@ -136,7 +136,7 @@ export default function Chart({ data, theme = 'dark' }) {
   );
 
   // Draw Wyckoff phase strip function
-  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding, chartHeight) => {
+  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, padding) => {
     // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
       ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
@@ -151,7 +151,7 @@ export default function Chart({ data, theme = 'dark' }) {
     const stripHeight = 35;
     // Position strip at bottom of visible canvas area (within viewport)
     const visibleCanvasHeight = height - 20; // Minimal reserve, position near bottom
-    const xAxisLabelY = visibleCanvasHeight - 45; // X-axis labels
+    // const xAxisLabelY = visibleCanvasHeight - 45; // X-axis labels (unused)
     const stripY = visibleCanvasHeight - 10; // Wyckoff strip at very bottom
 
     // Draw background for the strip
@@ -495,7 +495,7 @@ export default function Chart({ data, theme = 'dark' }) {
     });
 
     // Draw Wyckoff phase bottom strip
-    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth, padding, chartHeight);
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth, padding);
 
     // Y-axis labels
     ctx.textAlign = 'right';

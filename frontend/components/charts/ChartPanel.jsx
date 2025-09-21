@@ -7,6 +7,7 @@ import { StatsBar } from '@/components/ui/StatsBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import ControlPanel from '@/components/ControlPanel';
 import { ExtremaChart, CandlestickChart, CombinedChart, DashboardChart } from './index';
+import { logger } from '@/utils/logger';
 
 /**
  * ChartPanel - Reusable chart panel component that can be configured for different use cases
@@ -57,7 +58,7 @@ export const ChartPanel = ({
   const error = isRealTime ? realTimeError : instantError;
 
   // Debug logging
-  console.log('ChartPanel debug:', {
+  logger.debug('ChartPanel debug:', {
     isRealTime,
     hasCurrentData: !!currentData,
     currentData,
@@ -76,7 +77,7 @@ export const ChartPanel = ({
       statsGenerator: (data) => [
         {
           label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${data.candles?.length || 0} candles`,
+          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
           color: 'text-green-400',
         },
         {
@@ -99,7 +100,7 @@ export const ChartPanel = ({
       statsGenerator: (data) => [
         {
           label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${data.candles?.length || 0} candles`,
+          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
           color: 'text-green-400',
         },
         {
@@ -117,7 +118,7 @@ export const ChartPanel = ({
       statsGenerator: (data) => [
         {
           label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${data.candles?.length || 0} candles`,
+          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
           color: 'text-green-400',
         },
         {
@@ -135,7 +136,7 @@ export const ChartPanel = ({
       statsGenerator: (data) => [
         {
           label: 'Candles',
-          value: data.candles?.length || 0,
+          value: data.candles?.length || data.candlesticks?.length || 0,
           color: 'text-green-400',
         },
       ]
@@ -224,10 +225,10 @@ export const ChartPanel = ({
         <div className="flex-1 min-h-0">
           {currentData ? (
             <>
-              {console.log('ChartPanel rendering chart with data:', {
+              {logger.debug('ChartPanel rendering chart with data:', {
                 chartType,
                 component: ChartComponent.name,
-                hasCandles: !!currentData.candles?.length,
+                hasCandles: !!(currentData.candles?.length || currentData.candlesticks?.length),
                 hasHeikinAshi: !!currentData.heikinAshi?.length,
                 currentData
               })}

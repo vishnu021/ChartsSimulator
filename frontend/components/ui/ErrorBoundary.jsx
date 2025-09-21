@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '@/utils/logger';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -24,8 +25,8 @@ class ErrorBoundary extends React.Component {
       errorId,
     });
 
-    // Log to console for development
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Log for development
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
 
     // Report error to monitoring service in production
     if (process.env.NODE_ENV === 'production') {
@@ -49,7 +50,7 @@ class ErrorBoundary extends React.Component {
       url: window.location.href,
     };
 
-    console.log('Error report:', errorReport);
+    logger.info('Error report:', errorReport);
     // Example: send to monitoring service
     // fetch('/api/errors', { method: 'POST', body: JSON.stringify(errorReport) });
   }

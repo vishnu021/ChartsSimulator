@@ -1,6 +1,7 @@
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { configService } from '../config/configService.js';
+import { logger } from '@/utils/logger';
 
 export class WebSocketManager {
   constructor(wsUrl = null) {
@@ -33,7 +34,7 @@ export class WebSocketManager {
     // Handle tab visibility changes
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.isConnected()) {
-        console.log('Tab became hidden, scheduling WebSocket cleanup');
+        logger.info('Tab became hidden, scheduling WebSocket cleanup');
         setTimeout(() => {
           if (document.hidden) {
             this.disconnect();
@@ -54,7 +55,7 @@ export class WebSocketManager {
 
   async connect() {
     if (this.isConnecting || this.isConnected()) {
-      console.log('WebSocket already connected or connecting');
+      logger.info('WebSocket already connected or connecting');
       return Promise.resolve();
     }
 
@@ -69,32 +70,32 @@ export class WebSocketManager {
           reconnectDelay: this.getReconnectDelay(),
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
-          debug: str => console.log('STOMP:', str),
+          debug: str => logger.debug('STOMP:', str),
         });
 
         this.client.onConnect = frame => {
-          console.log('WebSocket connected:', frame);
+          logger.info('WebSocket connected:', frame);
           this.isConnecting = false;
           this.reconnectAttempts = 0;
           resolve();
         };
 
         this.client.onDisconnect = frame => {
-          console.log('WebSocket disconnected:', frame);
+          logger.info('WebSocket disconnected:', frame);
           this.isConnecting = false;
           this.subscriptions.clear();
           this.scheduleReconnect();
         };
 
         this.client.onStompError = frame => {
-          console.error('STOMP error:', frame);
+          logger.error('STOMP error:', frame);
           this.isConnecting = false;
           const errorMessage = frame.headers['message'] || 'WebSocket connection error';
           reject(new Error(errorMessage));
         };
 
         this.client.onWebSocketError = error => {
-          console.error('WebSocket error:', error);
+          logger.error('WebSocket error:', error);
           this.isConnecting = false;
           reject(new Error('WebSocket connection failed'));
         };
@@ -113,14 +114,14 @@ export class WebSocketManager {
     }
 
     if (this.subscriptions.has(destination)) {
-      console.log(`Already subscribed to ${destination}`);
+      logger.info(`Already subscribed to ${destination}`);
       return this.subscriptions.get(destination);
     }
 
     const subscription = this.client.subscribe(destination, callback);
     this.subscriptions.set(destination, subscription);
 
-    console.log(`Subscribed to ${destination}`);
+    logger.info(`Subscribed to ${destination}`);
     return subscription;
   }
 
@@ -140,12 +141,12 @@ export class WebSocketManager {
     if (subscription) {
       subscription.unsubscribe();
       this.subscriptions.delete(destination);
-      console.log(`Unsubscribed from ${destination}`);
+      logger.info(`Unsubscribed from ${destination}`);
     }
   }
 
   disconnect() {
-    console.log('Disconnecting WebSocket...');
+    logger.info('Disconnecting WebSocket...');
 
     try {
       // Unsubscribe from all subscriptions
@@ -153,7 +154,7 @@ export class WebSocketManager {
         try {
           subscription.unsubscribe();
         } catch (error) {
-          console.warn(`Error unsubscribing from ${destination}:`, error);
+          logger.warn(`Error unsubscribing from ${destination}:`, error);
         }
       });
       this.subscriptions.clear();
@@ -163,7 +164,7 @@ export class WebSocketManager {
         this.client.deactivate();
       }
     } catch (error) {
-      console.error('Error during disconnect:', error);
+      logger.error('Error during disconnect:', error);
     } finally {
       this.client = null;
       this.isConnecting = false;
@@ -188,18 +189,18 @@ export class WebSocketManager {
 
   scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      logger.error('Max reconnection attempts reached');
       return;
     }
 
     const delay = this.getReconnectDelay();
-    console.log(`Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
+    logger.info(`Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1})`);
 
     setTimeout(() => {
       if (!this.isConnected() && !this.isConnecting) {
         this.reconnectAttempts++;
         this.connect().catch(error => {
-          console.error('Reconnection failed:', error);
+          logger.error('Reconnection failed:', error);
         });
       }
     }, delay);

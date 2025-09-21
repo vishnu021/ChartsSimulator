@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { themes, chartSettings } from './chartConfig';
 import { canvasUtils } from '../utils/chart';
+import { logger } from '@/utils/logger';
 
 // Helper function to format time
 const formatTime = (date, format) => {
@@ -783,6 +784,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
     // X-axis labels - show time based on zoom level
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
     const visibleIntervals = timeIntervals.filter(interval => {
       const x = xScaleTime(interval.timestamp);
       return x >= padding.left && x <= width - padding.right;
@@ -801,6 +803,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         }));
     }
 
+    // Debug logging
+    logger.debug('TickerChart X-axis Debug:', {
+      height,
+      paddingBottom: padding.bottom,
+      labelsToShowCount: labelsToShow.length,
+      timeIntervalsCount: timeIntervals.length,
+      visibleIntervalsCount: visibleIntervals.length
+    });
+
     // Limit number of labels to avoid crowding
     const maxLabels = isMobile ? 4 : 8;
     const labelStep = Math.max(1, Math.ceil(labelsToShow.length / maxLabels));
@@ -810,8 +821,10 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const x = xScaleTime(interval.timestamp);
         if (x >= padding.left && x <= width - padding.right) {
           const timeString = formatTime(interval.time, 'HH:mm');
-          // Position x-axis labels using proper padding-based positioning
-          const labelY = height - padding.bottom + 15; // Use actual padding instead of hardcoded values
+          // Position x-axis labels in the reserved bottom space
+          const bottomSpace = 70; // Match bottomReservedSpace
+          const chartBottom = height - padding.bottom - bottomSpace;
+          const labelY = chartBottom + 25; // Position in reserved space below chart
           ctx.fillText(timeString, x, labelY);
         }
       }

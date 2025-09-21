@@ -2,8 +2,8 @@ module.exports = {
   extends: ['next/core-web-vitals'],
   rules: {
     'prefer-const': 'error',
-    'no-unused-vars': 'warn',
-    'no-console': 'warn',
+    'no-unused-vars': 'error',
+    'no-console': 'error',
     'jsx-quotes': ['error', 'prefer-double'],
     quotes: ['error', 'single'],
     semi: ['error', 'always'],
@@ -13,7 +13,8 @@ module.exports = {
     'no-trailing-spaces': 'error',
     'eol-last': 'error',
     indent: ['error', 2],
-    'max-len': ['warn', { code: 100 }],
+    // Keep CI noise low: prefer error/off over warn
+    // 'max-len': ['warn', { code: 100 }],
   },
   env: {
     browser: true,

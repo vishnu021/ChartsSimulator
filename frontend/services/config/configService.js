@@ -27,7 +27,11 @@ class ConfigService {
       this.config = config;
       return config;
     } catch (error) {
-      console.warn('Failed to load server config, using fallback:', error.message);
+      // Non-fatal; log and use fallback
+      // eslint-disable-next-line no-restricted-imports
+      // (logger imported lazily below to avoid circular deps in some bundlers)
+      const { logger } = await import('@/utils/logger');
+      logger.warn('Failed to load server config, using fallback:', error.message);
       // Use fallback configuration
       this.config = this.getFallbackConfig();
       this.error = error;

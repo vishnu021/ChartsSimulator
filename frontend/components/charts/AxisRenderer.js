@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 
 export const renderXAxis = (ctx, {
   width,
-  height,
   data,
   colors,
   padding,

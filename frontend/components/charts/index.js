@@ -1,10 +1,12 @@
-import React from 'react';
 import UnifiedChart from './UnifiedChart';
+import EnhancedCombinedChart from './EnhancedCombinedChart';
 
 // Export all chart components for easy importing
 export { default as ChartContainer } from './ChartContainer';
 export { default as UnifiedChart } from './UnifiedChart';
 export { default as ChartPanel } from './ChartPanel';
+export { default as EnhancedCombinedChart } from './EnhancedCombinedChart';
+export { default as UniversalChart } from './UniversalChart';
 export { renderXAxis, renderYAxis, renderGrid } from './AxisRenderer';
 export { renderWyckoffPhases } from './WyckoffPhaseRenderer';
 export { renderCandlesticks, renderHeikinAshi } from './CandlestickRenderer';
@@ -29,11 +31,9 @@ export const ExtremaChart = (props) => (
   />
 );
 
+// Universal Combined Chart - automatically handles any data structure
 export const CombinedChart = (props) => (
-  <UnifiedChart
-    showHeikinAshi={true}
-    showExtrema={false}
-    showWyckoffPhases={true}
+  <EnhancedCombinedChart
     {...props}
   />
 );

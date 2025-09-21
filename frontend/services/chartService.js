@@ -1,5 +1,6 @@
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
+import { logger } from '@/utils/logger';
 
 let stompClient = null;
 let isConnecting = false;
@@ -20,7 +21,7 @@ const setupGlobalEventListeners = () => {
   // Handle tab visibility changes
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && stompClient && stompClient.connected) {
-      console.log('Tab became hidden, scheduling chart WebSocket cleanup');
+      logger.info('Tab became hidden, scheduling chart WebSocket cleanup');
       setTimeout(() => {
         if (document.hidden) {
           chartService.disconnect();
@@ -31,14 +32,14 @@ const setupGlobalEventListeners = () => {
 
   // Handle page unload - send disconnect message to server
   window.addEventListener('beforeunload', () => {
-    console.log('Page unloading, sending disconnect message to server');
+    logger.info('Page unloading, sending disconnect message to server');
     chartService.sendDisconnectMessage();
     chartService.disconnect();
   });
 
   // Handle page hide (mobile/browser specific)
   window.addEventListener('pagehide', () => {
-    console.log('Page hidden, sending disconnect message to server');
+    logger.info('Page hidden, sending disconnect message to server');
     chartService.sendDisconnectMessage();
     chartService.disconnect();
   });
@@ -51,7 +52,7 @@ export const chartService = {
 
     // Prevent multiple simultaneous connections
     if (isConnecting) {
-      console.log('Chart connection already in progress, ignoring request');
+      logger.info('Chart connection already in progress, ignoring request');
       return;
     }
 
@@ -68,12 +69,12 @@ export const chartService = {
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
         debug: str => {
-          console.log('STOMP: ' + str);
+          logger.debug('STOMP: ' + str);
         },
       });
 
       stompClient.onConnect = frame => {
-        console.log('Connected to WebSocket:', frame);
+        logger.info('Connected to WebSocket:', frame);
         isConnecting = false;
 
         try {
@@ -87,20 +88,20 @@ export const chartService = {
           currentSubscription = stompClient.subscribe('/topic/candles', msg => {
             try {
               if (isCleaningUp) {
-                console.log('Ignoring message during cleanup');
+                logger.debug('Ignoring message during cleanup');
                 return;
               }
               const data = JSON.parse(msg.body);
               onData(data);
             } catch (error) {
-              console.error('Error parsing message:', error);
+              logger.error('Error parsing message:', error);
               onError('Error parsing server response');
             }
           });
 
           // Subscribe to error messages
           stompClient.subscribe('/user/queue/error', msg => {
-            console.error('Server error:', msg.body);
+            logger.error('Server error:', msg.body);
             onError(msg.body);
           });
 
@@ -110,20 +111,20 @@ export const chartService = {
             body: JSON.stringify({ symbol, date, lookbackPeriod }),
           });
         } catch (error) {
-          console.error('Error setting up subscription:', error);
+          logger.error('Error setting up subscription:', error);
           onError('Error setting up data subscription');
           isConnecting = false;
         }
       };
 
       stompClient.onDisconnect = frame => {
-        console.log('Disconnected from WebSocket:', frame);
+        logger.info('Disconnected from WebSocket:', frame);
         isConnecting = false;
         currentSubscription = null;
       };
 
       stompClient.onStompError = frame => {
-        console.error('STOMP error:', frame);
+        logger.error('STOMP error:', frame);
         isConnecting = false;
         const errorMessage = frame.headers['message'] || 'WebSocket connection error';
         onError(errorMessage);
@@ -131,7 +132,7 @@ export const chartService = {
       };
 
       stompClient.onWebSocketError = error => {
-        console.error('WebSocket error:', error);
+        logger.error('WebSocket error:', error);
         isConnecting = false;
         onError('WebSocket connection failed');
         this.disconnect();
@@ -140,7 +141,7 @@ export const chartService = {
       // Activate the connection
       stompClient.activate();
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      logger.error('Error creating WebSocket connection:', error);
       isConnecting = false;
       onError('Failed to create WebSocket connection');
     }
@@ -150,19 +151,19 @@ export const chartService = {
   sendDisconnectMessage() {
     if (stompClient && stompClient.connected) {
       try {
-        console.log('Sending disconnect message to server for candles');
+        logger.info('Sending disconnect message to server for candles');
         stompClient.publish({
           destination: '/app/disconnectCandles',
           body: JSON.stringify({ reason: 'Client navigating away' }),
         });
       } catch (error) {
-        console.warn('Error sending disconnect message:', error);
+        logger.warn('Error sending disconnect message:', error);
       }
     }
   },
 
   disconnect() {
-    console.log('Disconnecting WebSocket...');
+    logger.info('Disconnecting WebSocket...');
     isCleaningUp = true;
 
     // Send disconnect message before closing
@@ -174,7 +175,7 @@ export const chartService = {
         try {
           currentSubscription.unsubscribe();
         } catch (error) {
-          console.warn('Error unsubscribing:', error);
+          logger.warn('Error unsubscribing:', error);
         }
         currentSubscription = null;
       }
@@ -186,11 +187,11 @@ export const chartService = {
             stompClient.deactivate();
           }
         } catch (error) {
-          console.warn('Error deactivating client:', error);
+          logger.warn('Error deactivating client:', error);
         }
       }
     } catch (error) {
-      console.error('Error during disconnect:', error);
+      logger.error('Error during disconnect:', error);
     } finally {
       stompClient = null;
       isConnecting = false;

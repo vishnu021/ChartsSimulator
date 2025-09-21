@@ -196,7 +196,7 @@ export default function CandleChart({
     }
 
     return null;
-  }, [data, viewState]);
+  }, [data, viewState, isDashboard, isMobile]);
 
   // Function to draw phase tooltip
   const drawPhaseTooltip = useCallback((ctx, phase, mouseX, mouseY) => {

@@ -8,6 +8,7 @@ import { renderWyckoffPhases, renderWyckoffTooltip } from './WyckoffPhaseRendere
 import { renderCandlesticks, renderHeikinAshi } from './CandlestickRenderer';
 import { renderExtrema } from './ExtremaRenderer';
 import { drawEnhancedCrosshair } from '../common/CrosshairRenderer';
+import { logger } from '@/utils/logger';
 
 /**
  * UnifiedChart - A reusable chart component that can render:
@@ -29,7 +30,11 @@ export const UnifiedChart = ({
   enableInteraction = true,
   className = '',
   style = {},
-  onViewStateChange = null
+  onViewStateChange = null,
+  // Enhanced control props
+  showCandlesticks = true,
+  heikinAshiOnFront = false,
+  customRenderProps = null
 }) => {
   const colors = themes[theme];
 
@@ -44,28 +49,34 @@ export const UnifiedChart = ({
     showCrosshair,
     isDragging
   }) => {
-    // Check if we have either candles or heikinAshi data to display
-    const hasCandles = data?.candles && data.candles.length > 0;
+    // Check if we have either candles or candlesticks (handle both field names) or heikinAshi data to display
+    const candleData = data?.candles || data?.candlesticks;
+    const hasCandles = candleData && candleData.length > 0;
     const hasHeikinAshi = data?.heikinAshi && data.heikinAshi.length > 0;
 
     // Debug logging for data availability
-    console.log('UnifiedChart render debug:', {
+    logger.debug('UnifiedChart render debug:', {
       data: !!data,
       hasCandles,
       hasHeikinAshi,
-      candlesLength: data?.candles?.length || 0,
+      candleDataLength: candleData?.length || 0,
       heikinAshiLength: data?.heikinAshi?.length || 0,
       showHeikinAshi,
-      showExtrema
+      showExtrema,
+      fieldNames: {
+        candles: !!data?.candles,
+        candlesticks: !!data?.candlesticks,
+        heikinAshi: !!data?.heikinAshi
+      }
     });
 
     if (!data || (!hasCandles && !hasHeikinAshi)) {
-      console.log('UnifiedChart early return: no data to display');
+      logger.debug('UnifiedChart early return: no data to display');
       return;
     }
 
     // Use candles if available, otherwise fall back to heikinAshi as primary data
-    const primaryData = hasCandles ? data.candles : data.heikinAshi;
+    const primaryData = hasCandles ? candleData : data.heikinAshi;
 
     // Setup padding based on mobile/desktop
     const padding = isMobile ? chartSettings.mobilePadding : chartSettings.padding;
@@ -144,7 +155,7 @@ export const UnifiedChart = ({
     const pricePadding = Math.max(priceRange * 0.1, 1);
 
     // Debug logging
-    console.log('Chart Debug:', {
+    logger.debug('Chart Debug:', {
       primaryDataLength: primaryData.length,
       visibleStart,
       visibleEnd,
@@ -182,26 +193,32 @@ export const UnifiedChart = ({
       });
     }
 
-    // Render primary candlesticks (either candles or heikinAshi as fallback)
-    if (hasCandles) {
-      console.log('UnifiedChart: Rendering regular candlesticks');
-      renderCandlesticks(ctx, {
-        data,
-        colors,
-        padding,
-        chartHeight,
-        visibleStart,
-        visibleEnd,
-        candleWidth,
-        minPrice,
-        maxPrice,
-        priceRange,
-        pricePadding
-      });
+    // Extract control props from customRenderProps if available
+    const actualShowCandlesticks = customRenderProps?.showCandlesticks ?? showCandlesticks;
+    const actualShowHeikinAshi = customRenderProps?.showHeikinAshi ?? showHeikinAshi;
+    const actualHeikinAshiOnFront = customRenderProps?.heikinAshiOnFront ?? heikinAshiOnFront;
 
-      // Render Heikin Ashi overlay if enabled and we have separate heikinAshi data
-      if (showHeikinAshi && data.heikinAshi && hasHeikinAshi) {
-        console.log('UnifiedChart: Rendering Heikin Ashi overlay');
+    // Determine rendering order based on layering preference
+    const renderBackgroundChart = () => {
+      if (actualHeikinAshiOnFront && actualShowCandlesticks && hasCandles) {
+        // Regular candlesticks in background
+        logger.debug('UnifiedChart: Rendering regular candlesticks (background)');
+        renderCandlesticks(ctx, {
+          data,
+          colors,
+          padding,
+          chartHeight,
+          visibleStart,
+          visibleEnd,
+          candleWidth,
+          minPrice,
+          maxPrice,
+          priceRange,
+          pricePadding
+        });
+      } else if (!actualHeikinAshiOnFront && actualShowHeikinAshi && hasHeikinAshi) {
+        // Heikin Ashi in background
+        logger.debug('UnifiedChart: Rendering Heikin Ashi (background)');
         renderHeikinAshi(ctx, {
           data,
           colors,
@@ -217,11 +234,73 @@ export const UnifiedChart = ({
           outlineOnly: true
         });
       }
-    } else if (hasHeikinAshi) {
-      // If no regular candles, render HeikinAshi as primary candlesticks
-      console.log('UnifiedChart: Rendering Heikin Ashi as primary chart');
+    };
+
+    const renderForegroundChart = () => {
+      if (actualHeikinAshiOnFront && actualShowHeikinAshi && hasHeikinAshi) {
+        // Heikin Ashi in foreground
+        logger.debug('UnifiedChart: Rendering Heikin Ashi (foreground)');
+        renderHeikinAshi(ctx, {
+          data,
+          colors,
+          padding,
+          chartHeight,
+          visibleStart,
+          visibleEnd,
+          candleWidth,
+          minPrice,
+          maxPrice,
+          priceRange,
+          pricePadding,
+          outlineOnly: true
+        });
+      } else if (!actualHeikinAshiOnFront && actualShowCandlesticks && hasCandles) {
+        // Regular candlesticks in foreground
+        logger.debug('UnifiedChart: Rendering regular candlesticks (foreground)');
+        renderCandlesticks(ctx, {
+          data,
+          colors,
+          padding,
+          chartHeight,
+          visibleStart,
+          visibleEnd,
+          candleWidth,
+          minPrice,
+          maxPrice,
+          priceRange,
+          pricePadding
+        });
+      }
+    };
+
+    // Render charts in the correct order
+    if ((actualShowCandlesticks && hasCandles) || (actualShowHeikinAshi && hasHeikinAshi)) {
+      // Render background chart first
+      renderBackgroundChart();
+
+      // Render foreground chart second
+      renderForegroundChart();
+    } else if (actualShowCandlesticks && hasCandles) {
+      // Only regular candlesticks
+      logger.debug('UnifiedChart: Rendering regular candlesticks only');
+      renderCandlesticks(ctx, {
+        data,
+        colors,
+        padding,
+        chartHeight,
+        visibleStart,
+        visibleEnd,
+        candleWidth,
+        minPrice,
+        maxPrice,
+        priceRange,
+        pricePadding
+      });
+    } else if (actualShowHeikinAshi && hasHeikinAshi) {
+      // Only Heikin Ashi
+      logger.debug('UnifiedChart: Rendering Heikin Ashi only');
       renderHeikinAshi(ctx, {
-        data: { heikinAshi: primaryData }, // Map primaryData to heikinAshi for renderer
+        data: hasCandles ? data : { heikinAshi: primaryData },
         colors,
         padding,
         chartHeight,

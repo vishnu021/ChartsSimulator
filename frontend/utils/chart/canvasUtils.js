@@ -1,4 +1,5 @@
-import { UI_CONSTANTS, CHART_CONSTANTS } from '../constants';
+import { UI_CONSTANTS } from '../constants';
+import { logger } from '@/utils/logger';
 
 /**
  * Enhanced Canvas utility functions for high-performance chart rendering
@@ -205,14 +206,14 @@ export const canvasUtils = {
    */
   clearClippingRegion(ctx) {
     if (!ctx || typeof ctx.restore !== 'function') {
-      console.warn('Invalid canvas context for clearing clipping region');
+      logger.warn('Invalid canvas context for clearing clipping region');
       return;
     }
 
     try {
       ctx.restore();
     } catch (error) {
-      console.warn('Failed to restore canvas context:', error.message);
+      logger.warn('Failed to restore canvas context:', error.message);
     }
   },
 
@@ -227,7 +228,7 @@ export const canvasUtils = {
    */
   drawPanelBackground(ctx, colors, padding, width, height, options = {}) {
     if (!ctx || !colors) {
-      console.warn('Invalid parameters for drawing panel background');
+      logger.warn('Invalid parameters for drawing panel background');
       return;
     }
 
@@ -257,7 +258,7 @@ export const canvasUtils = {
 
       ctx.restore();
     } catch (error) {
-      console.warn('Failed to draw panel background:', error.message);
+      logger.warn('Failed to draw panel background:', error.message);
       ctx.restore();
     }
   },
@@ -272,7 +273,7 @@ export const canvasUtils = {
    */
   clearCanvas(ctx, colors, width, height, useOptimization = true) {
     if (!ctx || !colors) {
-      console.warn('Invalid parameters for clearing canvas');
+      logger.warn('Invalid parameters for clearing canvas');
       return;
     }
 
@@ -286,7 +287,7 @@ export const canvasUtils = {
         ctx.fillRect(0, 0, width, height);
       }
     } catch (error) {
-      console.warn('Failed to clear canvas:', error.message);
+      logger.warn('Failed to clear canvas:', error.message);
       // Fallback to basic clear
       ctx.clearRect(0, 0, width, height);
     }
@@ -377,7 +378,7 @@ export const canvasUtils = {
 
       return result;
     } catch (error) {
-      console.warn('Failed to measure text:', error.message);
+      logger.warn('Failed to measure text:', error.message);
       return { width: text.length * 6, height: 12 }; // Fallback estimation
     }
   },

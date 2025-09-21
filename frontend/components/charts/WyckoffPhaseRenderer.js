@@ -14,7 +14,6 @@ const WYCKOFF_COLORS = {
 
 export const renderWyckoffPhases = (ctx, {
   width,
-  height,
   data,
   colors,
   padding,
@@ -170,7 +169,6 @@ export const renderWyckoffPhases = (ctx, {
  */
 export const renderWyckoffTooltip = (ctx, {
   width,
-  height,
   data,
   padding,
   mousePos,

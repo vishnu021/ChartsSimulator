@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { configService } from '@/services/config/configService';
+import { logger } from '@/utils/logger';
 
 export const useWebSocket = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -66,7 +67,7 @@ export const useWebSocket = () => {
         // Load WebSocket URL from config
         await configService.loadConfig();
         const wsUrl = configService.getWsUrl();
-        console.log('Loaded WebSocket URL for extrema:', wsUrl);
+        logger.info('Loaded WebSocket URL for extrema:', wsUrl);
 
         const client = new Client({
           webSocketFactory: () => new SockJS(wsUrl),
@@ -111,7 +112,7 @@ export const useWebSocket = () => {
           }
         };
 
-        client.onStompError = frame => {
+        client.onStompError = () => {
           setError('WebSocket connection error');
           setIsConnecting(false);
           isActiveRef.current = false;

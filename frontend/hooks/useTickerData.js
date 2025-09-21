@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { tickerService } from '@/services/tickerService';
+import { logger } from '@/utils/logger';
 
 export const useTickerData = () => {
   const [tickerData, setTickerData] = useState([]);
@@ -45,7 +46,7 @@ export const useTickerData = () => {
 
   const loadRealTimeTickerData = useCallback(params => {
     if (loadingRef.current || tickerService.isConnecting()) {
-      console.log('Request already in progress, ignoring');
+      logger.info('Request already in progress, ignoring');
       return;
     }
 
@@ -63,7 +64,7 @@ export const useTickerData = () => {
           params.date,
           tick => {
             if (tick && tick.time && typeof tick.price === 'number') {
-              console.log('Real-time tick received:', tick.price);
+              logger.debug('Real-time tick received:', tick.price);
               setTickerData(prev => {
                 const newData = [...prev, tick];
                 return newData.length > 10000 ? newData.slice(-10000) : newData;
@@ -71,7 +72,7 @@ export const useTickerData = () => {
             }
           },
           err => {
-            console.error('Ticker service error:', err);
+            logger.error('Ticker service error:', err);
             setError(err);
             setIsLoading(false);
             loadingRef.current = false;
@@ -82,7 +83,7 @@ export const useTickerData = () => {
           loadingRef.current = false;
         }, 2000);
       } catch (error) {
-        console.error('Error loading ticker:', error);
+        logger.error('Error loading ticker:', error);
         setError('Failed to load ticker data');
         setIsLoading(false);
         loadingRef.current = false;
@@ -96,18 +97,18 @@ export const useTickerData = () => {
     setTickerData([]);
 
     try {
-      console.log(`Loading instant ticker data for ${params.symbol} on ${params.date}`);
+      logger.info(`Loading instant ticker data for ${params.symbol} on ${params.date}`);
       const data = await tickerService.getTickerData(params.symbol, params.date);
-      console.log(`Received ${data.length} ticker records`);
+      logger.debug(`Received ${data.length} ticker records`);
 
       const validData = data.filter(
         tick => tick && tick.time && typeof tick.price === 'number' && !isNaN(tick.price)
       );
 
-      console.log(`Filtered to ${validData.length} valid ticks`);
+      logger.debug(`Filtered to ${validData.length} valid ticks`);
       setTickerData(validData);
     } catch (error) {
-      console.error('Error loading ticker:', error);
+      logger.error('Error loading ticker:', error);
       setError(`Failed to load ticker data: ${error.message}`);
     } finally {
       setIsLoading(false);

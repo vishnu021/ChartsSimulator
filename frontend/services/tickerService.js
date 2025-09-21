@@ -1,6 +1,7 @@
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { configService } from './config/configService.js';
+import { logger } from '@/utils/logger';
 
 let tickerStompClient = null;
 let tickerIsConnecting = false;
@@ -21,7 +22,7 @@ const setupTickerGlobalEventListeners = () => {
   // Handle tab visibility changes
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && tickerStompClient && tickerStompClient.connected) {
-      console.log('Tab became hidden, scheduling ticker WebSocket cleanup');
+      logger.info('Tab became hidden, scheduling ticker WebSocket cleanup');
       setTimeout(() => {
         if (document.hidden) {
           tickerService.disconnect();
@@ -32,14 +33,14 @@ const setupTickerGlobalEventListeners = () => {
 
   // Handle page unload - send disconnect message to server
   window.addEventListener('beforeunload', () => {
-    console.log('Page unloading, sending ticker disconnect message to server');
+    logger.info('Page unloading, sending ticker disconnect message to server');
     tickerService.sendDisconnectMessage();
     tickerService.disconnect();
   });
 
   // Handle page hide (mobile/browser specific)
   window.addEventListener('pagehide', () => {
-    console.log('Page hidden, sending ticker disconnect message to server');
+    logger.info('Page hidden, sending ticker disconnect message to server');
     tickerService.sendDisconnectMessage();
     tickerService.disconnect();
   });
@@ -49,12 +50,12 @@ export const tickerService = {
   // Get ticker data via API
   async getTickerData(symbol, date) {
     try {
-      console.log(`Fetching ticker data for ${symbol} on ${date}`);
+      logger.info(`Fetching ticker data for ${symbol} on ${date}`);
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
       const params = new URLSearchParams({ symbol, date });
       const url = `${apiUrl}/api/ticker?${params}`;
-      console.log(`API URL: ${url}`);
+      logger.debug(`API URL: ${url}`);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -63,19 +64,19 @@ export const tickerService = {
         },
       });
 
-      console.log(`API Response status: ${response.status}`);
+      logger.debug(`API Response status: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`API Error: ${response.status} - ${errorText}`);
+        logger.error(`API Error: ${response.status} - ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log(`Received ${data.length} ticker records`);
+      logger.debug(`Received ${data.length} ticker records`);
       return data;
     } catch (error) {
-      console.error('Error fetching ticker data:', error);
+      logger.error('Error fetching ticker data:', error);
       throw error;
     }
   },
@@ -86,7 +87,7 @@ export const tickerService = {
     setupTickerGlobalEventListeners();
 
     if (tickerIsConnecting) {
-      console.log('Ticker connection already in progress, ignoring request');
+      logger.info('Ticker connection already in progress, ignoring request');
       return;
     }
 
@@ -99,7 +100,7 @@ export const tickerService = {
       if (!WEBSOCKET_URL) {
         await configService.loadConfig();
         WEBSOCKET_URL = configService.getWsUrl();
-        console.log('Loaded WebSocket URL for ticker:', WEBSOCKET_URL);
+        logger.info('Loaded WebSocket URL for ticker:', WEBSOCKET_URL);
       }
 
       tickerStompClient = new Client({
@@ -108,12 +109,12 @@ export const tickerService = {
         heartbeatIncoming: 4000,
         heartbeatOutgoing: 4000,
         debug: str => {
-          console.log('STOMP Ticker: ' + str);
+          logger.debug('STOMP Ticker: ' + str);
         },
       });
 
       tickerStompClient.onConnect = frame => {
-        console.log('Connected to Ticker WebSocket:', frame);
+        logger.info('Connected to Ticker WebSocket:', frame);
         tickerIsConnecting = false;
 
         try {
@@ -125,20 +126,20 @@ export const tickerService = {
           tickerCurrentSubscription = tickerStompClient.subscribe('/topic/ticker', msg => {
             try {
               if (tickerIsCleaningUp) {
-                console.log('Ignoring ticker message during cleanup');
+                logger.debug('Ignoring ticker message during cleanup');
                 return;
               }
               const tickerData = JSON.parse(msg.body);
               onData(tickerData);
             } catch (error) {
-              console.error('Error parsing ticker message:', error);
+              logger.error('Error parsing ticker message:', error);
               onError('Error parsing ticker response');
             }
           });
 
           // Subscribe to error messages
           tickerStompClient.subscribe('/user/queue/error', msg => {
-            console.error('Ticker server error:', msg.body);
+            logger.error('Ticker server error:', msg.body);
             onError(msg.body);
           });
 
@@ -147,20 +148,20 @@ export const tickerService = {
             body: JSON.stringify({ symbol, date }),
           });
         } catch (error) {
-          console.error('Error setting up ticker subscription:', error);
+          logger.error('Error setting up ticker subscription:', error);
           onError('Error setting up ticker subscription');
           tickerIsConnecting = false;
         }
       };
 
       tickerStompClient.onDisconnect = frame => {
-        console.log('Disconnected from Ticker WebSocket:', frame);
+        logger.info('Disconnected from Ticker WebSocket:', frame);
         tickerIsConnecting = false;
         tickerCurrentSubscription = null;
       };
 
       tickerStompClient.onStompError = frame => {
-        console.error('STOMP Ticker error:', frame);
+        logger.error('STOMP Ticker error:', frame);
         tickerIsConnecting = false;
         const errorMessage = frame.headers['message'] || 'Ticker WebSocket connection error';
         onError(errorMessage);
@@ -168,7 +169,7 @@ export const tickerService = {
       };
 
       tickerStompClient.onWebSocketError = error => {
-        console.error('Ticker WebSocket error:', error);
+        logger.error('Ticker WebSocket error:', error);
         tickerIsConnecting = false;
         onError('Ticker WebSocket connection failed');
         this.disconnect();
@@ -176,7 +177,7 @@ export const tickerService = {
 
       tickerStompClient.activate();
     } catch (error) {
-      console.error('Error creating ticker WebSocket connection:', error);
+      logger.error('Error creating ticker WebSocket connection:', error);
       tickerIsConnecting = false;
       onError('Failed to create ticker WebSocket connection');
     }
@@ -186,19 +187,19 @@ export const tickerService = {
   sendDisconnectMessage() {
     if (tickerStompClient && tickerStompClient.connected) {
       try {
-        console.log('Sending disconnect message to server for ticker');
+        logger.info('Sending disconnect message to server for ticker');
         tickerStompClient.publish({
           destination: '/app/disconnectTicker',
           body: JSON.stringify({ reason: 'Client navigating away' }),
         });
       } catch (error) {
-        console.warn('Error sending ticker disconnect message:', error);
+        logger.warn('Error sending ticker disconnect message:', error);
       }
     }
   },
 
   disconnect() {
-    console.log('Disconnecting Ticker WebSocket...');
+    logger.info('Disconnecting Ticker WebSocket...');
     tickerIsCleaningUp = true;
 
     // Send disconnect message before closing
@@ -209,7 +210,7 @@ export const tickerService = {
         try {
           tickerCurrentSubscription.unsubscribe();
         } catch (error) {
-          console.warn('Error unsubscribing from ticker:', error);
+          logger.warn('Error unsubscribing from ticker:', error);
         }
         tickerCurrentSubscription = null;
       }
@@ -220,11 +221,11 @@ export const tickerService = {
             tickerStompClient.deactivate();
           }
         } catch (error) {
-          console.warn('Error deactivating ticker client:', error);
+          logger.warn('Error deactivating ticker client:', error);
         }
       }
     } catch (error) {
-      console.error('Error during ticker disconnect:', error);
+      logger.error('Error during ticker disconnect:', error);
     } finally {
       tickerStompClient = null;
       tickerIsConnecting = false;
