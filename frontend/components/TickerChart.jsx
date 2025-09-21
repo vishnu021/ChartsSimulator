@@ -821,10 +821,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const x = xScaleTime(interval.timestamp);
         if (x >= padding.left && x <= width - padding.right) {
           const timeString = formatTime(interval.time, 'HH:mm');
-          // Position x-axis labels in the reserved bottom space
-          const bottomSpace = 70; // Match bottomReservedSpace
-          const chartBottom = height - padding.bottom - bottomSpace;
-          const labelY = chartBottom + 25; // Position in reserved space below chart
+          // Position x-axis labels just below the chart area
+          const labelY = height - padding.bottom + 20; // Position in padding area
           ctx.fillText(timeString, x, labelY);
         }
       }

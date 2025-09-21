@@ -31,6 +31,7 @@ export const UnifiedChart = ({
   className = '',
   style = {},
   onViewStateChange = null,
+  sharedViewState = null,
   // Enhanced control props
   showCandlesticks = true,
   heikinAshiOnFront = false,
@@ -204,7 +205,7 @@ export const UnifiedChart = ({
         // Regular candlesticks in background
         logger.debug('UnifiedChart: Rendering regular candlesticks (background)');
         renderCandlesticks(ctx, {
-          data,
+          data: { candles: candleData },
           colors,
           padding,
           chartHeight,
@@ -258,7 +259,7 @@ export const UnifiedChart = ({
         // Regular candlesticks in foreground
         logger.debug('UnifiedChart: Rendering regular candlesticks (foreground)');
         renderCandlesticks(ctx, {
-          data,
+          data: { candles: candleData },
           colors,
           padding,
           chartHeight,
@@ -284,7 +285,7 @@ export const UnifiedChart = ({
       // Only regular candlesticks
       logger.debug('UnifiedChart: Rendering regular candlesticks only');
       renderCandlesticks(ctx, {
-        data,
+        data: { candles: candleData },
         colors,
         padding,
         chartHeight,
@@ -449,6 +450,8 @@ export const UnifiedChart = ({
       enableInteraction={enableInteraction}
       className={className}
       style={style}
+      sharedViewState={sharedViewState}
+      onViewStateChange={onViewStateChange}
     />
   );
 };

@@ -16,17 +16,24 @@ export const ChartContainer = ({
   enableInteraction = true,
   className = '',
   style = {},
+  sharedViewState = null,
+  onViewStateChange = null,
 }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
 
-  // State management
-  const [viewState, setViewState] = useState({
-    zoom: 1,
-    offset: 0,
-    targetOffset: 0,
-    velocity: 0,
-  });
+  // State management - initialize from shared state if provided
+  const [localViewState, setLocalViewState] = useState(() =>
+    sharedViewState || {
+      zoom: 1,
+      offset: 0,
+      targetOffset: 0,
+      velocity: 0,
+    }
+  );
+
+  // Always use local state for immediate responsiveness, sync to shared state when provided
+  const viewState = localViewState;
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, offset: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -75,7 +82,7 @@ export const ChartContainer = ({
   // Smooth animation loop
   useEffect(() => {
     const animate = () => {
-      setViewState(prev => {
+      setLocalViewState(prev => {
         const friction = 0.9;
         const springStrength = 0.1;
 
@@ -93,7 +100,14 @@ export const ChartContainer = ({
           prev.velocity = 0;
         }
 
-        return { ...prev };
+        const newState = { ...prev };
+
+        // Sync to shared state if available
+        if (onViewStateChange) {
+          onViewStateChange(newState);
+        }
+
+        return newState;
       });
 
       animationRef.current = requestAnimationFrame(animate);
@@ -105,7 +119,14 @@ export const ChartContainer = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isDragging]);
+  }, [isDragging, onViewStateChange]);
+
+  // Update local state when shared state changes (incoming sync from other panels)
+  useEffect(() => {
+    if (sharedViewState && !isDragging) {
+      setLocalViewState(sharedViewState);
+    }
+  }, [sharedViewState, isDragging]);
 
   // Render chart using provided render function
   const renderChart = useCallback(() => {
@@ -163,7 +184,7 @@ export const ChartContainer = ({
       const minOffset = Math.min(0, rect.width - newWidth);
       const clampedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
 
-      setViewState(prev => ({
+      setLocalViewState(prev => ({
         ...prev,
         zoom: newZoom,
         offset: clampedOffset,
@@ -183,7 +204,7 @@ export const ChartContainer = ({
 
       if (isDragging) {
         const dx = e.clientX - dragStart.x;
-        setViewState(prev => ({
+        setLocalViewState(prev => ({
           ...prev,
           targetOffset: dragStart.offset + dx,
         }));
@@ -224,7 +245,7 @@ export const ChartContainer = ({
 
   // Reset view function
   const resetView = useCallback(() => {
-    setViewState({
+    setLocalViewState({
       zoom: 1,
       offset: 0,
       targetOffset: 0,
@@ -238,7 +259,7 @@ export const ChartContainer = ({
       canvasRef.current._chartControls = {
         resetView,
         getViewState: () => viewState,
-        setViewState,
+        setViewState: setLocalViewState,
       };
     }
   }, [resetView, viewState]);

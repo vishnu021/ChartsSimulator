@@ -12,7 +12,7 @@ const CandleChart = dynamic(() => import('@/components/CandleChart'), {
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2">
         </div>
-        Loading chart...
+                Loading chart...
       </div>
     </div>
   ),
@@ -341,7 +341,7 @@ export default function DashboardPage() {
           }}
         >
           <h1 className="text-lg font-bold" style={{ color: c.text }}>
-            📋 Multi-Stock Dashboard
+                        📋 Multi-Stock Dashboard
           </h1>
           <div className="flex items-center gap-2">
             {/* Date Navigation */}
@@ -355,7 +355,7 @@ export default function DashboardPage() {
               }}
               title="Previous Day"
             >
-              ◀
+                            ◀
             </button>
             <input
               type="date"
@@ -374,21 +374,21 @@ export default function DashboardPage() {
               }}
               title="Next Day"
             >
-              ▶
+                            ▶
             </button>
             <button
               onClick={loadAllCharts}
               className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
               title="Load All Charts"
             >
-              ⚡📊
+                            ⚡📊
             </button>
             <button
               onClick={resetAllCharts}
               className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
               title="Reset All"
             >
-              🧹
+                            🧹
             </button>
             <button
               onClick={toggleTheme}

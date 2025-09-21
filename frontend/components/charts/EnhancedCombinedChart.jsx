@@ -34,98 +34,70 @@ export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Enhanced Control Panel */}
-      <div className="flex-shrink-0 mb-4">
-        <div className="flex flex-col gap-3 p-4 rounded-lg" style={{ backgroundColor: colors.controlPanel, border: `1px solid ${colors.grid}` }}>
+      {/* Compressed Control Panel */}
+      <div className="flex-shrink-0 mb-2">
+        <div className="flex items-center justify-between gap-4 p-2 rounded-lg" style={{ backgroundColor: colors.controlPanel, border: `1px solid ${colors.grid}` }}>
 
-          {/* Chart Visibility Controls */}
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium" style={{ color: colors.text.primary }}>
-              Chart Visibility
-            </h3>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setShowCandlesticks(!showCandlesticks)}
-                className="px-3 py-2 rounded-md transition-all text-sm font-medium flex items-center gap-2"
-                style={getButtonStyle(showCandlesticks)}
-                title="Toggle regular candlesticks visibility"
-              >
-                <div
-                  className="w-3 h-3 rounded border-2"
-                  style={{
-                    backgroundColor: showCandlesticks ? colors.candle.bullish : 'transparent',
-                    borderColor: colors.candle.bullish
-                  }}
-                />
-                Regular Candles
-                {showCandlesticks && <span className="text-xs opacity-75">✓</span>}
-              </button>
+          {/* Chart Visibility Controls - Left Side */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium mr-2" style={{ color: colors.text.primary }}>Charts:</span>
+            <button
+              onClick={() => setShowCandlesticks(!showCandlesticks)}
+              className="px-2 py-1 rounded transition-all text-xs font-medium flex items-center gap-1"
+              style={getButtonStyle(showCandlesticks)}
+              title="Toggle regular candlesticks visibility"
+            >
+              <div
+                className="w-2 h-2 rounded border"
+                style={{
+                  backgroundColor: showCandlesticks ? colors.candle.bullish : 'transparent',
+                  borderColor: colors.candle.bullish
+                }}
+              />
+              Regular{showCandlesticks && '✓'}
+            </button>
 
-              <button
-                onClick={() => setShowHeikinAshi(!showHeikinAshi)}
-                className="px-3 py-2 rounded-md transition-all text-sm font-medium flex items-center gap-2"
-                style={getButtonStyle(showHeikinAshi)}
-                title="Toggle Heikin Ashi candlesticks visibility"
-              >
-                <div
-                  className="w-3 h-3 rounded border-2"
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderColor: '#fbbf24' // Yellow for Heikin Ashi
-                  }}
-                />
-                Heikin Ashi
-                {showHeikinAshi && <span className="text-xs opacity-75">✓</span>}
-              </button>
-            </div>
+            <button
+              onClick={() => setShowHeikinAshi(!showHeikinAshi)}
+              className="px-2 py-1 rounded transition-all text-xs font-medium flex items-center gap-1"
+              style={getButtonStyle(showHeikinAshi)}
+              title="Toggle Heikin Ashi candlesticks visibility"
+            >
+              <div
+                className="w-2 h-2 rounded border"
+                style={{
+                  backgroundColor: 'transparent',
+                  borderColor: '#d97706' // Updated color for Heikin Ashi
+                }}
+              />
+              Heikin Ashi{showHeikinAshi && '✓'}
+            </button>
           </div>
 
-          {/* Layer Ordering Controls */}
+          {/* Layer Control - Center */}
           {showCandlesticks && showHeikinAshi && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium" style={{ color: colors.text.primary }}>
-                Layer Order
-              </h3>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setHeikinAshiOnFront(!heikinAshiOnFront)}
-                  className="px-3 py-2 rounded-md transition-all text-sm font-medium flex items-center gap-2"
-                  style={getToggleStyle(heikinAshiOnFront)}
-                  title="Toggle which chart appears in front"
-                >
-                  <span className="text-xs">
-                    {heikinAshiOnFront ? '🟡' : '🟢'}
-                  </span>
-                  {heikinAshiOnFront ? 'Heikin Ashi on Front' : 'Regular Candles on Front'}
-                  <span className="text-xs opacity-75">
-                    {heikinAshiOnFront ? '(Background: Regular)' : '(Background: Heikin Ashi)'}
-                  </span>
-                </button>
-              </div>
-            </div>
+            <button
+              onClick={() => setHeikinAshiOnFront(!heikinAshiOnFront)}
+              className="px-2 py-1 rounded transition-all text-xs font-medium flex items-center gap-1"
+              style={getToggleStyle(heikinAshiOnFront)}
+              title="Toggle which chart appears in front"
+            >
+              <span className="text-xs">{heikinAshiOnFront ? '🟡' : '🟢'}</span>
+              {heikinAshiOnFront ? 'Heikin Front' : 'Regular Front'}
+            </button>
           )}
 
-
-          {/* Status Display */}
-          <div className="flex items-center gap-4 text-xs pt-2 border-t" style={{ borderColor: colors.grid, color: colors.text.secondary }}>
-            <span>Status:</span>
+          {/* Status Display - Right Side */}
+          <div className="flex items-center gap-3 text-xs" style={{ color: colors.text.secondary }}>
             <span className="flex items-center gap-1">
-              Regular: {showCandlesticks ?
-                <span className="text-green-400">Visible</span> :
-                <span className="text-red-400">Hidden</span>
-              }
+              R: {showCandlesticks ? <span className="text-green-400">✓</span> : <span className="text-red-400">✗</span>}
             </span>
             <span className="flex items-center gap-1">
-              Heikin Ashi: {showHeikinAshi ?
-                <span className="text-yellow-400">Visible</span> :
-                <span className="text-red-400">Hidden</span>
-              }
+              H: {showHeikinAshi ? <span className="text-yellow-400">✓</span> : <span className="text-red-400">✗</span>}
             </span>
             {showCandlesticks && showHeikinAshi && (
               <span className="flex items-center gap-1">
-                Front: <span className="text-blue-400">
-                  {heikinAshiOnFront ? 'Heikin Ashi' : 'Regular'}
-                </span>
+                Front: <span className="text-blue-400">{heikinAshiOnFront ? 'H' : 'R'}</span>
               </span>
             )}
           </div>

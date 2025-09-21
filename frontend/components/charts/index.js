@@ -38,11 +38,16 @@ export const CombinedChart = (props) => (
   />
 );
 
-export const DashboardChart = (props) => (
+export const DashboardChart = ({ sharedViewState, onViewStateChange, ...props }) => (
   <UnifiedChart
-    enableInteraction={false}
-    showAxes={false}
-    showWyckoffPhases={false}
+    enableInteraction={true}
+    showAxes={true}
+    showWyckoffPhases={true}
+    showGrid={true}
+    showHeikinAshi={false}
+    showExtrema={false}
+    sharedViewState={sharedViewState}
+    onViewStateChange={onViewStateChange}
     {...props}
   />
 );

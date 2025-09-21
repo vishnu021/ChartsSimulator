@@ -88,7 +88,7 @@ export const renderHeikinAshi = (ctx, {
       candleWidth / 2;
   };
 
-  const yellowColor = '#fbbf24'; // Yellow color for Heikin Ashi
+  const yellowColor = '#d97706'; // More subdued orange-yellow for Heikin Ashi
 
   visibleCandles.forEach((candle, i) => {
     const x = xScale(visibleStart + i);

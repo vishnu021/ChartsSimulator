@@ -91,11 +91,160 @@ NEXT_PUBLIC_API_URL=http://localhost:9090
 NEXT_PUBLIC_WS_URL=http://localhost:9090/ws
 ```
 
+### 🔧 Playwright MCP Debugging Setup
+**CRITICAL for UI Testing**: When using Playwright MCP for testing, you MUST run frontend and backend separately to access latest changes:
+
+```bash
+# Terminal 1: Backend only (no frontend build)
+mvn spring-boot:run -Pdev
+
+# Terminal 2: Frontend dev server (latest changes)
+cd frontend
+NEXT_PUBLIC_API_URL=http://localhost:9090 NEXT_PUBLIC_WS_URL=http://localhost:9090/ws pnpm dev
+
+# Then use Playwright MCP on: http://localhost:3000
+```
+
+**Why this is required:**
+- Integrated `mvn spring-boot:run` serves pre-built frontend from `/target/classes/static/`
+- Frontend changes aren't visible until Maven rebuilds
+- Separate dev server serves live changes from source code
+
 ### Full Build & Deploy
 ```bash
 mvn clean package -Pprod
 java -jar target/ChartsSimulator-0.0.1-SNAPSHOT.jar
 ```
+
+---
+
+## 🏗️ Build Process Analysis
+
+### Maven Frontend Integration Process
+
+**How it works:**
+```bash
+mvn spring-boot:run  # Triggers this sequence:
+```
+
+1. **Frontend Build** (`frontend-maven-plugin`):
+   ```bash
+   pnpm install       # Install Node.js dependencies
+   pnpm build         # Next.js production build
+   pnpm export        # Static export to /frontend/out/
+   ```
+
+2. **Resource Copying** (Maven resources plugin):
+   ```bash
+   # Copy frontend/out → target/classes/static/
+   # Copy frontend/out/_next → target/classes/static/_next/
+   ```
+
+3. **JAR Packaging**: Static files embedded in Spring Boot JAR at `/static/**`
+
+4. **Runtime Serving**: Spring Boot serves static files from classpath
+
+### ⚠️ Risks & Limitations
+
+**Development Workflow Issues:**
+- **Slow Feedback Loop**: Every frontend change requires full Maven rebuild
+- **Resource Intensive**: Each build runs full Next.js compilation (~30-60s)
+- **Debugging Complexity**: Frontend errors hidden in Maven output
+- **Hot Reload Loss**: No live reload during development
+
+**Production Concerns:**
+- **JAR Size Bloat**: Frontend assets increase JAR size significantly
+- **Memory Usage**: All static assets loaded into JVM memory
+- **Cache Invalidation**: JAR deployment required for frontend updates
+- **CDN Limitations**: Can't leverage CDN for static assets easily
+
+**Scaling Issues:**
+- **Build Pipeline Coupling**: Frontend/backend deployments are coupled
+- **Team Workflow**: Frontend developers need Java/Maven setup
+- **CI/CD Complexity**: Single pipeline for different technologies
+
+### 🚀 Better Architectural Approaches
+
+#### 1. **Microservices with Reverse Proxy** (Recommended for Production)
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │  Reverse Proxy  │    │   Backend       │
+│   (Nginx/CDN)   │◄──►│  (Nginx/Traefik)│◄──►│  (Spring Boot)  │
+│   Port: 80/443  │    │                 │    │   Port: 8080    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+**Advantages:**
+- Independent deployments
+- CDN integration for frontend
+- Horizontal scaling
+- Technology stack independence
+
+#### 2. **BFF (Backend for Frontend) Pattern**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Next.js App   │    │   API Gateway   │    │  Microservices  │
+│   (Vercel/      │◄──►│   (BFF Layer)   │◄──►│   Ecosystem     │
+│    Netlify)     │    │                 │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+#### 3. **Container Orchestration** (Docker + Kubernetes)
+```yaml
+# docker-compose.yml
+services:
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+  backend:
+    build: ./backend
+    ports: ["8080:8080"]
+  nginx:
+    image: nginx
+    ports: ["80:80"]
+```
+
+#### 4. **Serverless Architecture**
+- **Frontend**: Vercel/Netlify (auto-scaling, CDN)
+- **Backend**: AWS Lambda/Google Cloud Functions
+- **Database**: Managed services (RDS, DynamoDB)
+
+### 🎯 Recommended Migration Path
+
+**Phase 1: Immediate (Current Project)**
+- Keep current Maven integration for simplicity
+- Use separate dev servers for development (already implemented)
+- Document the limitations
+
+**Phase 2: Short-term (Next 3-6 months)**
+```bash
+# Option A: Docker Compose Development
+docker-compose up  # Runs frontend + backend in containers
+
+# Option B: Separate Deployment Pipeline
+# Frontend: Deploy to Vercel/Netlify
+# Backend: Deploy as standalone JAR to cloud
+```
+
+**Phase 3: Long-term (Production Architecture)**
+- Microservices with API Gateway
+- CDN for frontend assets
+- Container orchestration
+- Separate CI/CD pipelines
+
+### 💡 Current Project Justification
+
+**Why we keep Maven integration:**
+1. **Simplicity**: Single command deployment
+2. **Prototyping**: Faster initial setup
+3. **Team Size**: Small team, less deployment complexity
+4. **Learning**: Good for understanding full-stack integration
+
+**When to migrate:**
+- Team grows beyond 5 developers
+- Frontend changes become frequent
+- Performance becomes critical
+- Need independent scaling
 
 ---
 
@@ -251,8 +400,27 @@ public record TickerProperties(
 - ✅ After modifying CSS/styling
 - ✅ Before marking tasks as completed
 
+#### Mandatory Development Environment Setup:
+**🔴 CRITICAL**: For frontend debugging and Playwright MCP testing, ALWAYS run frontend and backend separately:
+
+```bash
+# Terminal 1: Backend only (no frontend build)
+mvn spring-boot:run -Pdev
+
+# Terminal 2: Frontend dev server (latest changes)
+cd frontend
+NEXT_PUBLIC_API_URL=http://localhost:9090 NEXT_PUBLIC_WS_URL=http://localhost:9090/ws pnpm dev
+```
+
+**Why This is Required:**
+- ✅ Frontend dev server (port 3000) reflects latest code changes immediately
+- ✅ Playwright MCP gets most current frontend updates without rebuild delays
+- ✅ Debugging is faster with hot reload and instant updates
+- ✅ Avoids stale integrated build issues where changes aren't visible
+- ❌ Integrated build (`mvn spring-boot:run`) may serve outdated frontend files
+
 #### Mandatory Verification Process:
-1. **Navigate to localhost:3000** using Playwright MCP
+1. **Navigate to localhost:3000** using Playwright MCP (NOT localhost:9090)
 2. **Test affected components** - interact with changed UI elements
 3. **Switch themes** - verify changes work across all 5 themes
 4. **Check console** - ensure zero browser console errors
@@ -261,7 +429,7 @@ public record TickerProperties(
 
 #### Playwright MCP Commands:
 ```bash
-# Navigate and test
+# Navigate and test (use port 3000 for frontend dev server)
 playwright navigate http://localhost:3000
 playwright snapshot  # Capture current state
 playwright click [element]  # Test interactions
@@ -273,6 +441,7 @@ playwright console_messages  # Check for errors
 - Visual bugs may go undetected
 - Theme compatibility issues missed
 - Console errors remain unfixed
+- Outdated build results in false testing outcomes
 
 ---
 
