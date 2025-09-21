@@ -52,8 +52,9 @@ export default function CandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
-    const availableHeight = height - 120; // Account for bottom reserved space
-    const stripY = availableHeight - stripHeight - 10; // Position closer to bottom
+    const bottomSpace = isDashboard ? (isMobile ? 60 : 80) : 120;
+    const availableHeight = height - bottomSpace; // Account for bottom reserved space
+    const stripY = availableHeight - stripHeight - (isDashboard ? 5 : 10); // Position closer to bottom for dashboard
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -168,8 +169,9 @@ export default function CandleChart({
 
     const rect = canvas.getBoundingClientRect();
     const stripHeight = 35;
-    const availableHeight = rect.height - 120; // Account for bottom reserved space
-    const stripY = availableHeight - stripHeight - 10; // Match the drawing position
+    const bottomSpace = isDashboard ? (isMobile ? 60 : 80) : 120;
+    const availableHeight = rect.height - bottomSpace; // Account for bottom reserved space
+    const stripY = availableHeight - stripHeight - (isDashboard ? 5 : 10); // Match the drawing position
 
     // Check if mouse is in the phase strip area
     if (mouseY < stripY || mouseY > stripY + stripHeight) return null;
@@ -329,11 +331,13 @@ export default function CandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Calculate available space ensuring bottom elements are visible
-    const bottomReservedSpace = 120; // Increased space for x-axis and Wyckoff
+    // Use responsive spacing based on context - balanced for dashboard
+    const topPadding = isDashboard ? (isMobile ? 15 : 20) : padding.top;
+    const bottomReservedSpace = isDashboard ? (isMobile ? 60 : 80) : 120;
     const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
-    // Ensure chart doesn't extend beyond available space
-    const availableHeight = height - bottomReservedSpace;
-    const chartHeight = Math.max(100, availableHeight - padding.top - padding.bottom);
+    // Ensure chart doesn't extend beyond available space with balanced padding
+    const availableHeight = height - bottomReservedSpace - topPadding;
+    const chartHeight = Math.max(100, availableHeight);
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);
@@ -358,13 +362,14 @@ export default function CandleChart({
     const { minPrice, maxPrice, priceRange, pricePadding } =
       scalingUtils.calculatePriceRange(prices);
 
-    // Create scaling functions
+    // Create scaling functions with adjusted padding for dashboard
+    const adjustedPadding = { ...padding, top: topPadding };
     const yScale = scalingUtils.createYScale(
       minPrice,
       maxPrice,
       priceRange,
       pricePadding,
-      padding,
+      adjustedPadding,
       chartHeight
     );
     const xScale = scalingUtils.createXScale(padding, candleWidth, visibleStart);
@@ -400,7 +405,7 @@ export default function CandleChart({
     for (let i = 0; i < visibleCandles.length; i += verticalStepSize) {
       const x = xScale(visibleStart + i);
       ctx.beginPath();
-      ctx.moveTo(x, padding.top);
+      ctx.moveTo(x, topPadding);
       ctx.lineTo(x, height - padding.bottom);
       ctx.stroke();
     }
@@ -442,13 +447,15 @@ export default function CandleChart({
     const labelFontSize = isDashboard ? (isMobile ? '9px' : '10px') : isMobile ? '10px' : '12px';
     ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
 
-    // Y-axis labels
+    // Y-axis labels with proper positioning for dashboard
     ctx.textAlign = 'right';
     for (let i = 0; i <= horizontalLines; i++) {
       const price =
         minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
       const y = yScale(price);
-      ctx.fillText(price.toFixed(0), padding.left - 10, y + 4);
+      // Adjust x position for dashboard to prevent trimming
+      const labelX = isDashboard ? Math.max(35, padding.left - 5) : padding.left - 10;
+      ctx.fillText(price.toFixed(0), labelX, y + 4);
     }
 
     // X-axis labels
@@ -464,9 +471,11 @@ export default function CandleChart({
       if (candle && candle.time) {
         const x = xScale(visibleStart + i);
         const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
-        // Position x-axis labels ensuring visibility and proper spacing from Wyckoff strip
-        const availableHeight = height - 120; // Account for bottom reserved space
-        const labelY = availableHeight - 80; // Position higher to avoid overlap with Wyckoff strip
+        // Position x-axis labels responsively based on context
+        const availableHeight = height - bottomReservedSpace;
+        const labelY = isDashboard
+          ? availableHeight - (isMobile ? 25 : 35) // Closer to bottom for dashboard
+          : availableHeight - 80; // Original position for full charts
         ctx.fillText(timeLabel, x, labelY);
       }
     }
@@ -483,7 +492,7 @@ export default function CandleChart({
 
       // Vertical line
       ctx.beginPath();
-      ctx.moveTo(mousePos.x, padding.top);
+      ctx.moveTo(mousePos.x, topPadding);
       ctx.lineTo(mousePos.x, height - padding.bottom);
       ctx.stroke();
 

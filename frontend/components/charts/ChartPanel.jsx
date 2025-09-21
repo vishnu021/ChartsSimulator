@@ -56,6 +56,16 @@ export const ChartPanel = ({
   const isLoading = isRealTime ? realTimeLoading : instantLoading;
   const error = isRealTime ? realTimeError : instantError;
 
+  // Debug logging
+  console.log('ChartPanel debug:', {
+    isRealTime,
+    hasCurrentData: !!currentData,
+    currentData,
+    isLoading,
+    error,
+    willRenderChart: !isLoading && !!currentData
+  });
+
   // Chart type configurations
   const chartConfigs = {
     extrema: {
@@ -213,7 +223,16 @@ export const ChartPanel = ({
       {!isLoading && (
         <div className="flex-1 min-h-0">
           {currentData ? (
-            <ChartComponent data={currentData} theme={theme} />
+            <>
+              {console.log('ChartPanel rendering chart with data:', {
+                chartType,
+                component: ChartComponent.name,
+                hasCandles: !!currentData.candles?.length,
+                hasHeikinAshi: !!currentData.heikinAshi?.length,
+                currentData
+              })}
+              <ChartComponent data={currentData} theme={theme} />
+            </>
           ) : (
             <EmptyState
               icon={displayEmptyIcon}

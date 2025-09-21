@@ -44,7 +44,28 @@ export const UnifiedChart = ({
     showCrosshair,
     isDragging
   }) => {
-    if (!data || !data.candles || data.candles.length === 0) return;
+    // Check if we have either candles or heikinAshi data to display
+    const hasCandles = data?.candles && data.candles.length > 0;
+    const hasHeikinAshi = data?.heikinAshi && data.heikinAshi.length > 0;
+
+    // Debug logging for data availability
+    console.log('UnifiedChart render debug:', {
+      data: !!data,
+      hasCandles,
+      hasHeikinAshi,
+      candlesLength: data?.candles?.length || 0,
+      heikinAshiLength: data?.heikinAshi?.length || 0,
+      showHeikinAshi,
+      showExtrema
+    });
+
+    if (!data || (!hasCandles && !hasHeikinAshi)) {
+      console.log('UnifiedChart early return: no data to display');
+      return;
+    }
+
+    // Use candles if available, otherwise fall back to heikinAshi as primary data
+    const primaryData = hasCandles ? data.candles : data.heikinAshi;
 
     // Setup padding based on mobile/desktop
     const padding = isMobile ? chartSettings.mobilePadding : chartSettings.padding;
@@ -93,26 +114,26 @@ export const UnifiedChart = ({
     );
     ctx.globalAlpha = 1;
 
-    // Calculate visible range
-    const candleWidth = (chartWidth / data.candles.length) * viewState.zoom;
+    // Calculate visible range using primary data
+    const candleWidth = (chartWidth / primaryData.length) * viewState.zoom;
     const maxOffset = 0;
-    const minOffset = Math.min(0, -(data.candles.length * candleWidth - chartWidth));
+    const minOffset = Math.min(0, -(primaryData.length * candleWidth - chartWidth));
     const clampedOffset = Math.max(minOffset, Math.min(maxOffset, viewState.offset));
 
     const visibleStart = Math.max(0, Math.floor(-clampedOffset / candleWidth));
     const visibleEnd = Math.min(
-      data.candles.length,
+      primaryData.length,
       Math.ceil((chartWidth - clampedOffset) / candleWidth)
     );
 
     if (visibleStart >= visibleEnd) return;
 
-    // Calculate price range
-    const visibleCandles = data.candles.slice(visibleStart, visibleEnd);
+    // Calculate price range using primary data
+    const visibleCandles = primaryData.slice(visibleStart, visibleEnd);
     let allPrices = visibleCandles.flatMap(c => [c.high, c.low]);
 
-    // Include Heikin Ashi prices if shown
-    if (showHeikinAshi && data.heikinAshi) {
+    // Include Heikin Ashi prices if shown and we have separate heikinAshi data
+    if (showHeikinAshi && data.heikinAshi && hasCandles) {
       const visibleHeikinAshi = data.heikinAshi.slice(visibleStart, visibleEnd);
       allPrices = [...allPrices, ...visibleHeikinAshi.flatMap(c => [c.high, c.low])];
     }
@@ -121,6 +142,19 @@ export const UnifiedChart = ({
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
     const pricePadding = Math.max(priceRange * 0.1, 1);
+
+    // Debug logging
+    console.log('Chart Debug:', {
+      primaryDataLength: primaryData.length,
+      visibleStart,
+      visibleEnd,
+      candleWidth,
+      minPrice,
+      maxPrice,
+      priceRange,
+      allPricesLength: allPrices.length,
+      samplePrices: allPrices.slice(0, 5)
+    });
 
     // Set clipping region for chart area
     ctx.save();
@@ -133,7 +167,7 @@ export const UnifiedChart = ({
       renderGrid(ctx, {
         width,
         height,
-        data,
+        data: { candles: primaryData }, // Pass primaryData as candles for grid rendering
         colors,
         padding,
         minPrice,
@@ -148,24 +182,10 @@ export const UnifiedChart = ({
       });
     }
 
-    // Render candlesticks
-    renderCandlesticks(ctx, {
-      data,
-      colors,
-      padding,
-      chartHeight,
-      visibleStart,
-      visibleEnd,
-      candleWidth,
-      minPrice,
-      maxPrice,
-      priceRange,
-      pricePadding
-    });
-
-    // Render Heikin Ashi overlay if enabled
-    if (showHeikinAshi && data.heikinAshi) {
-      renderHeikinAshi(ctx, {
+    // Render primary candlesticks (either candles or heikinAshi as fallback)
+    if (hasCandles) {
+      console.log('UnifiedChart: Rendering regular candlesticks');
+      renderCandlesticks(ctx, {
         data,
         colors,
         padding,
@@ -176,8 +196,43 @@ export const UnifiedChart = ({
         minPrice,
         maxPrice,
         priceRange,
+        pricePadding
+      });
+
+      // Render Heikin Ashi overlay if enabled and we have separate heikinAshi data
+      if (showHeikinAshi && data.heikinAshi && hasHeikinAshi) {
+        console.log('UnifiedChart: Rendering Heikin Ashi overlay');
+        renderHeikinAshi(ctx, {
+          data,
+          colors,
+          padding,
+          chartHeight,
+          visibleStart,
+          visibleEnd,
+          candleWidth,
+          minPrice,
+          maxPrice,
+          priceRange,
+          pricePadding,
+          outlineOnly: true
+        });
+      }
+    } else if (hasHeikinAshi) {
+      // If no regular candles, render HeikinAshi as primary candlesticks
+      console.log('UnifiedChart: Rendering Heikin Ashi as primary chart');
+      renderHeikinAshi(ctx, {
+        data: { heikinAshi: primaryData }, // Map primaryData to heikinAshi for renderer
+        colors,
+        padding,
+        chartHeight,
+        visibleStart,
+        visibleEnd,
+        candleWidth,
+        minPrice,
+        maxPrice,
+        priceRange,
         pricePadding,
-        outlineOnly: true
+        outlineOnly: false
       });
     }
 
@@ -207,7 +262,7 @@ export const UnifiedChart = ({
       renderXAxis(ctx, {
         width,
         height,
-        data,
+        data: { candles: primaryData }, // Pass primaryData as candles for axis rendering
         viewState,
         colors,
         padding,
@@ -265,8 +320,8 @@ export const UnifiedChart = ({
         if (x < padding.left || x > width - padding.right) return null;
         const candleIndex = Math.floor((x - padding.left - clampedOffset) / candleWidth);
         const adjustedIndex = candleIndex + visibleStart;
-        if (adjustedIndex < 0 || adjustedIndex >= data.candles.length) return null;
-        return data.candles[adjustedIndex]?.time;
+        if (adjustedIndex < 0 || adjustedIndex >= primaryData.length) return null;
+        return primaryData[adjustedIndex]?.time;
       };
 
       // Draw enhanced crosshair with price and time labels

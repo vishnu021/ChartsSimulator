@@ -100,6 +100,9 @@ export const themes = {
 export const chartSettings = {
   padding: { top: 50, right: 90, bottom: 90, left: 90 },  // More space for Wyckoff phases
   mobilePadding: { top: 40, right: 50, bottom: 70, left: 70 },  // Enhanced mobile padding
+  // Dashboard-specific padding for better panel fit
+  dashboardPadding: { top: 25, right: 35, bottom: 60, left: 45 },  // Balanced dashboard padding
+  dashboardMobilePadding: { top: 20, right: 25, bottom: 50, left: 35 },  // Mobile dashboard padding
   gridLines: {
     horizontal: 8,
     vertical: 10,

@@ -31,8 +31,19 @@ logging:
     com.vish.fno.ChartsSimulator: INFO
     org.springframework.web: ${LOG_LEVEL_WEB:WARN}
     org.springframework.messaging: ${LOG_LEVEL_MESSAGING:WARN}
+    org.springframework.web.servlet.DispatcherServlet: ${LOG_LEVEL_DISPATCHER:WARN}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/chart-simulator.log
+  logback:
+    rollingpolicy:
+      max-file-size: 5MB
+      max-history: 30
+      total-size-cap: 100MB
+      file-name-pattern: logs/chart-simulator.%i.%d{yyyy-MM-dd}.log.gz
+      clean-history-on-start: false
 
 # API Documentation
 springdoc:

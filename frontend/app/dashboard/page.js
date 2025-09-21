@@ -1,9 +1,22 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef, createContext, useContext } from 'react';
+import dynamic from 'next/dynamic';
 import { useAppState } from '@/contexts/AppStateContext';
-import CandleChart from '@/components/CandleChart';
 import { configService } from '@/services/config/configService';
+
+const CandleChart = dynamic(() => import('@/components/CandleChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2">
+        </div>
+        Loading chart...
+      </div>
+    </div>
+  ),
+});
 
 // Sync context for chart synchronization
 const SyncContext = createContext();

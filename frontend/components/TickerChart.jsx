@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { themes, chartSettings } from './chartConfig';
+import { canvasUtils } from '../utils/chart';
 
 // Helper function to format time
 const formatTime = (date, format) => {
@@ -213,7 +214,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
   // Helper function to find time intervals
   const getTimeIntervals = (timeRange, chartWidth, zoom) => {
     const intervals = [];
-    if (!timeRange || timeRange.start === 0) return intervals;
+    if (!timeRange || timeRange.start === 0 || timeRange.end === 0) return intervals;
 
     const totalDuration = timeRange.end - timeRange.start;
     const visibleDuration = totalDuration / zoom;
@@ -256,9 +257,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
-    const availableHeight = height - 120; // Account for bottom reserved space
-    const stripY = availableHeight - stripHeight - 10; // Position closer to bottom
+    // Position strip using proper padding-based positioning
+    const stripY = height - padding.bottom + 30; // Position below x-axis labels
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -331,7 +331,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     const dpr = window.devicePixelRatio || 1;
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
-    const padding = isMobile ? chartSettings.mobilePadding : chartSettings.padding;
+    // Use appropriate padding based on context
+    const padding = canvasUtils.getPadding(isMobile, false);
 
     // Clear canvas
     ctx.fillStyle = colors.background;
@@ -787,18 +788,32 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       return x >= padding.left && x <= width - padding.right;
     });
 
+    // Fallback: if no intervals found, create labels from visible data points
+    let labelsToShow = visibleIntervals;
+    if (labelsToShow.length === 0 && processedData.candleData.length > 0) {
+      const maxLabels = isMobile ? 4 : 6;
+      const step = Math.max(1, Math.floor(processedData.candleData.length / maxLabels));
+      labelsToShow = processedData.candleData
+        .filter((_, i) => i % step === 0)
+        .map(candle => ({
+          timestamp: candle.timestamp,
+          time: new Date(candle.timestamp)
+        }));
+    }
+
     // Limit number of labels to avoid crowding
     const maxLabels = isMobile ? 4 : 8;
-    const labelStep = Math.ceil(visibleIntervals.length / maxLabels);
+    const labelStep = Math.max(1, Math.ceil(labelsToShow.length / maxLabels));
 
-    visibleIntervals.forEach((interval, i) => {
+    labelsToShow.forEach((interval, i) => {
       if (i % labelStep === 0) {
         const x = xScaleTime(interval.timestamp);
-        const timeString = formatTime(interval.time, 'HH:mm');
-        // Position x-axis labels ensuring visibility and proper spacing from Wyckoff strip
-        const availableHeight = height - 120; // Account for bottom reserved space
-        const labelY = availableHeight - 80; // Position higher to avoid overlap with Wyckoff strip
-        ctx.fillText(timeString, x, labelY);
+        if (x >= padding.left && x <= width - padding.right) {
+          const timeString = formatTime(interval.time, 'HH:mm');
+          // Position x-axis labels using proper padding-based positioning
+          const labelY = height - padding.bottom + 15; // Use actual padding instead of hardcoded values
+          ctx.fillText(timeString, x, labelY);
+        }
       }
     });
 
