@@ -1,28 +1,45 @@
 package com.vish.fno.ChartsSimulator.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.*;
 
+/**
+ * Configuration class for WebSocket settings.
+ * Configures STOMP endpoint and message broker for real-time communication.
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    @Value("${app.websocket.endpoint}")
-    private String wsEndpoint;
+    private final WebSocketProperties webSocketProperties;
 
-    @Value("${app.websocket.allowed-origins}")
-    private String allowedOrigins;  // comma-separated list
-
+    /**
+     * Registers STOMP endpoints for WebSocket connections.
+     * Configures SockJS fallback and allowed origins for CORS.
+     *
+     * @param registry STOMP endpoint registry
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
-                .addEndpoint(wsEndpoint)
-                .setAllowedOrigins(allowedOrigins.split(","))
+                .addEndpoint(webSocketProperties.endpoint())
+                .setAllowedOrigins(webSocketProperties.allowedOrigins().split(","))
                 .withSockJS();
     }
 
+    /**
+     * Configures the message broker for handling WebSocket messages.
+     * Sets up topic destinations and application prefixes.
+     *
+     * @param config Message broker registry configuration
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic");

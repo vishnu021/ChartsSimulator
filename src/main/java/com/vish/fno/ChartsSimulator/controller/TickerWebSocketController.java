@@ -1,12 +1,12 @@
 package com.vish.fno.ChartsSimulator.controller;
 
+import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
+import com.vish.fno.ChartsSimulator.controller.base.BaseWebSocketController;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.TickerRequest;
 import com.vish.fno.ChartsSimulator.service.TickerService;
 import com.vish.fno.ChartsSimulator.service.WebSocketSessionManager;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -14,24 +14,49 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
+/**
+ * WebSocket controller for handling ticker data streaming operations.
+ * Extends BaseWebSocketController to leverage common WebSocket functionality.
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ */
 @Slf4j
 @Controller
-@RequiredArgsConstructor
-public class TickerWebSocketController {
+public class TickerWebSocketController extends BaseWebSocketController {
 
     private final TickerService tickerService;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final WebSocketSessionManager sessionManager;
+    private final WebSocketProperties webSocketProperties;
 
-    @Value("${app.websocket.tickerDelay:50}")
-    private long tickerDelay;
+    /**
+     * Constructor for TickerWebSocketController.
+     *
+     * @param messagingTemplate    Spring messaging template for WebSocket communication
+     * @param sessionManager      Manager for WebSocket sessions
+     * @param tickerService       Service for ticker data operations
+     * @param webSocketProperties Configuration properties for WebSocket settings
+     */
+    public TickerWebSocketController(SimpMessagingTemplate messagingTemplate,
+                                   WebSocketSessionManager sessionManager,
+                                   TickerService tickerService,
+                                   WebSocketProperties webSocketProperties) {
+        super(messagingTemplate, sessionManager);
+        this.tickerService = tickerService;
+        this.webSocketProperties = webSocketProperties;
+    }
 
+    /**
+     * Handles WebSocket requests to stream ticker data.
+     * Processes ticker data sequentially and streams results to connected clients.
+     *
+     * @param req            Ticker request containing symbol and date
+     * @param headerAccessor WebSocket message header accessor for session management
+     * @throws InterruptedException if thread is interrupted during streaming
+     */
     @MessageMapping("/loadTicker")
     public void streamTicker(TickerRequest req, SimpMessageHeaderAccessor headerAccessor) throws InterruptedException {
-        String sessionId = headerAccessor.getSessionId();
-
-        log.info("Starting ticker stream for session: {} - symbol: {} on date: {}",
-                sessionId, req.symbol(), req.date());
+        String sessionId = getSessionId(headerAccessor);
+        logStreamStart(sessionId, req.symbol(), req.date(), "ticker");
 
         // Register session
         sessionManager.registerTickerSession(sessionId, req.symbol(), req.date());
@@ -40,9 +65,8 @@ public class TickerWebSocketController {
             List<Ticker> tickers = tickerService.getTickerData(req.symbol(), req.date());
 
             if (tickers == null || tickers.isEmpty()) {
-                log.warn("No ticker data found for symbol: {} on date: {}", req.symbol(), req.date());
-                messagingTemplate.convertAndSend("/topic/ticker",
-                        "No ticker data available for " + req.symbol() + " on " + req.date());
+                logNoDataFound(req.symbol(), req.date(), "ticker");
+                sendNoDataMessage("/topic/ticker", req.symbol(), req.date(), "ticker");
                 return;
             }
 
@@ -50,32 +74,33 @@ public class TickerWebSocketController {
 
             for (Ticker ticker : tickers) {
                 // Check if session is still active before sending each message
-                if (!sessionManager.isSessionActive(sessionId)) {
-                    log.info("Session {} is no longer active, stopping ticker stream", sessionId);
+                if (!isSessionActive(sessionId)) {
+                    logSessionInactive(sessionId, "ticker");
                     break;
                 }
 
                 messagingTemplate.convertAndSend("/topic/ticker", ticker);
-                Thread.sleep(tickerDelay);
+                Thread.sleep(webSocketProperties.tickerDelay());
             }
 
-            log.info("Completed ticker stream for session: {} - symbol: {} with {} ticks",
-                    sessionId, req.symbol(), tickers.size());
+            logStreamComplete(sessionId, req.symbol(), "ticker", tickers.size());
 
         } catch (RuntimeException e) {
-            log.error("Error during ticker streaming for session: {}", sessionId, e);
-            messagingTemplate.convertAndSendToUser(sessionId, "/queue/error",
-                    "Error streaming ticker data: " + e.getMessage());
+            logStreamError(sessionId, "ticker", e);
+            sendErrorMessage(sessionId, "ticker", e);
         } finally {
             // Clean up session when streaming is complete
-            sessionManager.removeSession(sessionId);
+            removeSession(sessionId);
         }
     }
 
+    /**
+     * Handles WebSocket disconnect requests for ticker data streaming.
+     *
+     * @param headerAccessor WebSocket message header accessor for session management
+     */
     @MessageMapping("/disconnectTicker")
     public void disconnectTicker(SimpMessageHeaderAccessor headerAccessor) {
-        String sessionId = headerAccessor.getSessionId();
-        log.info("Received disconnect request for ticker session: {}", sessionId);
-        sessionManager.removeSession(sessionId);
+        handleDisconnect(headerAccessor, "ticker");
     }
 }

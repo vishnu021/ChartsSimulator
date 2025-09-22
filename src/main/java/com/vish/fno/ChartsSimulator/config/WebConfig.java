@@ -1,42 +1,46 @@
 package com.vish.fno.ChartsSimulator.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.vish.fno.ChartsSimulator.config.properties.ApplicationProperties;
+import com.vish.fno.ChartsSimulator.config.properties.CorsProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ * Web configuration class for CORS and MVC settings.
+ * Configures Cross-Origin Resource Sharing based on environment.
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
     private static final String ENV_PRODUCTION = "production";
 
-    @Value("${app.cors.allowed-origins}")
-    private String allowedOrigins;
+    private final CorsProperties corsProperties;
+    private final ApplicationProperties applicationProperties;
 
-    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS}")
-    private String allowedMethods;
-
-    @Value("${app.cors.allowed-headers:*}")
-    private String allowedHeaders;
-
-    @Value("${app.cors.allow-credentials:true}")
-    private boolean allowCredentials;
-
-    @Value("${app.environment:production}")
-    private String environment;
-
+    /**
+     * Configures CORS mappings based on environment.
+     * Production environments have more restrictive CORS policies.
+     *
+     * @param registry CORS registry for configuration
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        String[] origins = allowedOrigins.split(",");
-        String[] methods = allowedMethods.split(",");
-        String[] headers = allowedHeaders.split(",");
+        String[] origins = corsProperties.allowedOrigins().split(",");
+        String[] methods = corsProperties.allowedMethods().split(",");
+        String[] headers = corsProperties.allowedHeaders().split(",");
 
         // More restrictive CORS for production
-        if (ENV_PRODUCTION.equals(environment)) {
+        if (ENV_PRODUCTION.equals(applicationProperties.environment())) {
             registry.addMapping("/api/**")
                     .allowedOrigins(origins)
                     .allowedMethods(methods)
                     .allowedHeaders(headers)
-                    .allowCredentials(allowCredentials)
+                    .allowCredentials(corsProperties.allowCredentials())
                     .maxAge(3600);
         } else {
             // Development mode - more permissive
