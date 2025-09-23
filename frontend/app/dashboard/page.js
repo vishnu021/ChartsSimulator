@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useRef, createContext, useCont
 import dynamic from 'next/dynamic';
 import { useAppState } from '@/contexts/AppStateContext';
 import { configService } from '@/services/config/configService';
+import { getDashboardTheme, getButtonStyles, getInputStyles, getCardStyles, toInlineStyles } from '@/utils/theme';
 
 const CandleChart = dynamic(() => import('@/components/CandleChart'), {
   ssr: false,
@@ -58,7 +59,7 @@ const SyncProvider = ({ children }) => {
 };
 
 // Synchronized Chart Component
-const SyncedChart = ({ data, theme }) => {
+const SyncedChart = ({ data, theme, showWyckoffPhases = false }) => {
   const { syncState, updateSyncState } = useSyncContext();
   const chartRef = useRef(null);
 
@@ -144,6 +145,7 @@ const SyncedChart = ({ data, theme }) => {
         theme={theme}
         externalViewState={syncedViewState}
         isDashboard={true}
+        showWyckoffPhases={showWyckoffPhases}
       />
     </div>
   );
@@ -155,6 +157,10 @@ const SimpleChart = ({ index, theme, globalDate }) => {
   const [symbol, setSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const themeColors = getDashboardTheme(theme);
+  const inputStyles = getInputStyles(theme);
+  const buttonStyles = getButtonStyles(theme, 'primary', 'sm');
 
   // Load symbol from localStorage on mount
   useEffect(() => {
@@ -173,8 +179,12 @@ const SimpleChart = ({ index, theme, globalDate }) => {
     try {
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
-      const params = new URLSearchParams({ symbol: stockSymbol, date });
-      const response = await fetch(`${apiUrl}/api/charts?${params}`);
+      const params = new URLSearchParams({
+        symbol: stockSymbol,
+        date,
+        lookbackPeriod: 3 // Default lookback period for extrema detection
+      });
+      const response = await fetch(`${apiUrl}/api/ohlc?${params}`);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -182,7 +192,11 @@ const SimpleChart = ({ index, theme, globalDate }) => {
 
       const result = await response.json();
       setStockData({
-        candles: result.candlesticks,
+        candles: result.candles,
+        maxima: result.maxima,
+        minima: result.minima,
+        wyckoffPhases: result.wyckoffPhases,
+        currentPhase: result.currentPhase,
         symbol: stockSymbol,
       });
     } catch (err) {
@@ -221,44 +235,46 @@ const SimpleChart = ({ index, theme, globalDate }) => {
     }
   };
 
-  const colors = {
-    dark: { bg: '#1e293b', border: '#475569', text: '#f1f5f9', input: '#0f172a' },
-    light: { bg: '#f3f4f6', border: '#d1d5db', text: '#374151', input: '#f9fafb' },
-  };
-  const c = colors[theme];
+  // Theme colors already defined above
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: c.bg }}>
-      <div className="p-1 border-b flex items-center gap-1" style={{ borderColor: c.border }}>
+    <div className="h-full flex flex-col" style={{ backgroundColor: themeColors.background.primary }}>
+      <div
+        className="p-3 border-b flex items-center gap-3"
+        style={{
+          borderColor: themeColors.border.primary,
+          backgroundColor: themeColors.background.secondary
+        }}
+      >
         <input
           type="text"
           value={symbol}
           onChange={handleSymbolChange}
           placeholder={`Symbol ${index + 1}`}
-          className="flex-1 px-2 py-1 rounded text-sm"
-          style={{ backgroundColor: c.input, border: `1px solid ${c.border}`, color: c.text }}
+          className="flex-1 transition-all"
+          style={toInlineStyles(inputStyles)}
         />
         <button
           onClick={handleLoad}
           disabled={isLoading || !symbol}
-          className="px-3 py-1 rounded text-sm bg-blue-600 text-white hover:bg-blue-700
-                     disabled:opacity-50"
+          className="transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          style={toInlineStyles(buttonStyles)}
         >
           {isLoading ? '⏳' : '⚡'}
         </button>
       </div>
       <div className="flex-1 relative" style={{ overflow: 'hidden' }}>
         {error ? (
-          <div className="flex items-center justify-center h-full text-red-400">
+          <div className="flex items-center justify-center h-full" style={{ color: themeColors.interactive.danger }}>
             <div className="text-center">
               <div>❌</div>
-              <div className="text-xs mt-1">Error loading data</div>
+              <div className="text-xs mt-1" style={{ color: themeColors.text.secondary }}>Error loading data</div>
             </div>
           </div>
         ) : stockData ? (
-          <SyncedChart data={stockData} theme={theme} chartId={index} />
+          <SyncedChart data={stockData} theme={theme} chartId={index} showWyckoffPhases={true} />
         ) : (
-          <div className="flex items-center justify-center h-full" style={{ color: c.text }}>
+          <div className="flex items-center justify-center h-full" style={{ color: themeColors.text.secondary }}>
             <div className="text-center">
               <div>📊</div>
               <div className="text-sm mt-1">Enter symbol and click ⚡</div>
@@ -272,6 +288,8 @@ const SimpleChart = ({ index, theme, globalDate }) => {
 
 export default function DashboardPage() {
   const { theme, toggleTheme, date, updateDate } = useAppState();
+  const themeColors = getDashboardTheme(theme);
+  const inputStyles = getInputStyles(theme);
 
   const loadAllCharts = () => {
     const event = new CustomEvent('loadAllCharts', { detail: { date } });
@@ -282,12 +300,6 @@ export default function DashboardPage() {
     const event = new CustomEvent('resetZoom');
     window.dispatchEvent(event);
   };
-
-  const colors = {
-    dark: { bg: '#0f172a', panel: '#1e293b', border: '#475569', text: '#f1f5f9' },
-    light: { bg: '#f9fafb', panel: '#f3f4f6', border: '#d1d5db', text: '#374151' },
-  };
-  const c = colors[theme];
 
   // Utility functions for date navigation (skip weekends)
   const getPreviousDate = currentDate => {
@@ -321,79 +333,76 @@ export default function DashboardPage() {
       <div
         className="flex flex-col"
         style={{
-          backgroundColor: c.bg,
+          backgroundColor: themeColors.background.primary,
           height: 'calc(100vh - 64px)', // Account for main nav header (h-16 = 64px)
           width: '100vw',
           overflow: 'hidden',
+          backgroundImage: theme === 'light' ? `linear-gradient(135deg, ${themeColors.background.primary} 0%, ${themeColors.background.secondary} 100%)` : 'none',
         }}
       >
         {/* Dashboard Header - Fixed height */}
         <div
-          className="flex-shrink-0 border-b"
+          className="flex-shrink-0 border-b backdrop-blur-sm"
           style={{
-            backgroundColor: c.panel,
-            borderColor: c.border,
-            height: '56px',
-            padding: '8px 16px',
+            backgroundColor: themeColors.surface.primary,
+            borderColor: themeColors.border.primary,
+            height: '64px',
+            padding: '12px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            boxShadow: themeColors.effects.shadow.md,
+            backdropFilter: 'blur(8px)',
           }}
         >
-          <h1 className="text-lg font-bold" style={{ color: c.text }}>
-                        📋 Multi-Stock Dashboard
+          <h1 className="text-xl font-bold" style={{ color: themeColors.text.primary }}>
+            <span style={{ color: themeColors.interactive.primary }}>📊</span> Multi-Stock Dashboard
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {/* Date Navigation */}
             <button
               onClick={handlePreviousDate}
-              className="px-2 py-1 rounded text-sm font-medium transition-all hover:scale-105"
-              style={{
-                backgroundColor: c.bg,
-                border: `1px solid ${c.border}`,
-                color: c.text,
-              }}
+              className="transition-all hover:scale-105"
+              style={toInlineStyles(getButtonStyles(theme, 'secondary', 'sm'))}
               title="Previous Day"
             >
-                            ◀
+              ◀
             </button>
             <input
               type="date"
               value={date}
               onChange={e => updateDate(e.target.value)}
-              className="px-3 py-1 rounded border"
-              style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+              className="font-medium transition-all"
+              style={toInlineStyles(inputStyles)}
             />
             <button
               onClick={handleNextDate}
-              className="px-2 py-1 rounded text-sm font-medium transition-all hover:scale-105"
-              style={{
-                backgroundColor: c.bg,
-                border: `1px solid ${c.border}`,
-                color: c.text,
-              }}
+              className="transition-all hover:scale-105"
+              style={toInlineStyles(getButtonStyles(theme, 'secondary', 'sm'))}
               title="Next Day"
             >
-                            ▶
+              ▶
             </button>
             <button
               onClick={loadAllCharts}
-              className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
+              className="transition-all"
+              style={toInlineStyles(getButtonStyles(theme, 'success', 'sm'))}
               title="Load All Charts"
             >
-                            ⚡📊
+              ⚡📊
             </button>
             <button
               onClick={resetAllCharts}
-              className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+              className="transition-all"
+              style={toInlineStyles(getButtonStyles(theme, 'danger', 'sm'))}
               title="Reset All"
             >
-                            🧹
+              🧹
             </button>
             <button
               onClick={toggleTheme}
-              className="px-3 py-1 rounded border"
-              style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+              className="transition-all hover:scale-105"
+              style={toInlineStyles(getButtonStyles(theme, 'secondary', 'sm'))}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
@@ -403,22 +412,21 @@ export default function DashboardPage() {
         {/* Chart Grid - Calculated height accounting for both headers */}
         <div
           style={{
-            height: 'calc(100vh - 64px - 56px)', // Full height minus headers
-            padding: '2px',
+            height: 'calc(100vh - 64px - 64px)', // Full height minus headers (updated for new header height)
+            padding: '8px',
             overflow: 'hidden',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gridTemplateRows: '1fr 1fr',
-            gap: '2px',
+            gap: '12px',
           }}
         >
           {[0, 1, 2, 3].map(index => (
             <div
               key={index}
-              className="border rounded flex flex-col"
+              className="flex flex-col transition-all duration-200"
               style={{
-                backgroundColor: c.panel,
-                borderColor: c.border,
+                ...toInlineStyles(getCardStyles(theme, true)),
                 minHeight: 0,
                 height: '100%',
                 width: '100%',

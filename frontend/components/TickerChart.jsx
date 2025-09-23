@@ -803,14 +803,20 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         }));
     }
 
-    // Debug logging
-    logger.debug('TickerChart X-axis Debug:', {
-      height,
-      paddingBottom: padding.bottom,
-      labelsToShowCount: labelsToShow.length,
-      timeIntervalsCount: timeIntervals.length,
-      visibleIntervalsCount: visibleIntervals.length
-    });
+    // Additional fallback: if still no labels, create from time range
+    if (labelsToShow.length === 0 && processedData.timeRange.start && processedData.timeRange.end) {
+      const maxLabels = isMobile ? 4 : 6;
+      const timeSpan = processedData.timeRange.end - processedData.timeRange.start;
+      labelsToShow = [];
+      for (let i = 0; i < maxLabels; i++) {
+        const timestamp = processedData.timeRange.start + (timeSpan * i) / (maxLabels - 1);
+        labelsToShow.push({
+          timestamp,
+          time: new Date(timestamp)
+        });
+      }
+    }
+
 
     // Limit number of labels to avoid crowding
     const maxLabels = isMobile ? 4 : 8;
@@ -821,8 +827,17 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         const x = xScaleTime(interval.timestamp);
         if (x >= padding.left && x <= width - padding.right) {
           const timeString = formatTime(interval.time, 'HH:mm');
-          // Position x-axis labels just below the chart area
-          const labelY = height - padding.bottom + 20; // Position in padding area
+          // Position x-axis labels above the Wyckoff phase strip
+          const stripY = height - padding.bottom + 30; // Match Wyckoff strip position
+          const labelY = stripY - 10; // Position labels above the strip
+
+          // Draw background for better visibility
+          const textWidth = ctx.measureText(timeString).width;
+          ctx.fillStyle = colors.background;
+          ctx.fillRect(x - textWidth/2 - 2, labelY - 15, textWidth + 4, 18);
+
+          // Draw text with contrasting color
+          ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'; // Force high contrast
           ctx.fillText(timeString, x, labelY);
         }
       }

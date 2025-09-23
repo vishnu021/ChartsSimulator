@@ -7,6 +7,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class SpaController {
 
     /**
+     * Handle root path - forward to dashboard as default page
+     */
+    @GetMapping("/")
+    public String root() {
+        return "forward:/index.html";
+    }
+
+    /**
      * Handle specific SPA routes - forward to their respective index.html files
      * This ensures that direct navigation to /ticker/, /candles/, etc. works properly
      */

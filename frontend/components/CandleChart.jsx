@@ -473,8 +473,10 @@ export default function CandleChart({
         const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
         // Position x-axis labels responsively based on context
         const availableHeight = height - bottomReservedSpace;
+        const stripHeight = 35;
+        const stripSpacing = isDashboard ? 5 : 10;
         const labelY = isDashboard
-          ? availableHeight - (isMobile ? 25 : 35) // Closer to bottom for dashboard
+          ? availableHeight - stripHeight - stripSpacing - (isMobile ? 15 : 20) // Position above phase strip for dashboard
           : availableHeight - 80; // Original position for full charts
         ctx.fillText(timeLabel, x, labelY);
       }

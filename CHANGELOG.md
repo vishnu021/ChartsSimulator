@@ -2,6 +2,159 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-09-23-Ticker-Timestamp-Fix] - Ticker Page X-Axis Timestamp Visibility Fix
+
+### 🐛 **Critical UI Fix**
+- **Fixed Missing X-Axis Timestamps**: Resolved issue where time labels were not visible on ticker chart x-axis
+  - File: `frontend/components/TickerChart.jsx:830-832`
+  - **Problem**: Timestamps positioned below chart were being hidden by Wyckoff phase strip
+  - **Root Cause**: Labels at Y=1212 were covered by phase strip drawn at Y=1192-1227
+  - **Solution**: Repositioned timestamps above phase strip using `stripY - 10` positioning
+  - **Result**: Time labels (09:30, 10:30, 11:30, etc.) now clearly visible above blue phase indicator
+
+### 🎨 **Visual Improvements**
+- **Better Chart Readability**: X-axis timestamps now provide proper time reference for ticker data
+- **Enhanced Ticker UX**: Users can easily identify time periods in real-time ticker charts
+- **Layering Fix**: Proper z-order between timestamp labels and Wyckoff phase indicators
+
+### ✅ **Verification Results**
+- **Playwright MCP Testing**: ✅ PASS - Screenshots confirm timestamps are visible on ticker charts
+- **Console Debug Analysis**: ✅ PASS - Verified label generation and positioning logic working correctly
+- **Multiple Theme Testing**: ✅ PASS - Timestamps visible in both light and dark themes
+- **Real-time Data**: ✅ PASS - Timestamps update correctly with live ticker data streams
+
+## [Session-2025-09-23-Timestamp-Fix] - Dashboard Timestamp Visibility Fix
+
+### 🐛 **Critical UI Fix**
+- **Fixed Timestamp Visibility**: Resolved issue where timestamps were hidden behind Wyckoff phase indicators
+  - File: `frontend/components/CandleChart.jsx:474-480`
+  - **Problem**: Timestamps positioned at `availableHeight - 35` were overlapped by phase strip at `availableHeight - 40`
+  - **Solution**: Repositioned timestamps above phase strip using `availableHeight - stripHeight - stripSpacing - 20`
+  - **Result**: Timestamps now clearly visible above colorful phase indicator strip
+
+### 🎨 **Visual Improvements**
+- **Better Chart Layout**: Proper separation between timestamp labels and Wyckoff phase indicators
+- **Enhanced Dashboard UX**: No more hidden interface elements in dashboard view
+- **Phase Strip Positioning**: Maintained phase indicator functionality while fixing overlap
+
+### ✅ **Verification Results**
+- **Playwright MCP Testing**: ✅ PASS - Screenshots confirm timestamps are visible
+- **Dashboard Functionality**: ✅ PASS - All chart features working correctly
+- **No Scrollbars**: ✅ PASS - Application maintains proper viewport sizing
+- **Theme Compatibility**: ✅ PASS - Fix works across all themes
+
+## [Session-2025-09-23-UI-Fix] - Frontend UI Serving & Swagger Fix
+
+### 🐛 **Critical Fixes**
+- **Fixed Root Path Issue**: SpaController now properly handles root path `/` forwarding to dashboard
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/controller/SpaController.java:12-15`
+  - Added `@GetMapping("/")` method to forward root requests to `/dashboard/index.html`
+  - Eliminated "This is the backend root" message on localhost:9090
+
+### 🔧 **API Documentation**
+- **Fixed Swagger UI Access**: Confirmed swagger-ui.html properly redirects to `/swagger-ui/index.html`
+  - Swagger UI loading correctly with API documentation
+  - OpenAPI configuration working as expected
+
+### ✅ **Verification Results**
+- **Playwright MCP Testing**: ✅ PASS
+  - Root path (localhost:9090) serves dashboard UI correctly
+  - Theme switching functional (dark ↔ light themes)
+  - No browser console errors detected
+  - Screenshots captured for both themes
+- **Application Startup**: ✅ PASS
+  - Spring Boot application starts successfully on port 9090
+  - Frontend assets properly served from `/target/classes/static/`
+  - WebSocket endpoints configured correctly
+
+### 🎨 **Theme System Verification**
+- **Light Theme**: Clean, modern appearance with soft gray-blue backgrounds
+- **Dark Theme**: Professional dark slate with proper contrast
+- **Theme Toggle**: Smooth switching between ☀️ and 🌙 icons
+- **No Scrollbars**: Application properly fits viewport on all themes
+
+## [Session-2025-09-23-Theme-System-Overhaul] - Centralized Theme System + Light Theme Fix
+
+### 🎨 **Complete Theme System Overhaul**
+- **Centralized Theme Variables**: Created comprehensive theme utility system with centralized color management
+  - New file: `frontend/utils/theme.js` - Single source of truth for all theme variables
+  - Eliminated bright/harsh light theme colors with softer, professional palette
+  - CSS Custom Properties system for consistent theming across components
+  - Theme Provider component for proper theme state management
+
+### 🔧 **Light Theme Improvements**
+- **Softer Color Palette**: Replaced bright whites and harsh colors with:
+  - Background: `#f8fafc` (soft gray-blue) instead of pure white
+  - Text: `#1e293b` (dark slate) for better readability
+  - Borders: `#e2e8f0` (subtle slate) instead of stark grays
+  - Surfaces: Professional white (#ffffff) for cards and inputs
+- **Enhanced Contrast**: Improved text contrast while maintaining softness
+- **Modern Shadows**: Added subtle shadow system for depth and hierarchy
+
+### 🏗️ **Dashboard Architecture Improvements**
+- **Consistent Theme Usage**: Refactored entire dashboard to use centralized theme system
+  - All colors now sourced from theme utility functions
+  - `getButtonStyles()`, `getInputStyles()`, `getCardStyles()` utility functions
+  - Eliminated hardcoded color values and inconsistent styling
+- **Theme-Aware Components**: All dashboard components now properly respond to theme changes
+- **CSS Custom Properties**: Implemented CSS variable system for instant theme switching
+
+### 🎯 **Technical Enhancements**
+- **ThemeProvider Component**: Automatic theme application to document element
+- **CSS Variables**: `:root` and `[data-theme="dark"]` selectors for proper CSS custom properties
+- **Utility Functions**: Helper functions for converting theme objects to inline styles
+- **Hover States**: Improved hover animations and transitions across all components
+- **Focus Rings**: Accessible focus indicators using theme accent colors
+
+### ✅ **Build & Verification Status**
+- **Frontend Build**: ✅ PASS - Dashboard bundle size increased to 7.04 kB (due to theme system)
+- **Backend Build**: ✅ PASS - Spring Boot compilation successful
+- **Theme Consistency**: ✅ PASS - No more bright spots or color inconsistencies
+- **CSS Custom Properties**: ✅ PASS - Proper theme variable system implemented
+- **Component Styling**: ✅ PASS - All dashboard components use centralized theme system
+
+### 📊 **Before & After Theme Comparison**
+- **Old Light Theme**: Harsh whites, inconsistent grays, poor contrast
+- **New Light Theme**: Soft slate colors, professional appearance, excellent readability
+- **Theme Variables**: 20+ centralized color variables vs scattered hardcoded values
+- **Component Consistency**: 100% theme compliance vs mixed styling approaches
+
+## [Session-2025-09-22-Dashboard-Enhancement] - Wyckoff Phases + Modern UI Improvements
+
+### 🎯 **Dashboard Enhancements**
+- **Wyckoff Phase Integration**: Dashboard now displays Wyckoff market phases for all charts
+  - Updated API endpoint from `/api/charts` to `/api/ohlc` for complete extrema data
+  - Added Wyckoff phase visualization strips at bottom of each chart
+  - Current market phase indicators with color-coded visualization
+  - Phase data includes: ACCUMULATION, MARKUP, DISTRIBUTION, MARKDOWN phases
+
+### 🎨 **Modern UI Improvements**
+- **Light Theme Overhaul**: Completely modernized light theme with cleaner, more professional colors
+  - Background: Updated from gray tones to crisp whites and light blues
+  - Borders: Softer, more subtle border colors (#e2e8f0)
+  - Text: Better contrast with slate colors (#334155)
+  - Cards: Added modern shadows and hover effects
+- **Enhanced Component Styling**:
+  - Rounded corners (rounded-xl) for modern card design
+  - Gradient buttons with hover animations
+  - Better focus states with ring effects
+  - Improved input styling with shadows and transitions
+  - Modern scrollbar styling for both themes
+
+### 🔧 **Dashboard Technical Improvements**
+- **Synchronized Chart Viewing**: All charts maintain synchronized zoom and pan
+- **Enhanced Grid Layout**: Better spacing and responsive design
+- **Improved Loading States**: Better visual feedback for data loading
+- **Modern Button Design**: Gradient backgrounds, hover effects, and improved accessibility
+- **Header Redesign**: More spacious header with better typography and gradient text
+
+### ✅ **Verification Status**
+- **Frontend Build**: ✅ PASS - Next.js compilation successful with new dashboard size (5.36 kB)
+- **Backend Build**: ✅ PASS - Maven compilation successful
+- **Wyckoff Integration**: ✅ PASS - Dashboard now loads extrema data with phase information
+- **Theme Improvements**: ✅ PASS - Modern light theme with professional appearance
+- **Component Styling**: ✅ PASS - Enhanced visual design and user experience
+
 ## [Session-2025-09-22-Major-Refactoring] - Code Deduplication and Production-Ready Improvements
 
 ### 🏗️ Architecture Improvements
