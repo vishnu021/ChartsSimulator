@@ -28,7 +28,9 @@ export default function ControlPanel({
     e.preventDefault();
     setIsLoading(true);
     try {
-      const params = { symbol, date };
+      // Normalize symbol to uppercase for API compatibility
+      const normalizedSymbol = symbol.trim().toUpperCase();
+      const params = { symbol: normalizedSymbol, date };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -60,7 +62,9 @@ export default function ControlPanel({
     updateDate(prevDate);
     setIsLoading(true);
     try {
-      const params = { symbol, date: prevDate };
+      // Normalize symbol to uppercase for API compatibility
+      const normalizedSymbol = symbol.trim().toUpperCase();
+      const params = { symbol: normalizedSymbol, date: prevDate };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -75,7 +79,9 @@ export default function ControlPanel({
     updateDate(nextDate);
     setIsLoading(true);
     try {
-      const params = { symbol, date: nextDate };
+      // Normalize symbol to uppercase for API compatibility
+      const normalizedSymbol = symbol.trim().toUpperCase();
+      const params = { symbol: normalizedSymbol, date: nextDate };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -99,6 +105,7 @@ export default function ControlPanel({
             type="text"
             value={symbol}
             onChange={e => updateSymbol(e.target.value)}
+            placeholder="e.g. NIFTY 50, BANK NIFTY"
             className="w-full px-2 py-1.5 rounded text-sm transition-colors"
             style={{
               backgroundColor: colors.input.background,

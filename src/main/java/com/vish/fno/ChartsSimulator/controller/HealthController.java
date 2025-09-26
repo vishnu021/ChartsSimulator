@@ -1,6 +1,7 @@
 package com.vish.fno.ChartsSimulator.controller;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,44 +16,40 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/health")
+@RequiredArgsConstructor
 public class HealthController {
 
-    @Value("${app.environment:unknown}")
-    private String environment;
-
-    @Value("${spring.application.name:ChartsSimulator}")
-    private String applicationName;
-
+    private final ValidationProperties validationProperties;
     private final Instant startTime = Instant.now();
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> health() {
         Map<String, Object> health = new HashMap<>();
-        
+
         health.put("status", "UP");
-        health.put("application", applicationName);
-        health.put("environment", environment);
+        health.put("application", validationProperties.applicationName());
+        health.put("environment", validationProperties.environment());
         health.put("timestamp", Instant.now().toString());
         health.put("uptime", getUptime());
-        
+
         return ResponseEntity.ok(health);
     }
 
     @GetMapping("/detailed")
     public ResponseEntity<Map<String, Object>> detailedHealth() {
         Map<String, Object> health = new HashMap<>();
-        
+
         // Basic info
         health.put("status", "UP");
-        health.put("application", applicationName);
-        health.put("environment", environment);
+        health.put("application", validationProperties.applicationName());
+        health.put("environment", validationProperties.environment());
         health.put("timestamp", Instant.now().toString());
         health.put("uptime", getUptime());
-        
+
         // System metrics
         health.put("system", getSystemMetrics());
         health.put("memory", getMemoryMetrics());
-        
+
         return ResponseEntity.ok(health);
     }
 

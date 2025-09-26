@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { themes, chartSettings } from './chartConfig';
 import { canvasUtils } from '../utils/chart';
-import { logger } from '@/utils/logger';
 
 // Helper function to format time
 const formatTime = (date, format) => {

@@ -2,11 +2,13 @@ package com.vish.fno.ChartsSimulator.runner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.vish.fno.ChartsSimulator.config.properties.TickProcessorProperties;
 import com.vish.fno.ChartsSimulator.model.StockTicker;
 import com.vish.fno.ChartsSimulator.service.DataLoaderService;
+import com.vish.fno.ChartsSimulator.util.TimeUtils;
+import com.vish.fno.ChartsSimulator.util.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -17,8 +19,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.time.Instant;
 import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,38 +26,12 @@ import java.util.Map;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@ConditionalOnProperty(value = "app.tickProcessor.enabled", havingValue = "true")
+@ConditionalOnProperty(value = "app.tick-processor.enabled", havingValue = "true")
 public class TickDataProcessor implements CommandLineRunner {
-
-    private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     private final DataLoaderService dataLoaderService;
     private final ObjectMapper objectMapper;
-
-    @Value("${app.tickProcessor.enabled:false}")
-    private boolean enabled;
-
-    @Value("${app.tickProcessor.date:}")
-    private String defaultDate;
-
-    @Value("${app.tickProcessor.symbol:}")
-    private String defaultSymbol;
-
-    @Value("${app.tickProcessor.outputPath:output/}")
-    private String outputPath;
-
-    @Value("${app.tickProcessor.deduplicateTimestamps:true}")
-    private boolean deduplicateTimestamps;
-
-    @Value("${app.tickProcessor.timeFilter.enabled:false}")
-    private boolean timeFilterEnabled;
-
-    @Value("${app.tickProcessor.timeFilter.startTime:09:00:00}")
-    private String startTimeStr;
-
-    @Value("${app.tickProcessor.timeFilter.endTime:15:30:00}")
-    private String endTimeStr;
+    private final TickProcessorProperties tickProcessorProperties;
 
     @PostConstruct
     public void configureObjectMapper() {
@@ -66,19 +40,22 @@ public class TickDataProcessor implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (!enabled) {
+        if (!tickProcessorProperties.enabled()) {
             log.debug("TickDataProcessor: disabled in configuration. Skipping tick data processing.");
             return;
         }
 
-        if (defaultSymbol.isEmpty() || defaultDate.isEmpty()) {
+        String symbol = tickProcessorProperties.symbol();
+        String date = tickProcessorProperties.date();
+
+        if (ValidationUtils.isNullOrBlank(symbol) || ValidationUtils.isNullOrBlank(date)) {
             log.error("TickDataProcessor: symbol and date must be configured in application.yml");
-            log.error("Configure: app.tickProcessor.symbol and app.tickProcessor.date");
+            log.error("Configure: app.tick-processor.symbol and app.tick-processor.date");
             return;
         }
 
-        log.info("Processing tick data with configuration: symbol={}, date={}", defaultSymbol, defaultDate);
-        processTickData(defaultSymbol, defaultDate);
+        log.info("Processing tick data with configuration: symbol={}, date={}", symbol, date);
+        processTickData(symbol, date);
     }
 
     public void processTickData(String symbol, String date) {
@@ -118,11 +95,11 @@ public class TickDataProcessor implements CommandLineRunner {
             long originalTimestamp = ticker.tickTimestamp();
 
             // Apply time filtering if enabled
-            if (timeFilterEnabled && !isWithinTimeRange(originalTimestamp)) {
+            if (tickProcessorProperties.timeFilter().enabled() && !isWithinTimeRange(originalTimestamp)) {
                 continue;
             }
 
-            String timeKey = formatTime(originalTimestamp);
+            String timeKey = TimeUtils.formatTime(originalTimestamp);
 
             if (shouldAdjustDuplicateTimestamp(timeToPrice, timeKey)) {
                 duplicatesAdjusted++;
@@ -138,7 +115,7 @@ public class TickDataProcessor implements CommandLineRunner {
     }
 
     private boolean shouldAdjustDuplicateTimestamp(Map<String, Double> timeToPrice, String timeKey) {
-        return deduplicateTimestamps && timeToPrice.containsKey(timeKey);
+        return tickProcessorProperties.deduplicateTimestamps() && timeToPrice.containsKey(timeKey);
     }
 
     private String adjustTimestampForDuplicate(long originalTimestamp, String timeKey,
@@ -147,21 +124,21 @@ public class TickDataProcessor implements CommandLineRunner {
         timeOccurrences.put(timeKey, occurrence);
         final long duplicateOffsetMs = 600L;
         long adjustedTimestamp = originalTimestamp + (occurrence * duplicateOffsetMs);
-        return formatTime(adjustedTimestamp);
+        return TimeUtils.formatTime(adjustedTimestamp);
     }
 
     private String generateOutputFilePath(String symbol, String date) {
-        String sanitizedSymbol = symbol.replaceAll("[^a-zA-Z0-9_]", "_");
+        String sanitizedSymbol = ValidationUtils.sanitizeSymbol(symbol);
         String outputFileName = String.format("tick_data_%s_%s.json", sanitizedSymbol, date);
-        return outputPath + outputFileName;
+        return tickProcessorProperties.outputPath() + outputFileName;
     }
 
     private void ensureOutputDirectoryExists() {
-        File outputDir = new File(outputPath);
+        File outputDir = new File(tickProcessorProperties.outputPath());
         if (!outputDir.exists()) {
             boolean created = outputDir.mkdirs();
             if (!created) {
-                log.warn("Failed to create output directory: {}", outputPath);
+                log.warn("Failed to create output directory: {}", tickProcessorProperties.outputPath());
             }
         }
     }
@@ -176,11 +153,12 @@ public class TickDataProcessor implements CommandLineRunner {
         jsonOutput.put("duplicateTimestampsAdjusted", processedData.duplicatesAdjusted());
 
         // Add time filtering information
-        if (timeFilterEnabled) {
+        var timeFilter = tickProcessorProperties.timeFilter();
+        if (timeFilter.enabled()) {
             Map<String, Object> timeFilterInfo = new LinkedHashMap<>();
             timeFilterInfo.put("enabled", true);
-            timeFilterInfo.put("startTime", startTimeStr);
-            timeFilterInfo.put("endTime", endTimeStr);
+            timeFilterInfo.put("startTime", timeFilter.startTime());
+            timeFilterInfo.put("endTime", timeFilter.endTime());
             jsonOutput.put("timeFilter", timeFilterInfo);
         } else {
             jsonOutput.put("timeFilter", Map.of("enabled", false));
@@ -217,19 +195,14 @@ public class TickDataProcessor implements CommandLineRunner {
 
     private boolean isWithinTimeRange(long timestamp) {
         LocalTime tickTime = Instant.ofEpochMilli(timestamp)
-                .atZone(INDIA_ZONE)
+                .atZone(TimeUtils.getIndiaZone())
                 .toLocalTime();
 
-        LocalTime startTime = LocalTime.parse(startTimeStr);
-        LocalTime endTime = LocalTime.parse(endTimeStr);
+        var timeFilter = tickProcessorProperties.timeFilter();
+        LocalTime startTime = LocalTime.parse(timeFilter.startTime());
+        LocalTime endTime = LocalTime.parse(timeFilter.endTime());
 
         return !tickTime.isBefore(startTime) && !tickTime.isAfter(endTime);
-    }
-
-    private String formatTime(long timestamp) {
-        return Instant.ofEpochMilli(timestamp)
-                .atZone(INDIA_ZONE)
-                .format(TIME_FORMATTER);
     }
 
     private record ProcessedTickData(Map<String, Double> timeToPrice, int duplicatesAdjusted) {}

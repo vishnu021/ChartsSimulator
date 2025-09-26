@@ -11,9 +11,10 @@ import java.util.List;
 @Service
 public class WyckoffAnalysisService {
 
-    private static final int MIN_PHASE_LENGTH = 8;  // Shorter minimum phase length
-    private static final int TREND_LOOKBACK = 15;  // Shorter lookback for more responsive detection
-    private static final double VOLUME_THRESHOLD_MULTIPLIER = 1.15;  // Lower volume threshold
+    private static final int MIN_PHASE_LENGTH = 5;   // Shorter phases for more dynamic detection
+    private static final int TREND_LOOKBACK = 10;   // More responsive to recent price action
+    private static final double STRONG_MOVE_THRESHOLD = 0.008;  // 0.8% for strong moves
+    private static final double WEAK_MOVE_THRESHOLD = 0.003;    // 0.3% for weak moves
 
     public List<WyckoffPhaseData> analyzeWyckoffPhases(List<Candle> candles) {
         if (candles.size() < MIN_PHASE_LENGTH * 2) {
@@ -22,15 +23,14 @@ public class WyckoffAnalysisService {
 
         List<WyckoffPhaseData> phases = new ArrayList<>();
 
-        // Calculate moving averages and volume metrics
+        // Calculate price moving average only (volume not needed)
         List<Double> priceMA = calculateMovingAverage(candles, TREND_LOOKBACK);
-        List<Double> volumeMA = calculateVolumeMovingAverage(candles, TREND_LOOKBACK);
 
         int phaseStart = 0;
         WyckoffPhase currentPhase = WyckoffPhase.UNKNOWN;
 
         for (int i = TREND_LOOKBACK; i < candles.size() - MIN_PHASE_LENGTH; i++) {
-            WyckoffPhase detectedPhase = detectPhaseAtIndex(candles, priceMA, volumeMA, i);
+            WyckoffPhase detectedPhase = detectPhaseAtIndex(candles, priceMA, i);
 
             if (detectedPhase != currentPhase && i - phaseStart >= MIN_PHASE_LENGTH) {
                 // End current phase and start new one
@@ -56,55 +56,71 @@ public class WyckoffAnalysisService {
         }
 
         List<Double> priceMA = calculateMovingAverage(candles, TREND_LOOKBACK);
-        List<Double> volumeMA = calculateVolumeMovingAverage(candles, TREND_LOOKBACK);
 
-        return detectPhaseAtIndex(candles, priceMA, volumeMA, candles.size() - 1);
+        return detectPhaseAtIndex(candles, priceMA, candles.size() - 1);
     }
 
-    private WyckoffPhase detectPhaseAtIndex(List<Candle> candles, List<Double> priceMA,
-                                          List<Double> volumeMA, int index) {
+    private WyckoffPhase detectPhaseAtIndex(List<Candle> candles, List<Double> priceMA, int index) {
         if (index < TREND_LOOKBACK || index >= candles.size()) {
             return WyckoffPhase.UNKNOWN;
         }
 
-        // Current metrics
+        // Current price and moving average
         double currentPrice = candles.get(index).close();
+        // MA array starts from TREND_LOOKBACK-1, so adjust index
         double currentMA = priceMA.get(index - TREND_LOOKBACK);
-        double currentVolume = candles.get(index).volume();
-        double avgVolume = volumeMA.get(index - TREND_LOOKBACK);
 
-        // Trend analysis
-        double priceChange = calculatePriceChangeRate(candles, index, TREND_LOOKBACK / 2);
-        double volumeRatio = currentVolume / Math.max(avgVolume, 1.0);
+        // Short and medium term price changes
+        double shortTermChange = calculatePriceChangeRate(candles, index, 3);     // 3-period change
+        double mediumTermChange = calculatePriceChangeRate(candles, index, 7);    // 7-period change
+        double longTermChange = calculatePriceChangeRate(candles, index, TREND_LOOKBACK); // 10-period change
 
-        // Phase detection logic
-        return classifyPhase(priceChange, volumeRatio, currentPrice, currentMA);
+        // Simplified price-based phase classification
+        return classifyPhaseByPrice(shortTermChange, mediumTermChange, longTermChange,
+                                   currentPrice, currentMA, candles, index);
     }
 
-    private WyckoffPhase classifyPhase(double priceChange, double volumeRatio,
-                                     double currentPrice, double movingAverage) {
-        boolean isAboveMA = currentPrice > movingAverage;
-        boolean isRising = priceChange > 0.015; // 1.5% threshold - more sensitive
-        boolean isFalling = priceChange < -0.015; // -1.5% threshold - more sensitive
-        boolean isHighVolume = volumeRatio > VOLUME_THRESHOLD_MULTIPLIER;
-        boolean isLowVolume = volumeRatio < (1.0 / VOLUME_THRESHOLD_MULTIPLIER);
+    private WyckoffPhase classifyPhaseByPrice(double shortTermChange, double mediumTermChange,
+                                             double longTermChange, double currentPrice,
+                                             double movingAverage, List<Candle> candles, int index) {
 
-        // Wyckoff phase classification - prioritize trending phases
-        if (isRising && (isHighVolume || isAboveMA)) {
-            // Rising price with either high volume OR above MA
-            return WyckoffPhase.MARKUP;
-        } else if (isFalling && (isHighVolume || !isAboveMA)) {
-            // Falling price with either high volume OR below MA
-            return WyckoffPhase.MARKDOWN;
-        } else if (isLowVolume && Math.abs(priceChange) < 0.01) {
-            // Low volume, sideways movement
-            return isAboveMA ? WyckoffPhase.DISTRIBUTION : WyckoffPhase.ACCUMULATION;
-        } else if (isAboveMA && !isFalling) {
-            // Above MA, not falling - potential distribution
-            return WyckoffPhase.DISTRIBUTION;
-        } else if (!isAboveMA && !isRising) {
-            // Below MA, not rising - potential accumulation
-            return WyckoffPhase.ACCUMULATION;
+        boolean isAboveMA = currentPrice > movingAverage;
+
+        // Trend strength analysis
+        boolean isStrongUptrend = shortTermChange > STRONG_MOVE_THRESHOLD &&
+                                 mediumTermChange > WEAK_MOVE_THRESHOLD;
+        boolean isStrongDowntrend = shortTermChange < -STRONG_MOVE_THRESHOLD &&
+                                   mediumTermChange < -WEAK_MOVE_THRESHOLD;
+        boolean isUptrend = shortTermChange > WEAK_MOVE_THRESHOLD ||
+                           (mediumTermChange > WEAK_MOVE_THRESHOLD && longTermChange > 0);
+        boolean isDowntrend = shortTermChange < -WEAK_MOVE_THRESHOLD ||
+                             (mediumTermChange < -WEAK_MOVE_THRESHOLD && longTermChange < 0);
+
+        // Sideways movement detection
+        boolean isSideways = Math.abs(shortTermChange) <= WEAK_MOVE_THRESHOLD &&
+                            Math.abs(mediumTermChange) <= STRONG_MOVE_THRESHOLD;
+
+        // Price momentum analysis
+        boolean hasUpwardMomentum = isAboveMA && (shortTermChange > 0 || mediumTermChange > 0);
+        boolean hasDownwardMomentum = !isAboveMA && (shortTermChange < 0 || mediumTermChange < 0);
+
+        // Enhanced Wyckoff phase classification
+        if (isStrongUptrend) {
+            return WyckoffPhase.MARKUP;        // Strong upward movement
+        } else if (isStrongDowntrend) {
+            return WyckoffPhase.MARKDOWN;      // Strong downward movement
+        } else if (isUptrend && hasUpwardMomentum) {
+            return WyckoffPhase.MARKUP;        // Moderate uptrend with momentum
+        } else if (isDowntrend && hasDownwardMomentum) {
+            return WyckoffPhase.MARKDOWN;      // Moderate downtrend with momentum
+        } else if (isSideways && isAboveMA) {
+            return WyckoffPhase.DISTRIBUTION;  // Consolidation at higher levels
+        } else if (isSideways && !isAboveMA) {
+            return WyckoffPhase.ACCUMULATION;  // Consolidation at lower levels
+        } else if (isAboveMA && !isDowntrend) {
+            return WyckoffPhase.DISTRIBUTION;  // Near highs, not declining
+        } else if (!isAboveMA && !isUptrend) {
+            return WyckoffPhase.ACCUMULATION;  // Near lows, not rising
         }
 
         return WyckoffPhase.UNKNOWN;

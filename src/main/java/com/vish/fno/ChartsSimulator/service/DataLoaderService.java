@@ -2,19 +2,18 @@ package com.vish.fno.ChartsSimulator.service;
 
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vish.fno.ChartsSimulator.config.properties.DataProperties;
 import com.vish.fno.ChartsSimulator.model.StockTicker;
+import com.vish.fno.ChartsSimulator.util.TimeUtils;
+import com.vish.fno.ChartsSimulator.util.ValidationUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -26,16 +25,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DataLoaderService {
 
-    @Value("${app.baseLogPath}")
-    private String baseLogPath;
-    private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
-
+    private final DataProperties dataProperties;
     private final ObjectMapper objectMapper;
-
     private final Map<String, List<StockTicker>> dataCache = new ConcurrentHashMap<>();
 
     @Autowired
-    public DataLoaderService(ObjectMapper objectMapper) {
+    public DataLoaderService(DataProperties dataProperties, ObjectMapper objectMapper) {
+        this.dataProperties = dataProperties;
         this.objectMapper = objectMapper;
         this.objectMapper.configure(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS, true);
     }
@@ -60,17 +56,21 @@ public class DataLoaderService {
     }
 
     private String buildFilePath(String date, String symbol) {
+        if (!ValidationUtils.isValidDate(date) || !ValidationUtils.isValidSymbol(symbol)) {
+            throw new IllegalArgumentException("Invalid date or symbol format");
+        }
+
         String[] dateParts = date.split("-");
         String year = dateParts[0];
         String month = dateParts[1];
         String day = dateParts[2];
 
         return String.format("%s/%s-%s/%s-%s-%s/%s/%s.txt",
-                baseLogPath,
+                dataProperties.baseLogPath(),
                 month, year,
                 day, month, year,
                 date,
-                symbol.replaceAll(" ", "_"));
+                ValidationUtils.sanitizeSymbol(symbol));
     }
 
     private List<StockTicker> loadTickersFromFile(String filePath) {
@@ -84,7 +84,7 @@ public class DataLoaderService {
                 totalTickers++;
                 StockTicker ticker = objectMapper.readValue(line, StockTicker.class);
 
-                if (isWithinTradingHours(ticker.tickTimestamp())) {
+                if (TimeUtils.isWithinTradingHours(ticker.tickTimestamp())) {
                     tickers.add(ticker);
                 } else {
                     filteredOut++;
@@ -107,20 +107,4 @@ public class DataLoaderService {
     }
 
 
-    public boolean isWithinTradingHours(long timestamp) {
-        LocalDateTime dateTime = fromEpochMilli(timestamp);
-        int hour = dateTime.getHour();
-        int minute = dateTime.getMinute();
-        int startTime = 9 * 60 + 15; // 9:15 AM in minutes
-        int endTime = 15 * 60 + 30;  // 3:30 PM in minutes
-        int currentTime = hour * 60 + minute;
-
-        return currentTime >= startTime && currentTime <= endTime;
-    }
-
-    public LocalDateTime fromEpochMilli(long timestamp) {
-        return Instant.ofEpochMilli(timestamp)
-                .atZone(INDIA_ZONE)
-                .toLocalDateTime();
-    }
 }

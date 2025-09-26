@@ -162,11 +162,21 @@ const SimpleChart = ({ index, theme, globalDate }) => {
   const inputStyles = getInputStyles(theme);
   const buttonStyles = getButtonStyles(theme, 'primary', 'sm');
 
-  // Load symbol from localStorage on mount
+  // Load symbol from localStorage on mount, with defaults
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(`dashboard_symbol_${index}`);
-      if (saved) setSymbol(saved);
+      if (saved) {
+        setSymbol(saved);
+      } else {
+        // Set default symbols for better UX
+        // Note: Currently only 'NIFTY 50' has available data
+        // TODO: Update when more symbols become available
+        const defaultSymbols = ['NIFTY 50', 'NIFTY 50', 'NIFTY 50', 'NIFTY 50'];
+        const defaultSymbol = defaultSymbols[index] || 'NIFTY 50';
+        setSymbol(defaultSymbol);
+        localStorage.setItem(`dashboard_symbol_${index}`, defaultSymbol);
+      }
     }
   }, [index]);
 
@@ -179,8 +189,10 @@ const SimpleChart = ({ index, theme, globalDate }) => {
     try {
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
+      // Normalize symbol to uppercase for API compatibility
+      const normalizedSymbol = stockSymbol.trim().toUpperCase();
       const params = new URLSearchParams({
-        symbol: stockSymbol,
+        symbol: normalizedSymbol,
         date,
         lookbackPeriod: 3 // Default lookback period for extrema detection
       });
@@ -197,7 +209,7 @@ const SimpleChart = ({ index, theme, globalDate }) => {
         minima: result.minima,
         wyckoffPhases: result.wyckoffPhases,
         currentPhase: result.currentPhase,
-        symbol: stockSymbol,
+        symbol: normalizedSymbol,
       });
     } catch (err) {
       setError(err.message);

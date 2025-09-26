@@ -1,35 +1,34 @@
 package com.vish.fno.ChartsSimulator.config;
 
+import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
+import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class StartupLogger {
 
     private static final Logger logger = LoggerFactory.getLogger(StartupLogger.class);
 
-    @Value("${server.port:9090}")
-    private int serverPort;
-
-    @Value("${app.environment:development}")
-    private String environment;
+    private final ValidationProperties validationProperties;
 
     @EventListener(ApplicationReadyEvent.class)
     public void logApplicationUrls() {
         try {
-            List<String> networkUrls = getNetworkUrls();
+            int serverPort = validationProperties.serverPort();
+            String environment = validationProperties.environment();
+            String applicationName = validationProperties.applicationName();
 
-            logger.info("🚀 ChartsSimulator Application Started Successfully!");
+            List<String> networkUrls = NetworkUtils.getNetworkUrls(serverPort);
+
+            logger.info("🚀 {} Application Started Successfully!", applicationName);
             logger.info("📊 Environment: {}", environment);
             logger.info("🌐 Application URLs:");
             logger.info("   Local:    http://localhost:{}", serverPort);
@@ -46,32 +45,11 @@ public class StartupLogger {
 
         } catch (java.net.SocketException e) {
             logger.warn("Could not determine network URLs due to network error: {}", e.getMessage());
-            logger.info("🚀 ChartsSimulator Application Started on port {}", serverPort);
+            logger.info("🚀 {} Application Started on port {}", validationProperties.applicationName(), validationProperties.serverPort());
         } catch (RuntimeException e) {
             logger.warn("Unexpected error while determining network URLs: {}", e.getMessage());
-            logger.info("🚀 ChartsSimulator Application Started on port {}", serverPort);
+            logger.info("🚀 {} Application Started on port {}", validationProperties.applicationName(), validationProperties.serverPort());
         }
     }
 
-    private List<String> getNetworkUrls() throws java.net.SocketException {
-        List<String> urls = new ArrayList<>();
-
-        for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-            if (networkInterface.isLoopback() || !networkInterface.isUp()) {
-                continue;
-            }
-
-            for (InetAddress address : Collections.list(networkInterface.getInetAddresses())) {
-                if (address.isSiteLocalAddress() && !address.isLoopbackAddress()) {
-                    String hostAddress = address.getHostAddress();
-                    // Filter out IPv6 addresses for simplicity
-                    if (!hostAddress.contains(":")) {
-                        urls.add("http://" + hostAddress + ":" + serverPort);
-                    }
-                }
-            }
-        }
-
-        return urls;
-    }
 }

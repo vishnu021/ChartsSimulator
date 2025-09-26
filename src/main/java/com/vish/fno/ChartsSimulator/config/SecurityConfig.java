@@ -1,6 +1,8 @@
 package com.vish.fno.ChartsSimulator.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.vish.fno.ChartsSimulator.config.properties.SecurityProperties;
+import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -14,19 +16,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig implements WebMvcConfigurer {
     private static final int RETRY_AFTER_SECONDS = 60;
     private static final long ONE_MINUTE_MS = 60_000L;
 
-    @Value("${app.security.rate-limit.enabled:true}")
-    private boolean rateLimitEnabled;
-
-    @Value("${app.security.rate-limit.requests-per-minute:60}")
-    private int requestsPerMinute;
+    private final SecurityProperties securityProperties;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        if (rateLimitEnabled) {
+        if (securityProperties.rateLimit().enabled()) {
             registry.addInterceptor(rateLimitInterceptor())
                     .addPathPatterns("/api/**", "/ws/**");
         }
@@ -37,7 +36,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     @Bean
     public RateLimitInterceptor rateLimitInterceptor() {
-        return new RateLimitInterceptor(requestsPerMinute);
+        return new RateLimitInterceptor(securityProperties.rateLimit().requestsPerMinute());
     }
 
     @Bean
@@ -74,11 +73,10 @@ public class SecurityConfig implements WebMvcConfigurer {
         }
 
         private String getClientId(HttpServletRequest request) {
-            String xForwardedFor = request.getHeader("X-Forwarded-For");
-            if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-                return xForwardedFor.split(",")[0].trim();
-            }
-            return request.getRemoteAddr();
+            return NetworkUtils.getClientIpAddress(
+                request.getHeader("X-Forwarded-For"),
+                request.getRemoteAddr()
+            );
         }
     }
 

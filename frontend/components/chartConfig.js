@@ -15,6 +15,13 @@ export const themes = {
       bullish: '#00d084',  // More vibrant green
       bearish: '#ff5757',  // More vibrant red
     },
+    volume: {
+      bullish: 'rgba(0, 208, 132, 0.6)',  // Semi-transparent green
+      bearish: 'rgba(255, 87, 87, 0.6)',  // Semi-transparent red
+      border: '#4a5f7a',
+      text: '#a1b5d1',
+      label: '#7c8db5',
+    },
     ticker: {
       line: '#f8fafc',
       shadow: '#4f46e5',
@@ -63,6 +70,13 @@ export const themes = {
       bullish: '#16a34a',  // Softer professional green
       bearish: '#e11d48',  // Softer professional red
     },
+    volume: {
+      bullish: 'rgba(22, 163, 74, 0.6)',  // Semi-transparent green
+      bearish: 'rgba(225, 29, 72, 0.6)',  // Semi-transparent red
+      border: '#cbd5e1',
+      text: '#64748b',
+      label: '#64748b',
+    },
     ticker: {
       line: '#1e293b',
       shadow: '#6366f1',
@@ -108,6 +122,7 @@ export const chartSettings = {
     vertical: 10,
   },
   candleBodyWidthRatio: 0.75,  // Slightly thinner candles for better readability
+  volumeBarWidthRatio: 0.65,  // Volume bars slightly thinner than candles
   extremaPointRadius: 7,  // Larger extrema points for better visibility
   crosshairLineWidth: 1.5,  // Slightly thicker crosshair
   extremaLineWidth: 2.5,  // Thicker extrema lines
@@ -122,8 +137,10 @@ export const chartSettings = {
 
   fonts: {
     labels: '13px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+    axis: '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     tooltip: '14px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     extremaLabels: '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+    volumeLabel: 'bold 12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     mobileLabels: '11px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     mobileTooltip: '12px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
     mobileExtremaLabels: '10px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',

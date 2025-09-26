@@ -14,8 +14,10 @@ export const useAppState = () => {
 };
 
 const getDefaultDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
+  // Use a date that has available data instead of today's date
+  // Available dates include: 2025-07-18, 2025-08-01
+  // TODO: This should be updated when more recent data becomes available
+  return '2025-08-01';
 };
 
 // Note: state hydration handled in useEffect; no separate getStoredState needed

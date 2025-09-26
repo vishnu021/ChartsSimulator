@@ -1,8 +1,10 @@
 package com.vish.fno.ChartsSimulator.controller;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
+import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
+import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,39 +15,29 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/config")
+@RequiredArgsConstructor
 public class ConfigController {
 
-    @Value("${server.port:9090}")
-    private String serverPort;
-
-    @Value("${app.websocket.endpoint:/ws}")
-    private String wsEndpoint;
-
-    @Value("${app.environment:production}")
-    private String environment;
+    private final ValidationProperties validationProperties;
+    private final WebSocketProperties webSocketProperties;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getConfig(HttpServletRequest request) {
         Map<String, Object> config = new HashMap<>();
-        
+
         // Dynamically detect the host and protocol from the request
         String protocol = request.getScheme(); // http or https
         String host = request.getServerName();
         int port = request.getServerPort();
-        String wsProtocol = "https".equals(protocol) ? "wss" : "ws";
-        
+        String wsProtocol = NetworkUtils.getWebSocketProtocol(protocol);
+        String wsEndpoint = webSocketProperties.endpoint();
+        String environment = validationProperties.environment();
+
         // Build base URL from request
-        String baseUrl;
-        if ((port == 80 && "http".equals(protocol)) || (port == 443 && "https".equals(protocol))) {
-            // Default ports, omit port number
-            baseUrl = protocol + "://" + host;
-        } else {
-            // Non-default ports, include port number
-            baseUrl = protocol + "://" + host + ":" + port;
-        }
-        
+        String baseUrl = NetworkUtils.buildBaseUrl(protocol, host, port);
+
         // For production, prefer relative URLs for same-origin requests
-        if ("production".equals(environment)) {
+        if (validationProperties.isProduction()) {
             config.put("apiUrl", "");  // Relative URL for same origin
             config.put("wsUrl", wsProtocol + "://" + host + (port != 80 && port != 443 ? ":" + port : "") + wsEndpoint);
         } else {
@@ -53,14 +45,14 @@ public class ConfigController {
             config.put("apiUrl", baseUrl);
             config.put("wsUrl", wsProtocol + "://" + host + (port != 80 && port != 443 ? ":" + port : "") + wsEndpoint);
         }
-        
+
         config.put("environment", environment);
         config.put("wsEndpoint", wsEndpoint);
         config.put("version", "1.0.0");
         config.put("detectedHost", host);
         config.put("detectedPort", port);
         config.put("detectedProtocol", protocol);
-        
+
         return ResponseEntity.ok(config);
     }
 

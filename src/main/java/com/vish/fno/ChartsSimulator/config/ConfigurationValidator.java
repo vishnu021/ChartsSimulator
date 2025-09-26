@@ -1,7 +1,11 @@
 package com.vish.fno.ChartsSimulator.config;
 
+import com.vish.fno.ChartsSimulator.config.properties.CorsProperties;
+import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
+import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
+import com.vish.fno.ChartsSimulator.util.ValidationUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -11,26 +15,24 @@ import java.util.List;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ConfigurationValidator {
     private static final String ENV_PRODUCTION = "production";
     private static final String ENV_UNKNOWN = "unknown";
 
-    @Value("${app.environment:unknown}")
-    private String environment;
-
-    @Value("${app.cors.allowed-origins:}")
-    private String corsOrigins;
-
-    @Value("${app.websocket.allowed-origins:}")
-    private String wsOrigins;
-
-    @Value("${server.port:9090}")
-    private String serverPort;
+    private final ValidationProperties validationProperties;
+    private final CorsProperties corsProperties;
+    private final WebSocketProperties webSocketProperties;
 
     @EventListener(ApplicationReadyEvent.class)
     public void validateConfiguration() {
         List<String> warnings = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+
+        String environment = validationProperties.environment();
+        String corsOrigins = String.join(",", corsProperties.allowedOrigins());
+        String wsOrigins = String.join(",", webSocketProperties.allowedOrigins());
+        int serverPort = validationProperties.serverPort();
 
         // Validate environment
         if (ENV_UNKNOWN.equals(environment)) {
@@ -39,22 +41,19 @@ public class ConfigurationValidator {
 
         // Validate CORS origins for production
         if (ENV_PRODUCTION.equals(environment)) {
-            if (corsOrigins.isEmpty() || corsOrigins.contains("*")) {
+            if (corsOrigins.isEmpty() || ValidationUtils.containsWildcards(corsOrigins)) {
                 errors.add("Production environment requires explicit CORS origins (no wildcards)");
             }
-            if (wsOrigins.isEmpty() || wsOrigins.contains("*")) {
+            if (wsOrigins.isEmpty() || ValidationUtils.containsWildcards(wsOrigins)) {
                 errors.add("Production environment requires explicit WebSocket origins (no wildcards)");
             }
         }
 
         // Validate port
-        try {
-            int port = Integer.parseInt(serverPort);
-            if (port < 1024 && ENV_PRODUCTION.equals(environment)) {
-                warnings.add("Using privileged port " + port + " in production");
-            }
-        } catch (NumberFormatException e) {
+        if (!ValidationUtils.isValidPort(serverPort)) {
             errors.add("Invalid server port configuration: " + serverPort);
+        } else if (serverPort < 1024 && ENV_PRODUCTION.equals(environment)) {
+            warnings.add("Using privileged port " + serverPort + " in production");
         }
 
         // Log results

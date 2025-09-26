@@ -53,37 +53,82 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  # Application-wide settings
   environment: ${APP_ENVIRONMENT:development}
-  baseurl: https://127.0.0.1/api/v1/historicalData/
-  baseLogPath: /Volumes/MacSSD/trading-logs
+  baseurl: ${BASE_URL:https://127.0.0.1/api/v1/historicalData/}
+  baseLogPath: ${BASE_LOG_PATH:/Volumes/MacSSD/trading-logs}
 
+  # Application validation and environment settings
+  validation:
+    environment: ${APP_ENVIRONMENT:development}
+    application-name: ${spring.application.name:ChartsSimulator}
+    server-port: ${SERVER_PORT:9090}
+
+  # Data access configuration
+  data:
+    baseurl: ${BASE_URL:https://127.0.0.1/api/v1/historicalData/}
+    base-log-path: ${BASE_LOG_PATH:/Volumes/MacSSD/trading-logs}
+
+  # WebSocket configuration
   websocket:
     messageDelay: 10
     tickerDelay: 25 # Fast ticker updates (100ms)
     endpoint: /ws
     allowed-origins: ${WS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090}
 
+  # CORS configuration
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090}
     allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
     allowed-headers: ${CORS_ALLOWED_HEADERS:*}
     allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
 
+  # Security configuration
   security:
     rate-limit:
       enabled: ${RATE_LIMIT_ENABLED:true}
       requests-per-minute: ${RATE_LIMIT_REQUESTS_PER_MINUTE:60}
 
+  # Ticker data processing configuration
   ticker:
     deduplicateTimestamps: true # Handle duplicate timestamps in ticker API by incrementing by 600ms
 
-  tickProcessor:
+  # Tick data processor configuration
+  tick-processor:
     enabled: true  # Set to true to enable automatic tick processing on startup
     date: 2025-07-18
     symbol: NIFTY 50
-    outputPath: output/
-    deduplicateTimestamps: true
-    timeFilter:
+    output-path: output/
+    deduplicate-timestamps: true
+    time-filter:
       enabled: true        # Set to true to enable time range filtering
-      startTime: "13:20:00" # Start time (HH:mm:ss format)
-      endTime: "14:00:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format
+      start-time: "13:20:00" # Start time (HH:mm:ss format)
+      end-time: "14:00:00"   # End time (HH:mm:ss format) - 1:20 PM in 24-hour format
+
+  # Futures symbol mapping and analysis configuration
+  futures:
+    enabled: true
+    symbol-mappings:
+      "NIFTY 50": "NIFTY"
+      "BANK NIFTY": "BANKNIFTY"
+      "NIFTY IT": "NIFTYIT"
+      "NIFTY PHARMA": "NIFTYPHARMA"
+      "NIFTY AUTO": "NIFTYAUTO"
+      "NIFTY METAL": "NIFTYMETAL"
+      "NIFTY FMCG": "NIFTYFMCG"
+      "SENSEX": "SENSEX"
+      "FINNIFTY": "FINNIFTY"
+      "MIDCPNIFTY": "MIDCPNIFTY"
+    month-codes:
+      "JANUARY": "JAN"
+      "FEBRUARY": "FEB"
+      "MARCH": "MAR"
+      "APRIL": "APR"
+      "MAY": "MAY"
+      "JUNE": "JUN"
+      "JULY": "JUL"
+      "AUGUST": "AUG"
+      "SEPTEMBER": "SEP"
+      "OCTOBER": "OCT"
+      "NOVEMBER": "NOV"
+      "DECEMBER": "DEC"
