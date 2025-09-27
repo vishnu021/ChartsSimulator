@@ -2,6 +2,7 @@ package com.vish.fno.ChartsSimulator.analysis;
 
 import com.vish.fno.ChartsSimulator.analysis.model.WyckoffPhase;
 import com.vish.fno.ChartsSimulator.model.Candle;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,13 +12,10 @@ import java.util.List;
  * This service acts as a facade for different Wyckoff analyzer implementations.
  */
 @Service
+@RequiredArgsConstructor
 public class WyckoffAnalysisService {
 
     private final WyckoffPhaseAnalyzer analyzer;
-
-    public WyckoffAnalysisService(WyckoffPhaseAnalyzer analyzer) {
-        this.analyzer = analyzer;
-    }
 
     /**
      * Analyzes a series of candles to identify Wyckoff phases.

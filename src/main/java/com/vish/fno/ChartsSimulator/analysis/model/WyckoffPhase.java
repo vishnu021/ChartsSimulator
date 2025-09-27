@@ -1,5 +1,8 @@
 package com.vish.fno.ChartsSimulator.analysis.model;
 
+import lombok.Getter;
+
+@Getter
 public enum WyckoffPhase {
     ACCUMULATION("Accumulation", "#4CAF50"),
     MARKUP("Markup", "#2196F3"),
@@ -13,14 +16,6 @@ public enum WyckoffPhase {
     WyckoffPhase(String displayName, String color) {
         this.displayName = displayName;
         this.color = color;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getColor() {
-        return color;
     }
 
     public static record WyckoffPhaseData(
