@@ -101,7 +101,7 @@ public final class CandleAggregator {
 
         // Calculate volume as the count of ticks (since individual tick volume is not available)
         // This represents trading activity frequency
-        long volume = (long) tickers.size();
+        long volume = tickers.size();
 
         // Open Interest - use 0 as default since it's not available in tick data
         long oi = 0L;

@@ -1,5 +1,7 @@
 package com.vish.fno.ChartsSimulator.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetAddress;
@@ -13,11 +15,8 @@ import java.util.List;
  * Utility class for network-related operations
  */
 @Slf4j
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NetworkUtils {
-
-    private NetworkUtils() {
-        // Utility class - prevent instantiation
-    }
 
     /**
      * Get all available network URLs for the application

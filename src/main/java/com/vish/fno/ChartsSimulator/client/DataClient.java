@@ -39,10 +39,12 @@ public class DataClient {
 
     private final DataProperties dataProperties;
     private final CloseableHttpClient httpClient;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
 
-    public DataClient(DataProperties dataProperties) throws GeneralSecurityException {
+    public DataClient(DataProperties dataProperties, ObjectMapper mapper) throws GeneralSecurityException {
         this.dataProperties = dataProperties;
+        this.mapper = mapper;
+        
         SSLContext sslContext = SSLContextBuilder.create()
                 .loadTrustMaterial(new TrustSelfSignedStrategy())
                 .build();
@@ -101,32 +103,32 @@ public class DataClient {
         CloseableHttpResponse response = responseInfo.response;
         String responseJson = null;
         int statusCode = response.getStatusLine().getStatusCode();
-        
+
         try {
             HttpEntity entity = response.getEntity();
             if (entity != null) {
                 responseJson = EntityUtils.toString(entity);
-                
+
                 // Check HTTP status code
                 if (statusCode != SC_OK) {
                     throw new DataFetchException("HTTP error", symbol, date, url, statusCode, responseJson);
                 }
-                
+
                 // Check if response is empty
                 if (responseJson == null || responseJson.trim().isEmpty()) {
                     throw new DataFetchException("Empty response content", symbol, date, url, statusCode, "Empty response");
                 }
-                
-                log.debug("Received response - Symbol: {}, Date: {}, Status: {}, Content length: {}", 
+
+                log.debug("Received response - Symbol: {}, Date: {}, Status: {}, Content length: {}",
                     symbol, date, statusCode, responseJson.length());
-                
+
                 SymbolData symbolData = mapper.readValue(responseJson, SymbolData.class);
                 List<Candle> candleSticks = symbolData.data();
-                
+
                 if (candleSticks == null || candleSticks.isEmpty()) {
                     throw new DataFetchException("No candle data found in response", symbol, date, url, statusCode, responseJson);
                 }
-                
+
                 return candleSticks.stream()
                         .map(c -> new Candle(c.time(), c.open(), c.high(), c.low(), c.close(), c.volume(), c.oi()))
                         .collect(Collectors.toList());

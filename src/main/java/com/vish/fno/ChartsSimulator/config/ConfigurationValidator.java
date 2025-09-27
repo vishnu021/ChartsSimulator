@@ -52,8 +52,6 @@ public class ConfigurationValidator {
         // Validate port
         if (!ValidationUtils.isValidPort(serverPort)) {
             errors.add("Invalid server port configuration: " + serverPort);
-        } else if (serverPort < 1024 && ENV_PRODUCTION.equals(environment)) {
-            warnings.add("Using privileged port " + serverPort + " in production");
         }
 
         // Log results

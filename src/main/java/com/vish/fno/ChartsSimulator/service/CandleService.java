@@ -1,10 +1,10 @@
 package com.vish.fno.ChartsSimulator.service;
 
+import com.vish.fno.ChartsSimulator.analysis.WyckoffAnalysisService;
+import com.vish.fno.ChartsSimulator.analysis.model.WyckoffPhase;
 import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.Extrema;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhase;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhaseData;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -57,7 +57,7 @@ public class CandleService {
         List<Candle> minima = findLocalExtrema(candles, false, lookbackPeriod);
 
         // Calculate Wyckoff phases
-        List<WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(candles);
+        List<WyckoffPhase.WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(candles);
         WyckoffPhase currentPhase = wyckoffAnalysisService.getCurrentPhase(candles);
 
         return new Extrema(candles, maxima, minima, wyckoffPhases, currentPhase);

@@ -1,4 +1,4 @@
-package com.vish.fno.ChartsSimulator.model;
+package com.vish.fno.ChartsSimulator.analysis.model;
 
 public enum WyckoffPhase {
     ACCUMULATION("Accumulation", "#4CAF50"),
@@ -22,4 +22,14 @@ public enum WyckoffPhase {
     public String getColor() {
         return color;
     }
+
+    public static record WyckoffPhaseData(
+            int startIndex,
+            int endIndex,
+            WyckoffPhase phase,
+            String startTime,
+            String endTime,
+            double confidence,
+            String description
+    ) {}
 }

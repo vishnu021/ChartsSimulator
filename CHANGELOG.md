@@ -2,6 +2,38 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-09-27] - Wyckoff Analysis Module Refactoring
+
+### 🏗️ Architecture Refactoring
+- **Wyckoff Analysis Modularization**: Moved Wyckoff analysis into separate module with interface-based design
+  - Created `WyckoffPhaseAnalyzer` interface for pluggable analysis implementations
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/WyckoffPhaseAnalyzer.java`
+  - Moved `WyckoffAnalysisService` to new analysis package as a facade service
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/WyckoffAnalysisService.java`
+  - Created `DefaultWyckoffPhaseAnalyzer` as the default implementation
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/DefaultWyckoffPhaseAnalyzer.java`
+
+### 🔧 Configuration Cleanup
+- **Removed Redundant Configuration**: Eliminated `ApplicationConfiguration.java`
+  - `@ConfigurationPropertiesScan` in main application class makes `@EnableConfigurationProperties` redundant
+  - Simplified configuration setup and reduced code duplication
+
+### 📦 Code Organization
+- **Updated Service Dependencies**: Updated import statements in dependent services
+  - Files: `src/main/java/com/vish/fno/ChartsSimulator/service/CandleService.java`
+  - Files: `src/main/java/com/vish/fno/ChartsSimulator/service/ChartTypeService.java`
+- **Interface Design**: Designed for future extensibility while maintaining single current implementation
+  - Interface includes `getAnalyzerName()` and `getVersion()` methods for identification
+  - Supports dependency injection of different analyzer implementations
+
+### ✅ Verification
+- Maven Build: ✅ PASS
+- Maven Compile: ✅ PASS
+- Dependencies: ✅ All imports updated correctly
+- Interface Implementation: ✅ Default analyzer properly implements interface
+
+---
+
 ## [Session-2025-01-25] - Build and Chart Loading Fixes
 
 ### 🐛 Bugs Fixed

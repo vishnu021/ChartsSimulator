@@ -1,27 +1,32 @@
-package com.vish.fno.ChartsSimulator.service;
+package com.vish.fno.ChartsSimulator.analysis.impl;
 
+import com.vish.fno.ChartsSimulator.analysis.WyckoffPhaseAnalyzer;
+import com.vish.fno.ChartsSimulator.analysis.model.WyckoffPhase;
 import com.vish.fno.ChartsSimulator.model.Candle;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhase;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhaseData;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
-public class WyckoffAnalysisService {
+/**
+ * Default implementation of Wyckoff phase analysis.
+ * Based on price action and moving average analysis.
+ */
+@Component
+public class DefaultWyckoffPhaseAnalyzer implements WyckoffPhaseAnalyzer {
 
     private static final int MIN_PHASE_LENGTH = 5;   // Shorter phases for more dynamic detection
     private static final int TREND_LOOKBACK = 10;   // More responsive to recent price action
     private static final double STRONG_MOVE_THRESHOLD = 0.008;  // 0.8% for strong moves
     private static final double WEAK_MOVE_THRESHOLD = 0.003;    // 0.3% for weak moves
 
-    public List<WyckoffPhaseData> analyzeWyckoffPhases(List<Candle> candles) {
+    @Override
+    public List<WyckoffPhase.WyckoffPhaseData> analyzeWyckoffPhases(List<Candle> candles) {
         if (candles.size() < MIN_PHASE_LENGTH * 2) {
             return List.of();
         }
 
-        List<WyckoffPhaseData> phases = new ArrayList<>();
+        List<WyckoffPhase.WyckoffPhaseData> phases = new ArrayList<>();
 
         // Calculate price moving average only (volume not needed)
         List<Double> priceMA = calculateMovingAverage(candles, TREND_LOOKBACK);
@@ -50,6 +55,7 @@ public class WyckoffAnalysisService {
         return phases;
     }
 
+    @Override
     public WyckoffPhase getCurrentPhase(List<Candle> candles) {
         if (candles.size() < TREND_LOOKBACK) {
             return WyckoffPhase.UNKNOWN;
@@ -58,6 +64,16 @@ public class WyckoffAnalysisService {
         List<Double> priceMA = calculateMovingAverage(candles, TREND_LOOKBACK);
 
         return detectPhaseAtIndex(candles, priceMA, candles.size() - 1);
+    }
+
+    @Override
+    public String getAnalyzerName() {
+        return "Default Wyckoff Phase Analyzer";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
     }
 
     private WyckoffPhase detectPhaseAtIndex(List<Candle> candles, List<Double> priceMA, int index) {
@@ -149,26 +165,12 @@ public class WyckoffAnalysisService {
         return ma;
     }
 
-    private List<Double> calculateVolumeMovingAverage(List<Candle> candles, int period) {
-        List<Double> ma = new ArrayList<>();
-
-        for (int i = period - 1; i < candles.size(); i++) {
-            double sum = 0.0;
-            for (int j = i - period + 1; j <= i; j++) {
-                sum += candles.get(j).volume();
-            }
-            ma.add(sum / period);
-        }
-
-        return ma;
-    }
-
-    private WyckoffPhaseData createPhaseData(List<Candle> candles, int startIndex, int endIndex,
-                                           WyckoffPhase phase) {
+    private WyckoffPhase.WyckoffPhaseData createPhaseData(List<Candle> candles, int startIndex, int endIndex,
+                                                          WyckoffPhase phase) {
         double confidence = calculatePhaseConfidence(candles, startIndex, endIndex, phase);
         String description = generatePhaseDescription(phase, confidence);
 
-        return new WyckoffPhaseData(
+        return new WyckoffPhase.WyckoffPhaseData(
                 startIndex,
                 endIndex,
                 phase,

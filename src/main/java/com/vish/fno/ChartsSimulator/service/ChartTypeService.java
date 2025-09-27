@@ -1,11 +1,11 @@
 package com.vish.fno.ChartsSimulator.service;
 
+import com.vish.fno.ChartsSimulator.analysis.WyckoffAnalysisService;
+import com.vish.fno.ChartsSimulator.analysis.model.WyckoffPhase;
 import com.vish.fno.ChartsSimulator.client.DataClient;
 import com.vish.fno.ChartsSimulator.model.Candle;
 import com.vish.fno.ChartsSimulator.model.ChartTypeResponse;
 import com.vish.fno.ChartsSimulator.model.StockTicker;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhase;
-import com.vish.fno.ChartsSimulator.model.WyckoffPhaseData;
 import com.vish.fno.ChartsSimulator.util.CandleAggregator;
 import com.vish.fno.ChartsSimulator.util.HeikinAshi;
 import lombok.AllArgsConstructor;
@@ -52,7 +52,7 @@ public class ChartTypeService {
         }
 
         // Calculate Wyckoff phases
-        List<WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(
+        List<WyckoffPhase.WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(
             !candles.isEmpty() ? candles : haCandles
         );
         WyckoffPhase currentPhase = wyckoffAnalysisService.getCurrentPhase(
@@ -93,7 +93,7 @@ public class ChartTypeService {
         List<Candle> haCandles = HeikinAshi.getCandles(candles);
 
         // Calculate Wyckoff phases for streaming
-        List<WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(candles);
+        List<WyckoffPhase.WyckoffPhaseData> wyckoffPhases = wyckoffAnalysisService.analyzeWyckoffPhases(candles);
         WyckoffPhase currentPhase = wyckoffAnalysisService.getCurrentPhase(candles);
 
         return List.of(new ChartTypeResponse(candles, haCandles, wyckoffPhases, currentPhase));
