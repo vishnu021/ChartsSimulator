@@ -131,3 +131,73 @@ app:
       "OCTOBER": "OCT"
       "NOVEMBER": "NOV"
       "DECEMBER": "DEC"
+
+# Wyckoff Phase Analysis Configuration
+wyckoff:
+  extrema:
+    ha:
+      # Extrema detection parameters
+      extremaLookback: 5           # Bars for local extrema detection (reduced for faster response)
+      extremaThreshold: 0.0005     # 0.05% minimum move for valid extrema (more sensitive)
+      extremaConfirmBars: 2        # Bars to confirm extrema (faster confirmation)
+
+      # Heikin-Ashi EMA parameters
+      haFastEma: 5                 # Fast EMA on HA (more responsive)
+      haSlowEma: 13                # Slow EMA on HA (reduced lag)
+      haMediumEma: 8               # Medium EMA for crossovers (faster)
+
+      # Trend detection
+      trendStrengthPeriod: 7       # Period for trend strength calculation (faster)
+      strongTrendThreshold: 0.0015 # 0.15% for strong trend (more sensitive)
+      weakTrendThreshold: 0.0005   # 0.05% for weak trend (more sensitive)
+
+      # Range detection
+      rangeLookback: 20            # Bars to detect range (faster detection)
+      rangeWidthMin: 0.0015        # 0.15% minimum range width
+      rangeWidthMax: 0.005         # 0.5% maximum range width
+      rangeBreakoutThreshold: 0.0008 # 0.08% above/below range (more sensitive)
+
+      # Phase detection thresholds
+      phaseConfirmBars: 2          # Bars to confirm phase change (much faster)
+      accumulationZone: 0.35       # Lower 35% of range (wider zone)
+      distributionZone: 0.65       # Upper 65% of range (wider zone)
+
+      # Pattern recognition
+      patternLookback: 10          # Bars for pattern detection (faster)
+      springThreshold: 0.001       # 0.1% for spring/upthrust detection
+      consolidationBars: 8         # Minimum bars for consolidation (faster)
+
+      # Smoothing
+      minPhaseLength: 3            # Minimum bars per phase (less smoothing)
+      smoothingWindow: 3           # Window for phase smoothing (less lag)
+
+      # Safety
+      minBars: 50                  # Minimum bars to analyze
+
+  # Pure Heikin-Ashi Wyckoff Analyzer Configuration
+  pure:
+    ha:
+      # Heikin-Ashi pattern detection
+      minConsecutiveCandles: 2     # Minimum consecutive HA candles for trend (reduced for faster detection)
+      maxWickRatio: 0.3             # Max wick/body ratio for strong trend (30% - more tolerant)
+      haColorRunRequired: 2         # Required consecutive same-color candles (reduced)
+
+      # Market structure
+      structureLookback: 15         # Bars for HH/HL/LL/LH detection
+      minStructureMove: 0.001       # 0.1% minimum move for valid structure
+
+      # Range detection
+      rangeLookback: 30             # Bars for range calculation
+      accumulationZone: 0.4         # Bottom 40% of range
+      distributionZone: 0.6         # Top 60% of range
+
+      # Trend strength
+      trendLookback: 10             # Bars for trend calculation
+      strongTrendThreshold: 0.0015  # 0.15% for strong trend
+
+      # Smoothing (minimal)
+      minPhaseLength: 2             # Very minimal smoothing
+      smoothingWindow: 2            # Minimal smoothing window
+
+      # Safety
+      minBars: 30                   # Minimum bars to analyze

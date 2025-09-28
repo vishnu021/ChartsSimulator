@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.controller;
 
+import com.vish.fno.ChartsSimulator.analysis.WyckoffAnalysisService;
 import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
 import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
 import com.vish.fno.ChartsSimulator.util.NetworkUtils;
@@ -20,6 +21,7 @@ public class ConfigController {
 
     private final ValidationProperties validationProperties;
     private final WebSocketProperties webSocketProperties;
+    private final WyckoffAnalysisService wyckoffAnalysisService;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getConfig(HttpServletRequest request) {
@@ -63,5 +65,13 @@ public class ConfigController {
         health.put("service", "ChartsSimulator");
         health.put("timestamp", java.time.Instant.now().toString());
         return ResponseEntity.ok(health);
+    }
+
+    @GetMapping("/wyckoff")
+    public ResponseEntity<Map<String, String>> getWyckoffAnalyzer() {
+        Map<String, String> analyzer = new HashMap<>();
+        analyzer.put("analyzerInfo", wyckoffAnalysisService.getAnalyzerInfo());
+        analyzer.put("timestamp", java.time.Instant.now().toString());
+        return ResponseEntity.ok(analyzer);
     }
 }

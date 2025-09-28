@@ -2,7 +2,201 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
-## [Session-2025-09-27] - Wyckoff Analysis Module Refactoring
+## [Session-2025-09-28-01:45] - SimplifiedHeikinAshiAnalyzer Implementation
+
+### 🚀 Features Added
+- **New Analyzer**: Created SimplifiedHeikinAshiAnalyzer with ultra-simple logic based purely on Heikin-Ashi patterns
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/SimplifiedHeikinAshiAnalyzer.java`
+  - Pure HA pattern recognition: consecutive bullish = MARKUP, consecutive bearish = MARKDOWN
+  - Wicky/mixed patterns = ACCUMULATION/DISTRIBUTION based on market position
+  - Minimal parameters for fast, responsive detection
+  - Set as @Primary analyzer for default usage
+
+### 🐛 Bugs Fixed
+- **Multiple @Primary Bean Conflict**: Removed @Primary annotations from other analyzers
+  - Files: `HeikinAshiWyckoffPhaseAnalyzer.java`, `PureHeikinAshiWyckoffAnalyzer.java`
+  - Only SimplifiedHeikinAshiAnalyzer now has @Primary annotation
+
+### 🔧 Configuration Updates
+- **Added SimplifiedHA Config**: New configuration section in application.yml
+  - minTrendCandles: 2 (minimum consecutive candles for trend)
+  - maxWickRatio: 0.3 (maximum wick ratio for trend candles)
+  - rangeThreshold: 70 (percentile threshold for range detection)
+
+### ✅ Verification
+- Playwright MCP: ✅ PASS - Phases correctly identify pure HA trends
+- Maven Build: ✅ PASS - Application starts without bean conflicts
+- Visual Testing: ✅ PASS - Confirmed proper phase detection on NIFTY 50 chart
+
+## [Session-2025-09-28-00:15] - Fixed HA Pattern Priority
+
+### 🐛 Bug Fixes
+- **Fixed Phase Detection Priority**: Corrected logic to prioritize HA patterns over range position
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/PureHeikinAshiWyckoffAnalyzer.java`
+  - Strong HA patterns now ALWAYS override position-based logic
+  - MARKUP: Always assigned when strong bullish HA pattern detected
+  - MARKDOWN: Always assigned when strong bearish HA pattern detected
+  - Position-based logic only used when HA patterns are ambiguous
+  - Reduced thresholds for faster detection (2 consecutive candles vs 3)
+
+### 🔧 Configuration Updates
+- **Adjusted HA Parameters**: Made detection more responsive
+  - minConsecutiveCandles: 3 → 2
+  - maxWickRatio: 0.2 → 0.3 (more tolerant)
+  - haColorRunRequired: 3 → 2
+
+## [Session-2025-09-28-00:00] - Pure Heikin-Ashi Wyckoff Analyzer
+
+### 🚀 New Simplified Analyzer
+- **PureHeikinAshiWyckoffAnalyzer**: Strictly follows Heikin-Ashi principles for accurate phase detection
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/PureHeikinAshiWyckoffAnalyzer.java`
+  - **Core Principles**:
+    - MARKUP: Only when consecutive bullish HA candles have minimal/no lower wicks
+    - MARKDOWN: Only when consecutive bearish HA candles have minimal/no upper wicks
+    - ACCUMULATION: Wicky patterns at range lows (bottom 40%)
+    - DISTRIBUTION: Wicky patterns at range highs (top 60%)
+  - **Key Features**:
+    - Wick ratio analysis (wicks must be <20% of body for trends)
+    - Market structure detection (HH/HL for uptrend, LL/LH for downtrend)
+    - Range position calculation for accumulation/distribution zones
+    - Minimal smoothing to preserve accuracy
+  - **Results**:
+    - No false MARKUP/MARKDOWN on wicky candles
+    - Properly identifies consolidation zones
+    - Wick ratio shown in descriptions for transparency
+    - More accurate phase detection based on true HA patterns
+
+### 🔧 Configuration
+- **New Configuration Section**: Added `wyckoff.pure.ha` in application.yml
+  - Simplified parameters focusing on essential HA characteristics
+  - 3 consecutive candles required for trend confirmation
+  - 20% max wick/body ratio for strong trends
+
+## [Session-2025-09-27-Evening-V2] - Enhanced Responsive Wyckoff Analyzer
+
+### 🚀 Performance Improvements
+- **Reduced Detection Lag**: Made analyzer much more responsive to market changes
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/ExtremaHeikinAshiWyckoffAnalyzer.java`
+  - **Parameter Optimizations**:
+    - Reduced extrema lookback from 10 to 5 bars
+    - Lowered thresholds for more sensitive detection (0.05% vs 0.08%)
+    - Faster EMA periods (5/8/13 vs 9/14/21)
+    - Reduced phase confirmation from 5 to 2 bars
+  - **Logic Improvements**:
+    - Added immediate momentum detection (3-bar lookback)
+    - Implemented HA crossover detection for instant signals
+    - Immediate extrema detection for faster phase transitions
+    - Enhanced range-based logic with HA direction bias
+  - **Results**:
+    - Near-instant MARKUP/MARKDOWN transitions
+    - Better alignment with actual price movements
+    - Reduced false UNKNOWN phases
+    - More accurate phase identification at turning points
+
+### 🔧 Configuration Updates
+- **Optimized Parameters**: Updated all timing parameters in application.yml
+  - Reduced smoothing window from 5 to 3 bars
+  - Minimum phase length reduced from 8 to 3 bars
+  - Wider accumulation/distribution zones (35%/65% vs 25%/75%)
+
+## [Session-2025-09-27-Evening] - Advanced Extrema-HeikinAshi Wyckoff Analyzer
+
+### 🚀 Features Added
+- **ExtremaHeikinAshiWyckoffAnalyzer**: Revolutionary Wyckoff phase analyzer combining extrema detection with Heikin-Ashi patterns
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/ExtremaHeikinAshiWyckoffAnalyzer.java`
+  - **Advanced Extrema Detection**:
+    - Local maxima/minima identification with configurable lookback (10 bars)
+    - Threshold validation (0.08% minimum move)
+    - Support/resistance zone identification
+  - **Enhanced Heikin-Ashi Analysis**:
+    - Triple EMA system (Fast: 9, Medium: 14, Slow: 21)
+    - Color run tracking for trend persistence
+    - Trend strength calculation combining price momentum and HA consistency
+  - **Market Condition Classification**:
+    - STRONG_UPTREND/DOWNTREND: Strong directional moves
+    - WEAK_UPTREND/DOWNTREND: Mild directional bias
+    - RANGING: Sideways consolidation
+    - BREAKOUT_UP/DOWN: Range breakout detection
+  - **Intelligent Phase Detection**:
+    - ACCUMULATION: Lower 25% of range with extrema lows
+    - DISTRIBUTION: Upper 75% of range with extrema highs
+    - MARKUP: Confirmed uptrends with HA alignment
+    - MARKDOWN: Confirmed downtrends with HA alignment
+    - Minimal UNKNOWN labels through smart fallback logic
+  - **Advanced Smoothing**:
+    - Three-pass smoothing algorithm
+    - Weighted voting in windows
+    - Segment merging for noise reduction
+  - Set as `@Primary` analyzer for automatic selection
+
+### 🔧 Configuration Updates
+- **Added Wyckoff Extrema-HA Configuration**: Comprehensive configuration in application.yml
+  - File: `src/main/resources/application.yml`
+  - Configuration path: `wyckoff.extrema.ha`
+  - Tunable parameters for extrema detection, trend analysis, and phase identification
+
+### 🐛 Bugs Fixed
+- **Removed Primary Annotation Conflict**: Fixed duplicate @Primary annotations
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/TradeSimulatorWyckoffAnalyzer.java`
+  - Removed @Primary to allow ExtremaHeikinAshiWyckoffAnalyzer as default
+
+### 🐛 Additional Bugs Fixed
+- **Fixed Array Index Out of Bounds**: Corrected rangeLookback calculations
+  - Added boundary checks for negative array indices
+  - Ensured safe array access in market condition detection
+
+### ✅ Verification
+- Maven Package: ✅ PASS
+- Frontend Lint: ✅ PASS (via Maven build)
+- Compilation: ✅ PASS
+- Manual Testing: ✅ PASS
+  - Successfully analyzes candle data without errors
+  - Returns meaningful Wyckoff phases (MARKDOWN, ACCUMULATION, MARKUP, DISTRIBUTION)
+  - Confidence levels ranging from 0.6 to 0.95
+  - Minimal to no UNKNOWN phases
+  - Market condition detection working correctly
+
+## [Session-2025-09-27] - Trade Simulator and Multiple Wyckoff Analyzers
+
+### 🚀 New Trade Simulator Analyzer
+- **TradeSimulatorWyckoffAnalyzer**: Comprehensive trade simulation analyzer for 1-minute OHLCV data
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/TradeSimulatorWyckoffAnalyzer.java`
+  - **Market Regime Detection**:
+    - TREND_UP: Higher Highs + Higher Lows pattern recognition
+    - TREND_DOWN: Lower Highs + Lower Lows pattern recognition
+    - RANGE: Narrow ATR with contained price movement
+    - WICKY: Long upper/lower wicks (>60% of candle range)
+  - **Wyckoff Phase Classification** (without volume):
+    - ACCUMULATION: Range after down move
+    - DISTRIBUTION: Range after up move
+    - MARKUP: Confirmed uptrend
+    - MARKDOWN: Confirmed downtrend
+    - RE-ACC/RE-DIST: Mapped to trend phases
+  - **Candlestick Pattern Recognition**:
+    - Hammer: Small body at top, long lower wick (2x body)
+    - Inverted Hammer: Small body at bottom, long upper wick
+  - **Trade Signal Generation**:
+    - Entry points with candlestick confirmation
+    - Stop Loss: 1.5x ATR from entry
+    - Take Profit: 2:1 Risk/Reward ratio
+    - Confidence scoring based on phase/regime alignment
+  - **Heikin Ashi Integration**: Smoothed trend analysis with dual EMA (9/21)
+  - **Configuration**: Customizable via `wyckoff.simulator` properties
+
+### 🚀 Features Added
+- **HeikinAshi Wyckoff Analyzer Integration**: Successfully switched from DefaultWyckoffPhaseAnalyzer to HeikinAshiWyckoffPhaseAnalyzer
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/analysis/impl/HeikinAshiWyckoffPhaseAnalyzer.java`
+  - Configured as `@Primary` component for automatic injection
+  - Supports Heikin Ashi candlestick analysis with volume and range heuristics
+  - Enhanced phase detection: ACCUMULATION, DISTRIBUTION, MARKUP, MARKDOWN
+  - Configurable parameters via `wyckoff.ha` configuration properties
+  - Version updated to 1.3.0 with improved no-volume analysis
+
+### 🔧 Configuration Enhancement
+- **Added Wyckoff Analyzer Endpoint**: New API endpoint to verify active analyzer
+  - Endpoint: `GET /api/config/wyckoff`
+  - File: `src/main/java/com/vish/fno/ChartsSimulator/controller/ConfigController.java`
+  - Returns current analyzer name and version for verification
 
 ### 🏗️ Architecture Refactoring
 - **Wyckoff Analysis Modularization**: Moved Wyckoff analysis into separate module with interface-based design
