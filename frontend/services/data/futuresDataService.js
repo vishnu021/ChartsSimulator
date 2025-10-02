@@ -75,7 +75,7 @@ class FuturesDataService {
 
     // Get month abbreviation
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-                   'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const month = months[targetDate.getMonth()];
 
     // Normalize underlying symbol - remove spaces and numbers

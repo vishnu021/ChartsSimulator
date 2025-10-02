@@ -22,17 +22,16 @@ public class ChartTypeController {
             @RequestParam String date,
             @RequestParam(defaultValue = "CANDLESTICK,HEIKIN_ASHI") String chartTypes
     ) {
-        log.info("🔍 ChartTypeController /api/charts - Received Request:");
-        log.info("   Symbol: {}", symbol);
-        log.info("   Date: {}", date);
-        log.info("   Chart Types: {}", chartTypes);
+        log.info("🔍 ChartTypeController /api/charts - Received Request:: Symbol: {}, Date: {}, Chart Types: {}",
+                symbol, date, chartTypes);
 
         ChartTypeResponse result = chartTypeService.getChartData(symbol, date, chartTypes);
 
         log.info("🔍 ChartTypeController /api/charts - Response:");
-        log.info("   Candlesticks count: {}", (result.candlesticks() != null ? result.candlesticks().size() : 0));
-        log.info("   Heikin Ashi count: {}", (result.heikinAshi() != null ? result.heikinAshi().size() : 0));
-        log.info("   Wyckoff Phases count: {}", (result.wyckoffPhases() != null ? result.wyckoffPhases().size() : 0));
+        log.info(" Candlesticks count: {}, Heikin Ashi count: {}, Wyckoff Phases count: {}",
+                (result.candlesticks() != null ? result.candlesticks().size() : 0),
+                (result.heikinAshi() != null ? result.heikinAshi().size() : 0),
+                (result.wyckoffPhases() != null ? result.wyckoffPhases().size() : 0));
 
         return result;
     }

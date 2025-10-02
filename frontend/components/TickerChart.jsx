@@ -244,7 +244,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
   };
 
   // Draw Wyckoff phase strip function
-  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, padding) => {
+  const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, padding, actualChartBottom) => {
     // Wyckoff phase colors - distinct and vibrant
     const wyckoffColors = {
       ACCUMULATION: '#10B981',  // Emerald green - buying/accumulating
@@ -257,8 +257,8 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     if (!wyckoffPhases || wyckoffPhases.length === 0) return;
 
     const stripHeight = 35;
-    // Position strip using proper padding-based positioning
-    const stripY = height - padding.bottom + 30; // Position below x-axis labels
+    // Position strip below x-axis time labels with more spacing
+    const stripY = actualChartBottom + 60; // Increased from 40 to 60 for more spacing
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -347,11 +347,12 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       height - padding.top - padding.bottom + 20
     );
 
-    // Reserve space for Wyckoff phase strip (35px) + x-axis labels (30px) + margins (15px) = 80px
-    // Reserve fixed space for bottom elements
-    const bottomReservedSpace = 70;
+    // Reserve extra space at bottom for labels and Wyckoff strip
+    const bottomReservedSpace = 140; // Increased to ensure timestamp labels are always visible with more margin
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
+    // Position labels well above the canvas bottom with more spacing
+    const xAxisLabelY = padding.top + chartHeight + 40;
 
     // Calculate price range from both candles and price data
     const allPrices = [
@@ -433,7 +434,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       if (x >= padding.left && x <= width - padding.right) {
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
-        ctx.lineTo(x, height - padding.bottom);
+        ctx.lineTo(x, padding.top + chartHeight);
         ctx.stroke();
       }
     });
@@ -821,29 +822,34 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     const maxLabels = isMobile ? 4 : 8;
     const labelStep = Math.max(1, Math.ceil(labelsToShow.length / maxLabels));
 
-    labelsToShow.forEach((interval, i) => {
-      if (i % labelStep === 0) {
-        const x = xScaleTime(interval.timestamp);
-        if (x >= padding.left && x <= width - padding.right) {
-          const timeString = formatTime(interval.time, 'HH:mm');
-          // Position x-axis labels above the Wyckoff phase strip
-          const stripY = height - padding.bottom + 30; // Match Wyckoff strip position
-          const labelY = stripY - 10; // Position labels above the strip
+    // Draw X-axis time labels
+    if (labelsToShow.length > 0) {
+      labelsToShow.forEach((interval, i) => {
+        if (i % labelStep === 0) {
+          const x = xScaleTime(interval.timestamp);
+          if (x >= padding.left && x <= width - padding.right) {
+            const timeString = formatTime(interval.time, 'HH:mm');
 
-          // Draw background for better visibility
-          const textWidth = ctx.measureText(timeString).width;
-          ctx.fillStyle = colors.background;
-          ctx.fillRect(x - textWidth/2 - 2, labelY - 15, textWidth + 4, 18);
+            // Draw background for better visibility
+            const textWidth = ctx.measureText(timeString).width;
+            ctx.fillStyle = colors.tooltip.background || colors.panelBackground;
+            ctx.fillRect(x - textWidth/2 - 3, xAxisLabelY - 14, textWidth + 6, 18);
 
-          // Draw text with contrasting color
-          ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000'; // Force high contrast
-          ctx.fillText(timeString, x, labelY);
+            // Draw border for visibility
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - textWidth/2 - 3, xAxisLabelY - 14, textWidth + 6, 18);
+
+            // Draw text with primary color
+            ctx.fillStyle = colors.text.primary;
+            ctx.fillText(timeString, x, xAxisLabelY);
+          }
         }
-      }
-    });
+      });
+    }
 
     // Draw Wyckoff phase bottom strip
-    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, padding);
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, padding, padding.top + chartHeight);
 
     // Y-axis labels
     ctx.textAlign = 'right';
@@ -897,16 +903,17 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       ctx.textAlign = 'left';
       ctx.fillText(price.toFixed(2), width - padding.right + 10, mousePos.y + 4);
 
-      // Time label
+      // Time label at TOP
       const hoveredTime = visibleStart + ((mousePos.x - padding.left) / chartWidth) * visibleSpan;
       const timeLabel = formatTime(new Date(hoveredTime), 'HH:mm:ss');
 
       ctx.fillStyle = colors.tooltip.background;
-      ctx.fillRect(mousePos.x - 40, height - padding.bottom + 5, 80, 20);
-      ctx.strokeRect(mousePos.x - 40, height - padding.bottom + 5, 80, 20);
+      ctx.fillRect(mousePos.x - 40, padding.top - 25, 80, 20);
+      ctx.strokeStyle = colors.tooltip.border;
+      ctx.strokeRect(mousePos.x - 40, padding.top - 25, 80, 20);
       ctx.fillStyle = colors.text.primary;
       ctx.textAlign = 'center';
-      ctx.fillText(timeLabel, mousePos.x, height - padding.bottom + 20);
+      ctx.fillText(timeLabel, mousePos.x, padding.top - 11);
     }
   }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme, drawWyckoffPhaseStrip]);
 
@@ -960,29 +967,9 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         return;
       }
 
-      // If the gesture is predominantly horizontal → smooth pan, not zoom
-      if (absX > absY) {
-        const totalWidth = chartWidth * viewState.zoom;
-        const maxOffset = 0;
-        const minOffset = Math.min(0, chartWidth - totalWidth);
-
-        // Positive deltaX means user scrolls right; move content left (offset more negative)
-        const panDelta = -e.deltaX; // invert to match intuitive scroll direction
-        const newTarget = Math.max(
-          minOffset,
-          Math.min(maxOffset, viewState.targetOffset + panDelta)
-        );
-
-        setViewState(prev => ({
-          ...prev,
-          targetOffset: newTarget,
-        }));
-        return;
-      }
-
-      // Otherwise treat as horizontal zoom (vertical wheel gesture)
-      const dominantDelta = absY >= absX ? e.deltaY : e.deltaX;
-      const effectiveDelta = dominantDelta !== 0 ? dominantDelta : e.deltaY || e.deltaX || 0;
+      // Always treat wheel as zoom, not pan (use drag for panning)
+      // Use vertical wheel delta for zoom
+      const effectiveDelta = e.deltaY || 0;
       const zoomFactor = effectiveDelta > 0 ? 0.9 : 1.1;
 
       const newZoom = Math.max(1.0, Math.min(100, viewState.zoom * zoomFactor));
@@ -1181,80 +1168,6 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
           />
         </div>
 
-        {/* Vertical Zoom Control */}
-        {!isMobile && (
-          <div
-            className="flex flex-col items-center px-2 py-4"
-            style={{ backgroundColor: colors.background }}
-          >
-            <div className="text-xs mb-2 text-center" style={{ color: colors.text.secondary }}>
-              Vertical
-            </div>
-
-            <button
-              onClick={() =>
-                setViewState(prev => ({
-                  ...prev,
-                  verticalZoom: Math.min(20, prev.verticalZoom * 1.2),
-                  targetVerticalOffset: prev.targetVerticalOffset, // Preserve vertical position
-                }))
-              }
-              className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
-              style={{
-                backgroundColor: colors.panelBackground,
-                border: `1px solid ${colors.grid}`,
-                color: colors.text.primary,
-              }}
-              title="Zoom in vertically (Shift+Scroll also works)"
-            >
-              +
-            </button>
-
-            <div className="flex-1 flex flex-col justify-center py-2">
-              <div className="text-center text-xs font-bold" style={{ color: colors.text.primary }}>
-                {(viewState.verticalZoom * 100).toFixed(0)}%
-              </div>
-            </div>
-
-            <button
-              onClick={() =>
-                setViewState(prev => ({
-                  ...prev,
-                  verticalZoom: Math.max(1.0, prev.verticalZoom / 1.2),
-                  targetVerticalOffset: prev.targetVerticalOffset, // Preserve vertical position
-                }))
-              }
-              className="px-2 py-2 mb-1 rounded text-sm hover:opacity-80 transition-all"
-              style={{
-                backgroundColor: colors.panelBackground,
-                border: `1px solid ${colors.grid}`,
-                color: colors.text.primary,
-              }}
-              title="Zoom out vertically (Shift+Scroll also works)"
-            >
-              -
-            </button>
-
-            <button
-              onClick={() =>
-                setViewState(prev => ({
-                  ...prev,
-                  verticalZoom: 1,
-                  verticalOffset: 0,
-                  targetVerticalOffset: 0,
-                  verticalVelocity: 0,
-                }))
-              }
-              className="px-1 py-1 mt-2 rounded text-xs hover:opacity-80"
-              style={{
-                backgroundColor: colors.input.focus,
-                color: '#ffffff',
-              }}
-            >
-              1x
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

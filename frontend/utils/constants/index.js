@@ -55,6 +55,13 @@ export const UI_CONSTANTS = {
     DEBOUNCE_MS: 300,
   },
 
+  PADDING: {
+    DESKTOP: { top: 50, right: 90, bottom: 120, left: 90 }, // Increased bottom from 90 to 120
+    MOBILE: { top: 40, right: 50, bottom: 90, left: 70 }, // Increased bottom from 70 to 90
+    DASHBOARD_DESKTOP: { top: 25, right: 35, bottom: 60, left: 45 },
+    DASHBOARD_MOBILE: { top: 20, right: 25, bottom: 50, left: 35 },
+  },
+
   ROUTES: {
     HOME: '/',
     CANDLES: '/candles',

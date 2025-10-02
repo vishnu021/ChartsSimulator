@@ -18,7 +18,7 @@ export const generateITMOptionSymbol = (underlyingSymbol, date) => {
   const day = String(dateObj.getDate()).padStart(2, '0');
 
   // Normalize underlying symbol for option naming
-  let optionBase = underlyingSymbol.replace(/\s+/g, '').toUpperCase();
+  const optionBase = underlyingSymbol.replace(/\s+/g, '').toUpperCase();
 
   // Common strike prices for major indices (simplified mapping)
   const strikeMapping = {
@@ -30,7 +30,7 @@ export const generateITMOptionSymbol = (underlyingSymbol, date) => {
   };
 
   // Get base strike (simplified - in reality this would be calculated from current market price)
-  let baseStrike = strikeMapping[optionBase] || 25000;
+  const baseStrike = strikeMapping[optionBase] || 25000;
 
   // For ITM, we typically go 1-2 strikes in-the-money
   // CE (Call) ITM = strike below current price

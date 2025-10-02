@@ -252,7 +252,7 @@ const SimpleChart = ({ index, theme, globalDate }) => {
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: themeColors.background.primary }}>
       <div
-        className="p-3 border-b flex items-center gap-3"
+        className="p-2 border-b flex items-center gap-2"
         style={{
           borderColor: themeColors.border.primary,
           backgroundColor: themeColors.background.secondary
@@ -425,12 +425,12 @@ export default function DashboardPage() {
         <div
           style={{
             height: 'calc(100vh - 64px - 64px)', // Full height minus headers (updated for new header height)
-            padding: '8px',
+            padding: '2px',
             overflow: 'hidden',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gridTemplateRows: '1fr 1fr',
-            gap: '12px',
+            gap: '6px',
           }}
         >
           {[0, 1, 2, 3].map(index => (

@@ -2,6 +2,138 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-02] - Ticker Chart Time Label Enhancements & Zoom Fixes + Dashboard Spacing Optimizations + UI Cleanup
+
+### 🐛 Latest Bug Fixes & Optimizations
+- **Enhanced Ticker Page Padding**: Significantly increased padding/margin for better timestamp visibility
+  - Bottom padding: Desktop 110px → 130px (+18%), Mobile 85px → 100px (+18%)
+  - bottomReservedSpace: 120px → 140px (+17%)
+  - xAxisLabelY position: +35 → +40
+  - Ensures timestamp labels have ample spacing across all resolutions
+  - Files: `frontend/components/chartConfig.js:115-116`, `frontend/components/TickerChart.jsx:351,355`
+
+- **Further Dashboard Panel Space Optimization**: Aggressive reduction of wasted space
+  - Top padding: Desktop 15px → 12px, Mobile 10px → 8px
+  - Bottom reserved space: Desktop 30px → 25px, Mobile 25px → 20px
+  - Candle clip buffer: 12px → 15px (better separation from x-axis labels)
+  - Wyckoff strip height: 20px → 18px (10% reduction)
+  - Strip spacing: 5px → 3px
+  - Grid outer padding: 4px → 2px
+  - Grid gap: 8px → 6px
+  - Maximizes chart visibility while maintaining label clarity
+  - Files: `frontend/components/CandleChart.jsx:51,55,57,335-336,342`, `frontend/app/dashboard/page.js:428,433`
+
+### 🎨 UI Improvements
+- **Removed Vertical Zoom Buttons**: Removed redundant vertical zoom controls from Ticker page
+  - Vertical zoom still available via Shift+Scroll (more intuitive)
+  - Cleaner UI with more space for chart content
+  - Files: `frontend/components/TickerChart.jsx:1171-1244`
+
+- **Reduced Dashboard Panel Padding**: Minimized wasted space in dashboard panels
+  - Panel header padding: 12px → 8px (p-3 → p-2)
+  - Panel header gap: 12px → 8px (gap-3 → gap-2)
+  - Grid outer padding: 8px → 4px
+  - Grid gap between panels: 12px → 8px
+  - More screen real estate for charts
+  - Files: `frontend/app/dashboard/page.js:255,428,433`
+
+### 🎨 Dashboard UI Optimizations
+- **Maximized Bottom Space**: Aggressive reduction of wasted space in dashboard panels
+  - Top padding: Desktop 20px → 15px, Mobile 15px → 10px
+  - Bottom reserved space: Desktop 80px → 30px (62.5% reduction!), Mobile 60px → 25px (58% reduction!)
+  - Significantly more vertical space for chart content
+  - Files: `frontend/components/CandleChart.jsx:55,172,335-336`
+
+- **Fixed Candle Overlap**: Prevented candles from touching x-axis labels
+  - Added 12px clipping buffer for dashboard candles
+  - Cleaner visual separation between chart and labels
+  - Files: `frontend/components/CandleChart.jsx:342,380`
+
+- **Wyckoff Phase Strip**: Reduced phase panel height and spacing for dashboard
+  - Strip height: 35px → 20px (dashboard only, 43% reduction)
+  - Strip spacing: 5px → 3px
+  - Label spacing: Desktop 20px → 15px, Mobile 15px → 12px
+  - Maintains full 35px height in full-screen charts
+  - Files: `frontend/components/CandleChart.jsx:51,171,478-479`
+
+- **Y-axis Label Spacing**: Fixed chart overlapping time bar labels
+  - Label X position: 35px → 40px (dashboard)
+  - Adjusted padding offset from -5px to -3px
+  - Prevents chart from touching Y-axis time labels
+  - Files: `frontend/components/CandleChart.jsx:457`
+
+### 🐛 Bugs Fixed
+- **X-axis Time Labels**: Fixed missing timestamp labels at the bottom of ticker chart
+  - Enhanced label positioning with background and border for better visibility
+  - Added bounds checking to ensure labels always visible in fullscreen
+  - Labels positioned at `Math.min(actualChartBottom + 20, height - 25)`
+  - Added proper styling with tooltip background and grid border
+  - Files: `frontend/components/TickerChart.jsx:825-851`
+
+- **Crosshair Time Display**: Fixed crosshair time label to show at top instead of bottom
+  - Moved time label from bottom (hidden) to top of chart for visibility
+  - Time format shows HH:mm:ss (time only, no date) as requested
+  - Enhanced with tooltip background and border styling
+  - Files: `frontend/components/TickerChart.jsx:904-914`
+
+- **Zoom Behavior**: Fixed unwanted horizontal panning during vertical zoom
+  - Removed horizontal scroll-to-pan logic (lines 969-987)
+  - Wheel events now only trigger zoom, not pan
+  - Dragging remains the exclusive method for panning
+  - Files: `frontend/components/TickerChart.jsx:969-972`
+
+### 🎨 UI Improvements
+- **Better Label Visibility**: Enhanced time labels with background boxes and borders
+  - X-axis labels now have clear backgrounds to stand out
+  - Crosshair time label positioned at top for better user experience
+  - Consistent styling using theme colors
+- **Increased Bottom Spacing**: Added more padding and margin at bottom for better visibility
+  - Desktop bottom padding: 90px → 120px
+  - Mobile bottom padding: 70px → 90px
+  - Chart reserved space: 70px → 100px
+  - Wyckoff strip spacing: 40px → 60px below labels
+
+### 🔧 Technical Details
+- **Root Cause**:
+  - Missing `UI_CONSTANTS.PADDING` configuration caused `canvasUtils.getPadding()` to fail
+  - Incorrect `bottomReservedSpace` subtraction caused labels to be positioned outside visible area
+- **Fix Applied**:
+  - Added padding constants to `UI_CONSTANTS` in constants file
+  - Increased `bottomReservedSpace` from 70px to 100px
+  - Increased bottom padding (Desktop: 120px, Mobile: 90px)
+  - Fixed label position to `padding.top + chartHeight + 30` (always visible)
+  - Chart height calculation: `height - padding.top - padding.bottom - bottomReservedSpace`
+- **Layout**: Chart reserves 100px at bottom for labels and Wyckoff strip
+- **Wyckoff Strip**: Positioned 60px below time labels for better spacing
+
+### ✅ Verification
+- Playwright MCP: ✅ PASS
+  - Dashboard page loads successfully with aggressively maximized chart space
+  - Bottom spacing reduced by 62.5% (desktop) and 58% (mobile)
+  - Ticker page vertical zoom buttons removed
+  - Zero console errors - clean execution
+  - Chart panels render with minimal wasted space
+  - Candles properly separated from x-axis labels (12px buffer)
+  - Wyckoff strip height reduced by 43% for dashboard
+  - Clean Next.js build after cache clear
+  - Screenshots saved: `dashboard-spacing-optimized.png`, `dashboard-reduced-padding.png`
+- Frontend Compilation: ✅ PASS (Clean build after removing .next cache)
+- Code Changes: ✅ COMPLETE
+  - Vertical zoom buttons removed from Ticker page (Shift+Scroll still works)
+  - Dashboard panel header padding reduced: 12px → 8px
+  - Dashboard grid padding reduced: 8px → 4px, gap: 12px → 8px
+  - Dashboard top padding: Desktop 20px → 15px, Mobile 15px → 10px
+  - Dashboard bottom spacing: Desktop 80px → 30px (62.5% reduction), Mobile 60px → 25px (58% reduction)
+  - Dashboard candle clipping: Added 12px buffer to prevent x-axis label overlap
+  - Wyckoff strip height: 35px → 20px (dashboard only, 43% reduction)
+  - Wyckoff strip spacing: 5px → 3px (dashboard)
+  - X-axis label spacing: Desktop 20px → 15px, Mobile 15px → 12px (dashboard)
+  - Y-axis label position: 35px → 40px with -3px offset
+  - Ticker chart time labels with bounds checking
+  - Crosshair time label at top of chart
+  - UI constants properly configured
+  - Zoom behavior fixed (wheel = zoom only, drag = pan)
+
 ## [Session-2025-09-28-16:30] - Futures API Integration
 
 ### 🚀 Features Added
