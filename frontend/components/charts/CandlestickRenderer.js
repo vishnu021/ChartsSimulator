@@ -63,6 +63,7 @@ export const renderCandlesticks = (ctx, {
 
 export const renderHeikinAshi = (ctx, {
   data,
+  colors,
   padding,
   chartHeight,
   visibleStart,
@@ -71,7 +72,8 @@ export const renderHeikinAshi = (ctx, {
   maxPrice,
   priceRange,
   pricePadding,
-  outlineOnly = true
+  outlineOnly = true,
+  colorMode = 'yellow'
 }) => {
   if (!data.heikinAshi || data.heikinAshi.length === 0) return;
 
@@ -88,13 +90,24 @@ export const renderHeikinAshi = (ctx, {
       candleWidth / 2;
   };
 
-  const yellowColor = '#d97706'; // More subdued orange-yellow for Heikin Ashi
-
   visibleCandles.forEach((candle, i) => {
     const x = xScale(visibleStart + i);
 
+    // Determine color based on mode
+    let wickColor, bodyColor;
+    if (colorMode === 'traditional') {
+      // Use red/green colors like regular candles
+      const isGreen = candle.close >= candle.open;
+      wickColor = isGreen ? colors.candle.bullish : colors.candle.bearish;
+      bodyColor = isGreen ? colors.candle.bullish : colors.candle.bearish;
+    } else {
+      // Default yellow color
+      wickColor = '#d97706';
+      bodyColor = '#d97706';
+    }
+
     // Draw wick
-    ctx.strokeStyle = yellowColor;
+    ctx.strokeStyle = wickColor;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(x, yScale(candle.high));
@@ -106,9 +119,9 @@ export const renderHeikinAshi = (ctx, {
     const bodyBottom = yScale(Math.min(candle.open, candle.close));
     const bodyHeight = Math.max(1, bodyBottom - bodyTop);
 
-    if (outlineOnly) {
-      // Only stroke the rectangle, don't fill it
-      ctx.strokeStyle = yellowColor;
+    if (colorMode === 'yellow' && outlineOnly) {
+      // Yellow hollow mode - only stroke the rectangle
+      ctx.strokeStyle = bodyColor;
       ctx.lineWidth = 1.5;
       ctx.strokeRect(
         x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
@@ -117,8 +130,8 @@ export const renderHeikinAshi = (ctx, {
         bodyHeight
       );
     } else {
-      // Fill the rectangle
-      ctx.fillStyle = yellowColor;
+      // Traditional mode or filled mode - fill the rectangle
+      ctx.fillStyle = bodyColor;
       ctx.fillRect(
         x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
         bodyTop,

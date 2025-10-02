@@ -13,8 +13,8 @@ export default function ControlPanel({
   isRealTime = false,
   onModeToggle,
 }) {
-  // Use shared state for symbol, date, and theme
-  const { symbol, date, theme, updateSymbol, updateDate, toggleTheme } = useAppState();
+  // Use shared state for symbol, date, theme, and symbolType
+  const { symbol, date, theme, symbolType, updateSymbol, updateDate, updateSymbolType, toggleTheme } = useAppState();
 
   // Use shared theme unless prop is provided (for backward compatibility)
   const currentTheme = propTheme || theme;
@@ -30,7 +30,21 @@ export default function ControlPanel({
     try {
       // Normalize symbol to uppercase for API compatibility
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const params = { symbol: normalizedSymbol, date };
+
+      // Handle symbol type logic
+      if (symbolType === 'future') {
+        // For futures, we'll need to generate the appropriate futures symbol
+        // This will be handled in the API call logic
+      } else if (symbolType === 'option') {
+        // For options, we'll need to find the ITM option
+        // This will be handled in the API call logic
+      }
+
+      const params = {
+        symbol: normalizedSymbol,
+        date,
+        symbolType
+      };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -64,7 +78,7 @@ export default function ControlPanel({
     try {
       // Normalize symbol to uppercase for API compatibility
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const params = { symbol: normalizedSymbol, date: prevDate };
+      const params = { symbol: normalizedSymbol, date: prevDate, symbolType };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -81,7 +95,7 @@ export default function ControlPanel({
     try {
       // Normalize symbol to uppercase for API compatibility
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const params = { symbol: normalizedSymbol, date: nextDate };
+      const params = { symbol: normalizedSymbol, date: nextDate, symbolType };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -117,6 +131,32 @@ export default function ControlPanel({
             onBlur={e => (e.target.style.borderColor = colors.input.border)}
             required
           />
+        </div>
+
+        <div className="flex-1 min-w-[120px]">
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: colors.text.secondary }}
+          >
+            Type
+          </label>
+          <select
+            value={symbolType}
+            onChange={e => updateSymbolType(e.target.value)}
+            className="w-full px-2 py-1.5 rounded text-sm transition-colors"
+            style={{
+              backgroundColor: colors.input.background,
+              border: `1px solid ${colors.input.border}`,
+              color: colors.text.primary,
+              outline: 'none',
+            }}
+            onFocus={e => (e.target.style.borderColor = colors.input.focus)}
+            onBlur={e => (e.target.style.borderColor = colors.input.border)}
+          >
+            <option value="normal">📊 Normal</option>
+            <option value="future">📈 Future</option>
+            <option value="option">⚙️ Option (ITM)</option>
+          </select>
         </div>
 
         <div className="flex-1 min-w-[140px]">

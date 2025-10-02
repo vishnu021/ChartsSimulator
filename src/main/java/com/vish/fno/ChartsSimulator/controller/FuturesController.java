@@ -56,7 +56,16 @@ public class FuturesController {
     public ResponseEntity<List<String>> getAvailableContracts(
             @PathVariable String underlyingSymbol,
             @RequestParam(defaultValue = "3") int months) {
+        System.out.println("🔍 FuturesController /api/futures/contracts - Received Request:");
+        System.out.println("   Underlying Symbol: " + underlyingSymbol);
+        System.out.println("   Months: " + months);
+
         List<String> contracts = futuresAnalysisService.getAvailableFuturesContracts(underlyingSymbol, months);
+
+        System.out.println("🔍 FuturesController /api/futures/contracts - Response:");
+        System.out.println("   Available Contracts: " + contracts);
+        System.out.println("   Contracts count: " + (contracts != null ? contracts.size() : 0));
+
         return ResponseEntity.ok(contracts);
     }
 

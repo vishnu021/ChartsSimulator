@@ -69,6 +69,9 @@ export const API_CONSTANTS = {
     CHARTS: '/api/charts',
     OHLC: '/api/ohlc',
     TICKER: '/api/ticker',
+    FUTURES_HISTORICAL: '/api/v1/futuresHistoricalData',
+    FUTURES_DATA: '/api/v1/futuresData',
+    FUTURES_CONTRACTS: '/api/futures/contracts',
   },
 
   WEBSOCKET_DESTINATIONS: {

@@ -35,6 +35,7 @@ export const UnifiedChart = ({
   // Enhanced control props
   showCandlesticks = true,
   heikinAshiOnFront = false,
+  heikinAshiColorMode = 'yellow',
   customRenderProps = null
 }) => {
   const colors = themes[theme];
@@ -198,6 +199,7 @@ export const UnifiedChart = ({
     const actualShowCandlesticks = customRenderProps?.showCandlesticks ?? showCandlesticks;
     const actualShowHeikinAshi = customRenderProps?.showHeikinAshi ?? showHeikinAshi;
     const actualHeikinAshiOnFront = customRenderProps?.heikinAshiOnFront ?? heikinAshiOnFront;
+    const actualHeikinAshiColorMode = customRenderProps?.heikinAshiColorMode ?? heikinAshiColorMode;
 
     // Determine rendering order based on layering preference
     const renderBackgroundChart = () => {
@@ -232,7 +234,8 @@ export const UnifiedChart = ({
           maxPrice,
           priceRange,
           pricePadding,
-          outlineOnly: true
+          outlineOnly: true,
+          colorMode: actualHeikinAshiColorMode
         });
       }
     };
@@ -253,7 +256,8 @@ export const UnifiedChart = ({
           maxPrice,
           priceRange,
           pricePadding,
-          outlineOnly: true
+          outlineOnly: true,
+          colorMode: actualHeikinAshiColorMode
         });
       } else if (!actualHeikinAshiOnFront && actualShowCandlesticks && hasCandles) {
         // Regular candlesticks in foreground
@@ -312,7 +316,8 @@ export const UnifiedChart = ({
         maxPrice,
         priceRange,
         pricePadding,
-        outlineOnly: false
+        outlineOnly: false,
+        colorMode: actualHeikinAshiColorMode
       });
     }
 

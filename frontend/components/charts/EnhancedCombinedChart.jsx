@@ -12,6 +12,7 @@ export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
   const [showCandlesticks, setShowCandlesticks] = useState(true);
   const [showHeikinAshi, setShowHeikinAshi] = useState(true);
   const [heikinAshiOnFront, setHeikinAshiOnFront] = useState(false);
+  const [heikinAshiColorMode, setHeikinAshiColorMode] = useState('yellow'); // 'yellow' or 'traditional'
 
   const colors = themes[theme];
 
@@ -67,11 +68,26 @@ export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
                 className="w-2 h-2 rounded border"
                 style={{
                   backgroundColor: 'transparent',
-                  borderColor: '#d97706' // Updated color for Heikin Ashi
+                  borderColor: heikinAshiColorMode === 'yellow' ? '#d97706' : colors.candle.bullish
                 }}
               />
               Heikin Ashi{showHeikinAshi && '✓'}
             </button>
+
+            {/* Heikin-Ashi Color Mode Toggle */}
+            {showHeikinAshi && (
+              <button
+                onClick={() => setHeikinAshiColorMode(heikinAshiColorMode === 'yellow' ? 'traditional' : 'yellow')}
+                className="px-2 py-1 rounded transition-all text-xs font-medium flex items-center gap-1"
+                style={getToggleStyle(heikinAshiColorMode === 'traditional')}
+                title="Toggle Heikin-Ashi color mode: Yellow hollow vs Red/Green filled"
+              >
+                <span className="text-xs">
+                  {heikinAshiColorMode === 'yellow' ? '🟡' : '🔴🟢'}
+                </span>
+                {heikinAshiColorMode === 'yellow' ? 'Yellow' : 'R/G'}
+              </button>
+            )}
           </div>
 
           {/* Layer Control - Center */}
@@ -121,6 +137,7 @@ export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
             showCandlesticks={showCandlesticks}
             showHeikinAshi={showHeikinAshi}
             heikinAshiOnFront={heikinAshiOnFront}
+            heikinAshiColorMode={heikinAshiColorMode}
             showExtrema={false}
             showWyckoffPhases={true}
             showGrid={true}
@@ -129,7 +146,8 @@ export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
             customRenderProps={{
               showCandlesticks,
               showHeikinAshi,
-              heikinAshiOnFront
+              heikinAshiOnFront,
+              heikinAshiColorMode
             }}
             {...props}
           />

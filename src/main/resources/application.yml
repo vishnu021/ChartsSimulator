@@ -27,13 +27,15 @@ server:
 # Logging configuration
 logging:
   level:
-    com.vish.fno.ChartsSimulator: INFO
+    root: WARN
+    com.vish.fno.ChartsSimulator: debug
     org.springframework.web: ${LOG_LEVEL_WEB:WARN}
     org.springframework.messaging: ${LOG_LEVEL_MESSAGING:WARN}
     org.springframework.web.servlet.DispatcherServlet: ${LOG_LEVEL_DISPATCHER:WARN}
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:%5p})\
+                  {magenta}%clr(-){faint}%clr([%8.8t]){faint}%clr(%-50.50logger{50}){cyan} %clr(:){faint} %m%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSSZ} ${LOG_LEVEL_PATTERN:-%5p} ${PID:- } [%8.8t] %-30.30logger{30} : %m%n"
   file:
     name: logs/chart-simulator.log
   logback:
