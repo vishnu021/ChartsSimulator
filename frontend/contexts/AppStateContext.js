@@ -27,7 +27,6 @@ export const AppStateProvider = ({ children }) => {
     symbol: 'NIFTY 50',
     date: getDefaultDate(),
     theme: 'dark',
-    symbolType: 'normal', // 'normal', 'future', 'option'
   }));
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -42,7 +41,6 @@ export const AppStateProvider = ({ children }) => {
             symbol: parsed.symbol || 'NIFTY 50',
             date: parsed.date || getDefaultDate(),
             theme: parsed.theme || 'dark',
-            symbolType: parsed.symbolType || 'normal',
           });
         }
       } catch (error) {
@@ -83,16 +81,11 @@ export const AppStateProvider = ({ children }) => {
     setState(prev => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }));
   };
 
-  const updateSymbolType = symbolType => {
-    setState(prev => ({ ...prev, symbolType }));
-  };
-
   const resetToDefaults = () => {
     setState({
       symbol: 'NIFTY 50',
       date: getDefaultDate(),
       theme: 'dark',
-      symbolType: 'normal',
     });
   };
 
@@ -100,12 +93,10 @@ export const AppStateProvider = ({ children }) => {
     symbol: state.symbol,
     date: state.date,
     theme: state.theme,
-    symbolType: state.symbolType,
     updateSymbol,
     updateDate,
     updateBoth,
     updateTheme,
-    updateSymbolType,
     toggleTheme,
     resetToDefaults,
   };

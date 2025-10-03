@@ -1,7 +1,6 @@
 import { apiClient } from '../api/apiClient';
 import { WebSocketManager } from '../websocket/WebSocketManager';
 import { logger } from '@/utils/logger';
-import { futuresDataService } from './futuresDataService';
 
 class ChartDataService {
   constructor() {
@@ -10,15 +9,6 @@ class ChartDataService {
 
   // API methods
   async getCandleData(symbol, date) {
-    // Check if it's a futures symbol and use appropriate API
-    if (futuresDataService.isFuturesSymbol(symbol)) {
-      try {
-        return await futuresDataService.getEntireDayFuturesData(date, symbol);
-      } catch (error) {
-        logger.warn('Futures API failed, falling back to regular API:', error);
-        return apiClient.get('/api/charts', { symbol, date });
-      }
-    }
     return apiClient.get('/api/charts', { symbol, date });
   }
 

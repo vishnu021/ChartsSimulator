@@ -2,6 +2,87 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-03-H] - Refined Ticker Line Thickness
+
+### 🎨 UI Improvements
+- **Thinner Tick Line**: Reduced thickness of the white ticker line for a more refined appearance
+  - **Shadow line**: Reduced from 4-6px to 2-3px
+  - **Main line**: Reduced from 3-4px to 1.5-2px (depending on zoom level)
+  - **Data points**: Reduced from 3px/2px to 2px/1.5px radius
+  - **Latest point highlight**: Reduced from 6px/3px to 4px/2px radius
+  - File: `frontend/components/TickerChart.jsx:568-660`
+
+### ✅ Verification
+- **Playwright MCP**: ✅ PASS - Ticker line renders with refined thickness
+- **Screenshot**: `ticker-thinner-line.png`
+- **Visual Test**: ✅ Line is noticeably thinner and more elegant
+- **Functionality**: ✅ All zoom and pan features work correctly
+
+## [Session-2025-10-03-G] - Complete Cleanup of Unused Symbol Type Code
+
+### 🗑️ Code Cleanup
+- **Removed Entire Symbol Type Feature**: Comprehensive cleanup of unused Normal/Future/Option type system
+  - **Files Deleted**:
+    - `frontend/services/optionService.js` - Option symbol generation service
+    - `frontend/services/data/futuresDataService.js` - Futures data handling service
+  - **Files Modified**:
+    - `frontend/contexts/AppStateContext.js` - Removed symbolType state and updateSymbolType function
+    - `frontend/hooks/useChartData.js` - Removed processSymbolByType logic and symbolType handling
+    - `frontend/components/ControlPanel.jsx` - Removed Type selector UI
+    - `frontend/services/data/chartDataService.js` - Removed futures API fallback logic
+
+### 🔧 Technical Changes
+- **AppStateContext.js**:
+  - Removed `symbolType: 'normal'` from state
+  - Removed `updateSymbolType` function
+  - Cleaned up localStorage persistence to exclude symbolType
+
+- **useChartData.js**:
+  - Removed `processSymbolByType()` helper function
+  - Removed futures/option symbol processing logic
+  - Simplified `loadInstantData()` to use single API call
+  - Removed symbolType from data response
+
+- **chartDataService.js**:
+  - Removed futuresDataService import
+  - Simplified `getCandleData()` to always use regular API
+
+- **ControlPanel.jsx**:
+  - Removed Type selector dropdown
+  - Removed symbolType from all form submissions
+
+### ✅ Verification
+- **Playwright MCP**: ✅ PASS - All pages tested successfully
+- **Ticker Page**: ✅ Loads data correctly without symbolType
+- **Charts Page**: ✅ Combined charts render properly (76 candles loaded)
+- **Screenshots**:
+  - `ticker-without-type-selector.png` - Control panel without Type field
+  - `cleanup-verification-charts-page.png` - Charts page working correctly
+- **Console Errors**: ✅ ZERO frontend errors
+- **Code Reduction**: Removed ~200+ lines of unused code
+
+## [Session-2025-10-03-F] - Removed Type Selector from Ticker Page
+
+### 🗑️ Features Removed
+- **Type Selector Removed**: Removed "Type" dropdown (Normal/Future/Option) from ControlPanel
+  - **Reason**: Future and Option data not available in the application
+  - **Simplified UI**: Control panel now shows only essential controls
+  - Files: `frontend/components/ControlPanel.jsx`
+
+### 🔧 Code Changes
+- Removed `symbolType` from AppState context usage
+- Removed `updateSymbolType` function calls
+- Removed Type selector form field (lines 136-160)
+- Cleaned up `handleSubmit`, `handlePreviousDate`, `handleNextDate` to remove `symbolType` parameter
+- **Control Panel Now Shows**: Symbol, Date, Nav buttons, Mode toggle, Load Data, Theme toggle
+
+### ✅ Verification
+- **Playwright MCP**: ✅ PASS - Type selector successfully removed
+- **Screenshot**: `ticker-without-type-selector.png`
+- **UI Test**: ✅ Control panel displays cleanly without Type field
+- **Console Errors**: ✅ ZERO errors
+- **Functionality**: ✅ Load Data works correctly without symbolType
+
 ## [Session-2025-10-03-E] - Volume Bars Now Zoom with Chart
 
 ### 🚀 Features Added

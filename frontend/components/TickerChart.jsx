@@ -565,7 +565,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
 
         // Draw background/shadow line first for enhanced visibility
         ctx.strokeStyle = colors.ticker.shadow;
-        ctx.lineWidth = viewState.zoom > 2 ? 6 : 4;
+        ctx.lineWidth = viewState.zoom > 2 ? 3 : 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalAlpha = 0.3;
@@ -586,7 +586,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
         // Reset alpha and draw main line with enhanced visibility
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = colors.ticker.line;
-        ctx.lineWidth = viewState.zoom > 2 ? 4 : 3;
+        ctx.lineWidth = viewState.zoom > 2 ? 2 : 1.5;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -623,7 +623,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const y = yScale(point.price);
 
             ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.arc(x, y, 2, 0, 2 * Math.PI);
             ctx.fill();
           });
 
@@ -635,7 +635,7 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             const y = yScale(point.price);
 
             ctx.beginPath();
-            ctx.arc(x, y, 2, 0, 2 * Math.PI);
+            ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
             ctx.fill();
           });
         }
@@ -649,15 +649,15 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
           if (x >= padding.left && x <= width - padding.right) {
             // Pulsing outer ring with theme colors
             ctx.strokeStyle = colors.ticker.pointShadow;
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
             ctx.stroke();
 
             // Inner point with enhanced visibility
             ctx.fillStyle = colors.ticker.point;
             ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.arc(x, y, 2, 0, 2 * Math.PI);
             ctx.fill();
 
             // Current price label with enhanced visibility
