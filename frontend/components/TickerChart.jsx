@@ -856,18 +856,20 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     const volumeBarBottom = volumeBarY + volumeBarHeight;
 
     if (data && data.length > 0) {
-      // Use ALL data for volume bars
-      const visibleData = data;
+      // Filter to visible range based on zoom/pan (using index-based approach)
+      const totalDataPoints = data.length;
+      const visibleStartIndex = Math.floor(totalDataPoints * visibleStartRatio);
+      const visibleEndIndex = Math.ceil(totalDataPoints * visibleEndRatio);
+      const visibleData = data.slice(visibleStartIndex, visibleEndIndex);
 
       if (visibleData.length > 0) {
         // Calculate incremental volume (change from previous tick) for visible data
         const incrementalVolumes = visibleData.map((tick, index) => {
           const currentVol = tick.volumeTradedToday || tick.volume || 0;
           if (index === 0) {
-            // For first visible tick, compare with previous tick in full dataset
-            const fullIndex = data.indexOf(tick);
-            if (fullIndex > 0) {
-              const prevVol = data[fullIndex - 1].volumeTradedToday || data[fullIndex - 1].volume || 0;
+            // For first visible tick, compare with previous tick if available
+            if (visibleStartIndex > 0) {
+              const prevVol = data[visibleStartIndex - 1].volumeTradedToday || data[visibleStartIndex - 1].volume || 0;
               return Math.max(0, currentVol - prevVol);
             }
             return currentVol;

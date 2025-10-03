@@ -2,6 +2,51 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-03-E] - Volume Bars Now Zoom with Chart
+
+### 🚀 Features Added
+- **Volume Bar Zoom Integration**: Volume bars now zoom synchronously with chart
+  - **Visible Range Filtering**: Shows only volume bars for visible time range
+  - **Index-based Slicing**: Uses `visibleStartRatio` and `visibleEndRatio` to filter data
+  - **Dynamic Bar Width**: Bar width adjusts based on number of visible data points
+  - **Incremental Volume**: Correctly calculates volume deltas for zoomed range
+  - Files: `frontend/components/TickerChart.jsx:859-879`
+
+### 🔧 Technical Implementation
+```javascript
+// Filter to visible range based on zoom/pan
+const totalDataPoints = data.length;
+const visibleStartIndex = Math.floor(totalDataPoints * visibleStartRatio);
+const visibleEndIndex = Math.ceil(totalDataPoints * visibleEndRatio);
+const visibleData = data.slice(visibleStartIndex, visibleEndIndex);
+
+// Calculate incremental volume for visible range
+const incrementalVolumes = visibleData.map((tick, index) => {
+  const currentVol = tick.volumeTradedToday || tick.volume || 0;
+  if (index === 0 && visibleStartIndex > 0) {
+    // Compare with previous tick from full dataset
+    const prevVol = data[visibleStartIndex - 1].volumeTradedToday || data[visibleStartIndex - 1].volume || 0;
+    return Math.max(0, currentVol - prevVol);
+  }
+  const prevVol = visibleData[index - 1].volumeTradedToday || visibleData[index - 1].volume || 0;
+  return Math.max(0, currentVol - prevVol);
+});
+
+// Bar width adjusts to visible data
+const barWidth = chartWidth / visibleData.length;
+```
+
+### ✅ Verification
+- **Playwright MCP**: ✅ PASS - Volume bars zoom with chart
+- **Before Zoom (H:100%)**: Shows all 34,438 data points compressed
+- **After Zoom (H:110%)**: Shows only visible range with wider, more detailed bars
+- **Screenshot Comparison**:
+  - `ticker-volume-before-zoom.png` - Full day view
+  - `ticker-volume-after-zoom.png` - Zoomed view with synchronized volume bars
+- **Console Errors**: ✅ ZERO errors
+- **Volume Bar Count**: Dynamically adjusts based on visible range
+- **Zoom Test**: ✅ Successfully tested at multiple zoom levels
+
 ## [Session-2025-10-03-D] - Volume Bars Fixed with Proper Stacking and Visibility
 
 ### 🚀 Features Added
