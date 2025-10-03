@@ -347,12 +347,16 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       height - padding.top - padding.bottom + 20
     );
 
-    // Reserve extra space at bottom for labels and Wyckoff strip
-    const bottomReservedSpace = 140; // Increased to ensure timestamp labels are always visible with more margin
+    // Reserve extra space at bottom for labels, Wyckoff strip, AND volume bars
+    // Use percentage of height to ensure it fits on all screen sizes
+    const volumeBarHeight = Math.min(60, height * 0.08); // Max 60px or 8% of height
+    const timestampHeight = 25; // Space for timestamp labels
+    const bottomReservedSpace = 140 + volumeBarHeight + timestampHeight;
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom - bottomReservedSpace;
-    // Position labels well above the canvas bottom with more spacing
-    const xAxisLabelY = padding.top + chartHeight + 40;
+    // Position volume bars and timestamps in clear stacked layout
+    const volumeBarY = padding.top + chartHeight + 10;
+    const xAxisLabelY = volumeBarY + volumeBarHeight + 18; // Timestamps clearly below volume
 
     // Calculate price range from both candles and price data
     const allPrices = [
@@ -848,8 +852,91 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
       });
     }
 
-    // Draw Wyckoff phase bottom strip
-    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, padding, padding.top + chartHeight);
+    // Draw volume bars ABOVE timestamp labels
+    const volumeBarBottom = volumeBarY + volumeBarHeight;
+
+    if (data && data.length > 0) {
+      // Use ALL data for volume bars
+      const visibleData = data;
+
+      if (visibleData.length > 0) {
+        // Calculate incremental volume (change from previous tick) for visible data
+        const incrementalVolumes = visibleData.map((tick, index) => {
+          const currentVol = tick.volumeTradedToday || tick.volume || 0;
+          if (index === 0) {
+            // For first visible tick, compare with previous tick in full dataset
+            const fullIndex = data.indexOf(tick);
+            if (fullIndex > 0) {
+              const prevVol = data[fullIndex - 1].volumeTradedToday || data[fullIndex - 1].volume || 0;
+              return Math.max(0, currentVol - prevVol);
+            }
+            return currentVol;
+          }
+          const prevVol = visibleData[index - 1].volumeTradedToday || visibleData[index - 1].volume || 0;
+          return Math.max(0, currentVol - prevVol); // Incremental volume
+        });
+
+        const maxVolume = Math.max(...incrementalVolumes, 1);
+
+        // Draw volume bars background
+        ctx.fillStyle = colors.panel || colors.background;
+        ctx.fillRect(padding.left, volumeBarY, chartWidth, volumeBarHeight);
+
+        // Draw border
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(padding.left, volumeBarY, chartWidth, volumeBarHeight);
+
+        // Draw grid line at 50%
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, volumeBarY + volumeBarHeight / 2);
+        ctx.lineTo(width - padding.right, volumeBarY + volumeBarHeight / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw volume bars with linear spacing (evenly distributed across width)
+        const barWidth = chartWidth / visibleData.length;
+        incrementalVolumes.forEach((volume, index) => {
+          if (volume > 0) {
+            const barHeight = (volume / maxVolume) * (volumeBarHeight - 4); // Leave 2px margin top/bottom
+            const x = padding.left + (index * barWidth);
+            const y = volumeBarBottom - barHeight - 2; // 2px bottom margin
+
+            // Use ticker color scheme with better visibility
+            const volumeColor = colors.ticker?.line || '#3b82f6';
+            ctx.fillStyle = volumeColor + 'CC'; // 80% opacity for better visibility
+            ctx.fillRect(x, y, Math.max(0.5, barWidth - 0.5), barHeight);
+          }
+        });
+
+        // Draw volume labels
+        ctx.fillStyle = colors.text.secondary;
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const formatVolume = (vol) => {
+          if (vol >= 1000000) return `${(vol / 1000000).toFixed(1)}M`;
+          if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
+          return vol.toString();
+        };
+
+        ctx.fillText(formatVolume(maxVolume), padding.left - 5, volumeBarY + 5);
+        ctx.fillText('0', padding.left - 5, volumeBarBottom - 5);
+
+        // Draw "Volume" title
+        ctx.fillStyle = colors.text.primary;
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Volume', 5, volumeBarY + volumeBarHeight / 2);
+      }
+    }
+
+    // Draw Wyckoff phase bottom strip (below timestamps and volume)
+    drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, padding, padding.top + chartHeight + volumeBarHeight + 80);
 
     // Y-axis labels
     ctx.textAlign = 'right';
@@ -1167,7 +1254,6 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             style={{ cursor: isMobile ? 'default' : 'crosshair' }}
           />
         </div>
-
       </div>
     </div>
   );

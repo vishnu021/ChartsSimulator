@@ -85,17 +85,19 @@ export const UnifiedChart = ({
 
     // Define fixed heights for bottom elements
     const xAxisHeight = 25; // Height for X-axis labels
+    const volumeBarHeight = 22; // Height for volume bars
     const phaseStripHeight = 22; // Height for Wyckoff phase strip
     const elementSpacing = 3; // Small spacing between elements
 
-    // Calculate chart area (reserve space for bottom elements)
-    const bottomElementsHeight = xAxisHeight + phaseStripHeight + (elementSpacing * 2);
+    // Calculate chart area (reserve space for bottom elements including volume bars)
+    const bottomElementsHeight = xAxisHeight + volumeBarHeight + phaseStripHeight + (elementSpacing * 3);
     const chartHeight = height - padding.top - padding.bottom - bottomElementsHeight;
 
     // Define Y positions for bottom elements (immediately after chart)
     const chartBottom = padding.top + chartHeight;
     const xAxisY = chartBottom + elementSpacing;
-    const phaseStripY = xAxisY + xAxisHeight + elementSpacing;
+    const volumeY = xAxisY + xAxisHeight + elementSpacing; // Volume bars after x-axis
+    const phaseStripY = volumeY + volumeBarHeight + elementSpacing; // Phase strip after volume bars
     const chartWidth = width - padding.left - padding.right;
 
     // Clear canvas
@@ -341,6 +343,55 @@ export const UnifiedChart = ({
     }
 
     ctx.restore(); // Remove clipping
+
+    // Render volume bars between x-axis and Wyckoff phase strip
+    if (visibleCandles && visibleCandles.length > 0) {
+      const volumes = visibleCandles.map(c => c.volume || 0);
+      const maxVolume = Math.max(...volumes, 1);
+
+      visibleCandles.forEach((candle, i) => {
+        if (!candle.volume || candle.volume === 0) return;
+
+        const x = padding.left + (i * candleWidth) + clampedOffset;
+        const barHeight = (candle.volume / maxVolume) * volumeBarHeight;
+        const barY = volumeY + volumeBarHeight - barHeight;
+
+        const isGreen = candle.close >= candle.open;
+        const volumeColor = isGreen ? colors.candle.bullish : colors.candle.bearish;
+
+        ctx.fillStyle = volumeColor;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(
+          x - (candleWidth * 0.8) / 2,
+          barY,
+          candleWidth * 0.8,
+          barHeight
+        );
+        ctx.globalAlpha = 1.0;
+      });
+
+      // Volume scale labels
+      const formatVolume = (vol) => {
+        if (vol >= 1000000) return `${(vol / 1000000).toFixed(1)}M`;
+        if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
+        return vol.toString();
+      };
+
+      ctx.font = isMobile ? '9px monospace' : '10px monospace';
+      ctx.fillStyle = colors.text.secondary;
+      ctx.textAlign = 'right';
+      ctx.fillText(formatVolume(maxVolume), padding.left - 5, volumeY + 12);
+
+      // Baseline for volume bars
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, volumeY + volumeBarHeight);
+      ctx.lineTo(width - padding.right, volumeY + volumeBarHeight);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    }
 
     // Render axes outside clipping region
     if (showAxes) {

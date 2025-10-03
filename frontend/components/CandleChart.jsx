@@ -36,6 +36,85 @@ export default function CandleChart({
 
   const colors = themes[theme];
 
+  // Draw volume bars function
+  const drawVolumeBars = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles) => {
+    if (!visibleCandles || visibleCandles.length === 0) return;
+
+    const volumeHeight = isDashboard ? 30 : 50; // Height of volume section
+    const padding = canvasUtils.getPadding(isMobile, isDashboard);
+    const bottomSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    const availableHeight = height - bottomSpace;
+    const stripHeight = isDashboard ? 18 : 35;
+
+    // Position volume bars above the Wyckoff phase strip
+    const volumeY = availableHeight - stripHeight - (isDashboard ? 3 : 10) - volumeHeight - 5;
+
+    // Find max volume for scaling
+    const volumes = visibleCandles.map(c => c.volume || 0);
+    const maxVolume = Math.max(...volumes, 1); // Avoid division by zero
+
+    // Debug logging (disabled for production)
+    // console.log('📊 Volume Bar Debug:', {
+    //   volumeHeight,
+    //   volumeY,
+    //   maxVolume,
+    //   bottomSpace,
+    //   availableHeight,
+    //   stripHeight,
+    //   height,
+    //   sampleVolumes: volumes.slice(0, 5)
+    // });
+
+    // Draw volume bars
+    visibleCandles.forEach((candle, i) => {
+      if (!candle.volume || candle.volume === 0) return;
+
+      const x = padding.left + (i * candleWidth);
+      const barHeight = (candle.volume / maxVolume) * volumeHeight;
+      const barY = volumeY + volumeHeight - barHeight;
+
+      // Color based on candle direction
+      const isGreen = candle.close >= candle.open;
+      const volumeColor = isGreen ? colors.candle.bullish : colors.candle.bearish;
+
+      ctx.fillStyle = volumeColor;
+      ctx.globalAlpha = 0.6;
+      ctx.fillRect(
+        x - (candleWidth * CHART_CONSTANTS.CANDLE.BODY_WIDTH_RATIO) / 2,
+        barY,
+        candleWidth * CHART_CONSTANTS.CANDLE.BODY_WIDTH_RATIO,
+        barHeight
+      );
+      ctx.globalAlpha = 1.0;
+    });
+
+    // Draw volume scale labels
+    ctx.fillStyle = colors.text.secondary;
+    const labelFontSize = isDashboard ? (isMobile ? '8px' : '9px') : isMobile ? '9px' : '10px';
+    ctx.font = `${labelFontSize} -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    // Format volume for display
+    const formatVolume = (vol) => {
+      if (vol >= 1000000) return `${(vol / 1000000).toFixed(1)}M`;
+      if (vol >= 1000) return `${(vol / 1000).toFixed(1)}K`;
+      return vol.toString();
+    };
+
+    // Draw max volume label
+    const labelX = isDashboard ? Math.max(40, padding.left - 3) : padding.left - 10;
+    ctx.fillText(formatVolume(maxVolume), labelX, volumeY + 4);
+
+    // Draw volume baseline
+    ctx.strokeStyle = colors.grid;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, volumeY + volumeHeight);
+    ctx.lineTo(width - padding.right, volumeY + volumeHeight);
+    ctx.stroke();
+  }, [data, colors, isMobile, isDashboard]);
+
   // Draw Wyckoff phase strip function
   const drawWyckoffPhaseStrip = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth) => {
     // Wyckoff phase colors - distinct and vibrant
@@ -484,6 +563,9 @@ export default function CandleChart({
       }
     }
 
+    // Draw volume bars (above Wyckoff phase strip)
+    drawVolumeBars(ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles);
+
     // Draw Wyckoff phase bottom strip
     drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth);
 
@@ -514,7 +596,7 @@ export default function CandleChart({
     if (hoveredPhase && showCrosshair && !isMobile) {
       drawPhaseTooltip(ctx, hoveredPhase, mousePos.x, mousePos.y);
     }
-  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging, drawWyckoffPhaseStrip, hoveredPhase, drawPhaseTooltip]);
+  }, [data, viewState, colors, isMobile, isDashboard, showCrosshair, mousePos, isDragging, drawVolumeBars, drawWyckoffPhaseStrip, hoveredPhase, drawPhaseTooltip]);
 
   useEffect(() => {
     drawChart();

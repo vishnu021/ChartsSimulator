@@ -74,59 +74,104 @@ export const ChartPanel = ({
       defaultTitle: 'Extrema Analysis',
       defaultEmptyIcon: '📈',
       defaultEmptyTitle: 'No extrema analysis loaded',
-      statsGenerator: (data) => [
-        {
-          label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
-          color: 'text-green-400',
-        },
-        {
-          label: 'Maxima',
-          value: data.maxima?.length || 0,
-          color: 'text-yellow-400',
-        },
-        {
-          label: 'Minima',
-          value: data.minima?.length || 0,
-          color: 'text-pink-400',
-        },
-      ]
+      statsGenerator: (data) => {
+        const candles = data.candles || data.candlesticks || [];
+        const totalVolume = candles.reduce((sum, c) => sum + (c.volume || 0), 0);
+        const formatVolume = (vol) => {
+          if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
+          if (vol >= 1000) return `${(vol / 1000).toFixed(2)}K`;
+          return vol.toString();
+        };
+
+        return [
+          {
+            label: isRealTime ? '⚡ Real-time' : '📊 Instant',
+            value: `${candles.length} candles`,
+            color: 'text-green-400',
+          },
+          {
+            label: 'Maxima',
+            value: data.maxima?.length || 0,
+            color: 'text-yellow-400',
+          },
+          {
+            label: 'Minima',
+            value: data.minima?.length || 0,
+            color: 'text-pink-400',
+          },
+          {
+            label: 'Total Volume',
+            value: formatVolume(totalVolume),
+            color: 'text-blue-400',
+          },
+        ];
+      }
     },
     candlestick: {
       component: CandlestickChart,
       defaultTitle: 'Candlestick Chart',
       defaultEmptyIcon: '📊',
       defaultEmptyTitle: 'No chart data loaded',
-      statsGenerator: (data) => [
-        {
-          label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
-          color: 'text-green-400',
-        },
-        {
-          label: 'Current Phase',
-          value: data.currentPhase || 'Unknown',
-          color: 'text-blue-400',
-        },
-      ]
+      statsGenerator: (data) => {
+        const candles = data.candles || data.candlesticks || [];
+        const totalVolume = candles.reduce((sum, c) => sum + (c.volume || 0), 0);
+        const formatVolume = (vol) => {
+          if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
+          if (vol >= 1000) return `${(vol / 1000).toFixed(2)}K`;
+          return vol.toString();
+        };
+
+        return [
+          {
+            label: isRealTime ? '⚡ Real-time' : '📊 Instant',
+            value: `${candles.length} candles`,
+            color: 'text-green-400',
+          },
+          {
+            label: 'Current Phase',
+            value: data.currentPhase || 'Unknown',
+            color: 'text-blue-400',
+          },
+          {
+            label: 'Total Volume',
+            value: formatVolume(totalVolume),
+            color: 'text-purple-400',
+          },
+        ];
+      }
     },
     combined: {
       component: CombinedChart,
       defaultTitle: 'Combined Chart',
       defaultEmptyIcon: '📈',
       defaultEmptyTitle: 'No combined chart data loaded',
-      statsGenerator: (data) => [
-        {
-          label: isRealTime ? '⚡ Real-time' : '📊 Instant',
-          value: `${(data.candles?.length || data.candlesticks?.length || 0)} candles`,
-          color: 'text-green-400',
-        },
-        {
-          label: 'Heikin Ashi',
-          value: data.heikinAshi?.length || 0,
-          color: 'text-yellow-400',
-        },
-      ]
+      statsGenerator: (data) => {
+        const candles = data.candles || data.candlesticks || [];
+        const totalVolume = candles.reduce((sum, c) => sum + (c.volume || 0), 0);
+        const formatVolume = (vol) => {
+          if (vol >= 1000000) return `${(vol / 1000000).toFixed(2)}M`;
+          if (vol >= 1000) return `${(vol / 1000).toFixed(2)}K`;
+          return vol.toString();
+        };
+
+        return [
+          {
+            label: isRealTime ? '⚡ Real-time' : '📊 Instant',
+            value: `${candles.length} candles`,
+            color: 'text-green-400',
+          },
+          {
+            label: 'Heikin Ashi',
+            value: data.heikinAshi?.length || 0,
+            color: 'text-yellow-400',
+          },
+          {
+            label: 'Total Volume',
+            value: formatVolume(totalVolume),
+            color: 'text-purple-400',
+          },
+        ];
+      }
     },
     dashboard: {
       component: DashboardChart,
