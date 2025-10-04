@@ -2,6 +2,121 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-04-V] - Crosshair with Price & Time Labels for Dashboard
+
+### 🎨 UI/UX Improvements
+- **Dashboard Crosshair Enhancement**: Added price and time labels to dashboard chart crosshairs
+  - **Price Label**: Displays on right side showing current price at crosshair position (e.g., "25176.61")
+  - **Time Label**: Displays at top showing time-only in HH:mm:ss format (e.g., "13:16:00")
+  - **Crosshair Lines**: Dashed vertical and horizontal lines following mouse
+  - **Responsive Sizing**: Smaller labels for dashboard (65px width, 11px font) vs regular pages (75px, 12px)
+  - **Implementation**: Added dedicated crosshair mouse event handlers that work with externalViewState
+  - Files: `frontend/components/CandleChart.jsx` (lines 572-650, 757-788)
+
+### 🐛 Bugs Fixed
+1. **Dashboard Crosshair Not Working**: Fixed crosshair not appearing on dashboard charts
+   - **Root Cause**: Mouse event handlers were disabled when `externalViewState` was present
+   - **Solution**: Added separate useEffect for crosshair-only events that works even with externalViewState
+   - **Impact**: Dashboard charts now show interactive crosshair with price/time labels like other pages
+
+2. **Labels Drawn Outside Chart Bounds**: Fixed price and time labels being cut off
+   - **Root Cause**: Labels positioned outside visible canvas area
+   - **Solution**:
+     - Price label: Positioned inside right edge with clamping to prevent vertical overflow
+     - Time label: Positioned just inside top edge with horizontal clamping
+   - **Impact**: All labels now fully visible within chart boundaries
+
+3. **Time Label Showing Full Timestamp**: Fixed time label displaying date/timezone
+   - **Root Cause**: Displaying raw timestamp value with date and timezone info
+   - **Solution**: Extract only HH:mm:ss portion from various timestamp formats (ISO-8601, space-separated)
+   - **Impact**: Clean time-only display (e.g., "13:16:00" instead of "2025-09-23T13:16:00+0530")
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - **Dashboard**: 4 charts loaded successfully with NIFTY 50 data
+  - **Crosshair**: ✅ Visible with dashed lines on all charts
+  - **Price Label**: ✅ Fully visible inside right edge (e.g., "25176.61")
+  - **Time Label**: ✅ Fully visible at top in HH:mm:ss format (e.g., "13:16:00")
+  - **Synchronized Charts**: ✅ All 4 charts maintain sync while showing individual crosshairs
+  - **Label Clamping**: ✅ Labels stay within bounds at all mouse positions
+  - Screenshots: `dashboard-time-only-label.png`, `dashboard-fixed-labels.png`
+- **Frontend Lint**: ✅ PASS (0 errors, 0 warnings)
+
+### 📝 Technical Details
+- Crosshair functionality now works in both standalone and dashboard contexts
+- Separate event handlers for zoom/pan vs crosshair display
+- Dashboard maintains synchronized zoom/pan while showing individual crosshairs
+- Time parsing handles multiple formats: ISO-8601 (T separator), space-separated, with/without timezone
+- Labels use monospace font for consistent digit alignment
+- Math.max/min clamping ensures labels never overflow chart boundaries
+- Smaller font and boxes for dashboard to fit compact layout
+
+## [Session-2025-10-04-IV] - Responsive Bottom Padding for All Screen Sizes
+
+### 🎨 UI/UX Improvements
+- **Responsive Bottom Padding**: Converted fixed pixel padding to percentage-based responsive padding
+  - **Desktop/Tablet**: 18% of viewport height (minimum 180px)
+  - **Mobile**: Fixed 150px for optimal mobile experience
+  - **Formula**: `Math.max(180, height * 0.18)` ensures consistent spacing across devices
+  - **Scaling Examples**:
+    - 1080p (1920x1080): 194px bottom space (was 150px)
+    - 1440p (2560x1440): 259px bottom space (was 150px)
+    - 4K (3840x2160): 389px bottom space (was 150px)
+  - File: `frontend/components/CustomCandleChart.jsx` (lines 42-44, 134-136, 254-256, 422-424)
+
+### 🐛 Bugs Fixed
+- **Volume Bars Touching Bottom Edge**: Fixed content being too close to screen bottom on large/fullscreen displays
+  - **Root Cause**: Fixed 150px padding was proportionally smaller on larger screens
+  - **Solution**: Implemented responsive percentage-based padding that scales with screen size
+  - **Impact**: Volume bars and time labels now have consistent comfortable spacing on all devices
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - **1080p (1920x1080)**: ✅ Volume bars visible with 194px bottom space
+  - **1440p (2560x1440)**: ✅ Excellent spacing with 259px bottom space
+  - **iPad (1024x768)**: ✅ Proper scaling with 180px minimum
+  - **Test Data**: BANKNIFTY25SEPFUT on 2025-09-23
+  - Screenshots: `responsive-padding-test-1920x1080.png`, `responsive-padding-test-2560x1440.png`
+- **Frontend Lint**: ✅ PASS (0 errors, 0 warnings)
+- **No Scrollbars**: ✅ Confirmed across all tested screen sizes
+
+### 📝 Technical Details
+- Percentage-based calculations ensure consistent user experience across devices
+- Minimum 180px prevents excessive padding on very small screens
+- Mobile uses fixed 150px for predictable behavior on smartphones
+- All four locations updated for consistency: main draw loop, volume bars, Wyckoff strip, mouse detection
+
+## [Session-2025-10-04-III] - Custom Candles Bottom Padding Fix
+
+### 🐛 Bugs Fixed
+- **Volume Bars & Time Labels Not Visible on Large Screens**: Fixed bottom content being cut off on large/fullscreen displays
+  - **Root Cause**: `bottomReservedSpace` was set to 150px in main draw loop but volume bars function still used old 120px value
+  - **Fix**: Updated `bottomSpace` from 120 to 150 in three locations:
+    - `drawVolumeBars` function (line 41)
+    - `drawWyckoffPhaseStrip` function (line 130)
+    - `getPhaseUnderMouse` function (line 247)
+  - **Result**: Volume bars and time axis labels now fully visible on all screen sizes including fullscreen
+  - File: `frontend/components/CustomCandleChart.jsx`
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - **Test Data**: BANKNIFTY25SEPFUT on 2025-09-23 (27,826 tickers → 376 candles)
+  - **Screen Size**: 1920x1080 (large screen simulation)
+  - **Fullscreen Mode**: Tested and verified
+  - **Volume Bars**: ✅ Fully visible at bottom
+  - **Time Labels**: ✅ All timestamps visible (09:16:00, 09:53:00, 10:30:00, etc.)
+  - **No Scrollbars**: ✅ Confirmed no vertical or horizontal scrollbars
+  - **Canvas Overflow**: Properly clipped with `overflow: hidden`
+  - Screenshots: `banknifty-1920x1080.png`, `banknifty-fullscreen.png`
+- **Frontend Lint**: ✅ PASS (0 errors, 0 warnings)
+- **Console Errors**: ✅ PASS (0 errors)
+
+### 📝 Technical Details
+- Canvas bottom extends 88px beyond viewport but content is properly contained
+- Container uses `overflow: hidden` to clip excess canvas area
+- Important content (volume bars, time labels) positioned within visible 150px bottom space
+- No scrollbars appear due to proper overflow handling
+
 ## [Session-2025-10-04-II] - Custom Candles UI Enhancements
 
 ### 🎨 UI/UX Improvements

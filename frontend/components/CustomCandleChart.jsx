@@ -38,7 +38,10 @@ export default function CustomCandleChart({
 
     const volumeHeight = isDashboard ? 30 : 50; // Height of volume section
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
-    const bottomSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    // Responsive bottom space: 18% of height for desktop/tablet, fixed pixels for mobile/dashboard
+    const bottomSpace = isDashboard
+      ? (isMobile ? 20 : 25)
+      : isMobile ? 150 : Math.max(180, height * 0.18);
     const availableHeight = height - bottomSpace;
     const stripHeight = isDashboard ? 18 : 35;
 
@@ -127,7 +130,10 @@ export default function CustomCandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
-    const bottomSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    // Responsive bottom space: 18% of height for desktop/tablet, fixed pixels for mobile/dashboard
+    const bottomSpace = isDashboard
+      ? (isMobile ? 20 : 25)
+      : isMobile ? 150 : Math.max(180, height * 0.18);
     const availableHeight = height - bottomSpace; // Account for bottom reserved space
     const stripY = availableHeight - stripHeight - (isDashboard ? 3 : 10); // Position closer to bottom for dashboard
 
@@ -244,7 +250,10 @@ export default function CustomCandleChart({
 
     const rect = canvas.getBoundingClientRect();
     const stripHeight = isDashboard ? 20 : 35;
-    const bottomSpace = isDashboard ? (isMobile ? 25 : 30) : 120;
+    // Responsive bottom space: 18% of height for desktop/tablet, fixed pixels for mobile/dashboard
+    const bottomSpace = isDashboard
+      ? (isMobile ? 25 : 30)
+      : isMobile ? 150 : Math.max(180, rect.height * 0.18);
     const availableHeight = rect.height - bottomSpace; // Account for bottom reserved space
     const stripY = availableHeight - stripHeight - (isDashboard ? 5 : 10); // Match the drawing position
 
@@ -408,7 +417,11 @@ export default function CustomCandleChart({
     // Calculate available space ensuring bottom elements are visible
     // Use responsive spacing based on context - minimal for dashboard to maximize chart space
     const topPadding = isDashboard ? (isMobile ? 8 : 12) : padding.top;
-    const bottomReservedSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    // Responsive bottom space: 18% of height for desktop/tablet (min 180px), fixed pixels for mobile/dashboard
+    // This ensures proper spacing on all screen sizes (iPad, laptop, 4K monitors, etc.)
+    const bottomReservedSpace = isDashboard
+      ? (isMobile ? 20 : 25)
+      : isMobile ? 150 : Math.max(180, height * 0.18);
     const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
     // Ensure chart doesn't extend beyond available space with balanced padding
     const availableHeight = height - bottomReservedSpace - topPadding;

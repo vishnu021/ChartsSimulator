@@ -42,4 +42,9 @@ public class SpaController {
     public String dashboard() {
         return "forward:/dashboard/index.html";
     }
+
+    @GetMapping(value = {"/custom-candles", "/custom-candles/"})
+    public String customerCandles() {
+        return "forward:/custom-candles/index.html";
+    }
 }
