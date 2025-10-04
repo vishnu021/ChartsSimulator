@@ -42,7 +42,7 @@ export default function CandleChart({
 
     const volumeHeight = isDashboard ? 30 : 50; // Height of volume section
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
-    const bottomSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    const bottomSpace = isDashboard ? (isMobile ? 70 : 100) : 120;
     const availableHeight = height - bottomSpace;
     const stripHeight = isDashboard ? 18 : 35;
 
@@ -410,15 +410,15 @@ export default function CandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Calculate available space ensuring bottom elements are visible
-    // Use responsive spacing based on context - minimal for dashboard to maximize chart space
+    // Use responsive spacing based on context - adequate for dashboard to prevent overlap
     const topPadding = isDashboard ? (isMobile ? 8 : 12) : padding.top;
-    const bottomReservedSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    const bottomReservedSpace = isDashboard ? (isMobile ? 70 : 100) : 120;
     const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
     // Ensure chart doesn't extend beyond available space with balanced padding
     const availableHeight = height - bottomReservedSpace - topPadding;
     const chartHeight = Math.max(100, availableHeight);
     // Add extra spacing to prevent candles from touching x-axis labels
-    const candleClipHeight = isDashboard ? chartHeight - 15 : chartHeight;
+    const candleClipHeight = isDashboard ? chartHeight - 35 : chartHeight - 25;
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);

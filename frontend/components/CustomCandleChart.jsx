@@ -415,7 +415,7 @@ export default function CustomCandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Calculate available space ensuring bottom elements are visible
-    // Use responsive spacing based on context - minimal for dashboard to maximize chart space
+    // Use responsive spacing based on context - adequate spacing to prevent overlap
     const topPadding = isDashboard ? (isMobile ? 8 : 12) : padding.top;
     // Responsive bottom space: 18% of height for desktop/tablet (min 180px), fixed pixels for mobile/dashboard
     // This ensures proper spacing on all screen sizes (iPad, laptop, 4K monitors, etc.)
@@ -427,7 +427,7 @@ export default function CustomCandleChart({
     const availableHeight = height - bottomReservedSpace - topPadding;
     const chartHeight = Math.max(100, availableHeight);
     // Add extra spacing to prevent candles from touching x-axis labels
-    const candleClipHeight = isDashboard ? chartHeight - 15 : chartHeight;
+    const candleClipHeight = isDashboard ? chartHeight - 35 : chartHeight - 25;
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);

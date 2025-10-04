@@ -2,6 +2,34 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-04-W] - Fixed Candle Spacing from X-Axis Timestamps
+
+### 🐛 Bugs Fixed
+- **Candles Too Close to X-Axis**: Fixed candles being drawn too close to timestamp labels at bottom
+  - **Root Cause**: `bottomReservedSpace` had insufficient space (25px for dashboard) to accommodate timestamp labels, volume bars, and Wyckoff phase strip
+  - **Solution**:
+    - Dashboard: Increased `bottomReservedSpace` from 25px to 100px (desktop) and 20px to 70px (mobile)
+    - Also increased `candleClipHeight` spacing from 15px to 35px (dashboard) and 25px (custom candles)
+  - **Impact**: Proper visual separation between candles and timestamp labels on both pages
+  - Files: `frontend/components/CandleChart.jsx` (lines 415, 421, 45)
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - **Dashboard Page**: ✅ All 4 charts show proper spacing between candles and timestamps
+  - **Custom Candles Page**: ✅ Proper spacing between candles and timestamp labels
+  - **Visual Inspection**: ✅ No overlap or touching between chart elements and labels
+  - Screenshots: `dashboard-final-spacing.png`, `custom-candles-improved-spacing.png`
+- **Frontend Lint**: ✅ PASS (0 errors, 0 warnings)
+
+### 📝 Technical Details
+- Dashboard `bottomReservedSpace`: 25px → 100px (desktop), 20px → 70px (mobile)
+- Clipping region spacing: 15px → 35px (dashboard), 0px → 25px (custom candles)
+- Volume bars function also updated to match new `bottomSpace` values
+- Custom Candles page already had adequate responsive bottom space (18% of height, min 180px)
+- Change affects visual rendering only, no impact on data or interactions
+
+---
+
 ## [Session-2025-10-04-V] - Crosshair with Price & Time Labels for Dashboard
 
 ### 🎨 UI/UX Improvements
