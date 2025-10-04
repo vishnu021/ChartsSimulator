@@ -4,6 +4,7 @@ import { logger } from '@/utils/logger';
 
 export const useTickerData = () => {
   const [tickerData, setTickerData] = useState([]);
+  const [significantMoves, setSignificantMoves] = useState([]);
   const [isRealTime, setIsRealTime] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -95,18 +96,21 @@ export const useTickerData = () => {
     setIsLoading(true);
     setError(null);
     setTickerData([]);
+    setSignificantMoves([]);
 
     try {
       logger.info(`Loading instant ticker data for ${params.symbol} on ${params.date}`);
-      const data = await tickerService.getTickerData(params.symbol, params.date);
-      logger.debug(`Received ${data.length} ticker records`);
+      const response = await tickerService.getTickerData(params.symbol, params.date);
+      logger.debug(`Received ${response.tickers?.length || 0} ticker records and ${response.significantMoves?.length || 0} significant moves`);
 
-      const validData = data.filter(
+      const validData = (response.tickers || []).filter(
         tick => tick && tick.time && typeof tick.price === 'number' && !isNaN(tick.price)
       );
 
       logger.debug(`Filtered to ${validData.length} valid ticks`);
       setTickerData(validData);
+      setSignificantMoves(response.significantMoves || []);
+      logger.info(`Set ${response.significantMoves?.length || 0} significant moves`);
     } catch (error) {
       logger.error('Error loading ticker:', error);
       setError(`Failed to load ticker data: ${error.message}`);
@@ -149,6 +153,7 @@ export const useTickerData = () => {
 
   return {
     tickerData,
+    significantMoves,
     stats,
     currentSymbol,
     isRealTime,

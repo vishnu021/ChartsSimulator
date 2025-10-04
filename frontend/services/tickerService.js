@@ -48,12 +48,12 @@ const setupTickerGlobalEventListeners = () => {
 
 export const tickerService = {
   // Get ticker data via API
-  async getTickerData(symbol, date) {
+  async getTickerData(symbol, date, threshold = 0.5) {
     try {
-      logger.info(`Fetching ticker data for ${symbol} on ${date}`);
+      logger.info(`Fetching ticker data for ${symbol} on ${date} with threshold ${threshold}%`);
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
-      const params = new URLSearchParams({ symbol, date });
+      const params = new URLSearchParams({ symbol, date, threshold: threshold.toString() });
       const url = `${apiUrl}/api/ticker?${params}`;
       logger.debug(`API URL: ${url}`);
 
@@ -73,7 +73,7 @@ export const tickerService = {
       }
 
       const data = await response.json();
-      logger.debug(`Received ${data.length} ticker records`);
+      logger.debug(`Received ${data.tickers?.length || 0} ticker records and ${data.significantMoves?.length || 0} significant moves`);
       return data;
     } catch (error) {
       logger.error('Error fetching ticker data:', error);

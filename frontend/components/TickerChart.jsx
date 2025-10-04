@@ -17,7 +17,7 @@ const formatTime = (date, format) => {
   return `${hours}:${minutes}`;
 };
 
-export default function TickerChart({ data, theme = 'dark', symbol, stats, isRealTime, wyckoffPhases, currentPhase }) {
+export default function TickerChart({ data, significantMoves = [], theme = 'dark', symbol, stats, isRealTime, wyckoffPhases, currentPhase }) {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -679,104 +679,69 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
     }
 
     // Draw significant trend indicators (arrows for major moves) when zoomed in
-    if (processedData.priceData.length > 5 && viewState.zoom > 1.5) {
-      const visiblePricePoints = processedData.priceData.filter(point => {
-        const x = xScaleTime(point.timestamp);
+    // Uses backend-provided significant moves instead of client-side calculation
+    if (significantMoves && significantMoves.length > 0 && viewState.zoom > 1.5) {
+      // Filter significant moves to only visible ones
+      const visibleMoves = significantMoves.filter(move => {
+        // Use emissionTime for positioning (when signal was actually confirmed)
+        const emissionTimestamp = new Date(move.emissionTime || move.timestamp);
+        const x = xScaleTime(emissionTimestamp);
         return x >= padding.left - 100 && x <= width - padding.right + 100;
       });
 
-      if (visiblePricePoints.length > 5) {
-        // Find significant price movements
-        const significantMoves = [];
-        const lookbackWindow = Math.max(3, Math.floor(visiblePricePoints.length * 0.02));
+      // Draw arrows for significant moves
+      visibleMoves.forEach(move => {
+        // Use emissionTime for X position (when signal was confirmed and emitted)
+        const emissionTimestamp = new Date(move.emissionTime || move.timestamp);
+        const x = xScaleTime(emissionTimestamp);
+        const y = yScale(move.price);
 
-        for (let i = lookbackWindow; i < visiblePricePoints.length - lookbackWindow; i++) {
-          const currentPrice = visiblePricePoints[i].price;
-          const prevAvg =
-            visiblePricePoints.slice(i - lookbackWindow, i).reduce((sum, p) => sum + p.price, 0) /
-            lookbackWindow;
-          const nextAvg =
-            visiblePricePoints
-              .slice(i + 1, i + lookbackWindow + 1)
-              .reduce((sum, p) => sum + p.price, 0) / lookbackWindow;
+        if (x >= padding.left && x <= width - padding.right) {
+          const arrowSize = chartSettings.trendArrowSize;
+          const color = move.type === 'dip' ? colors.candle.bullish : colors.candle.bearish;
+          const alpha = Math.min(0.8, 0.4 + move.magnitude / 5);
 
-          const changeFromPrev = ((currentPrice - prevAvg) / prevAvg) * 100;
-          const changeToNext = ((nextAvg - currentPrice) / currentPrice) * 100;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = color;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
 
-          // Detect significant dips or peaks
-          if (
-            Math.abs(changeFromPrev) > chartSettings.significantMoveThreshold ||
-            Math.abs(changeToNext) > chartSettings.significantMoveThreshold
-          ) {
-            const isDip =
-              changeFromPrev < -chartSettings.significantMoveThreshold &&
-              changeToNext > chartSettings.significantMoveThreshold;
-            const isPeak =
-              changeFromPrev > chartSettings.significantMoveThreshold &&
-              changeToNext < -chartSettings.significantMoveThreshold;
+          // Draw arrow pointing to the significant move
+          ctx.beginPath();
+          if (move.type === 'dip') {
+            // Downward arrow for dips
+            const arrowY = y + arrowSize + 5;
+            ctx.moveTo(x, arrowY);
+            ctx.lineTo(x - arrowSize / 2, arrowY + arrowSize);
+            ctx.lineTo(x + arrowSize / 2, arrowY + arrowSize);
+            ctx.closePath();
+            ctx.fill();
 
-            if (isDip || isPeak) {
-              significantMoves.push({
-                point: visiblePricePoints[i],
-                type: isDip ? 'dip' : 'peak',
-                magnitude: Math.max(Math.abs(changeFromPrev), Math.abs(changeToNext)),
-              });
-            }
+            // Add exclamation mark
+            ctx.fillStyle = colors.text.primary;
+            ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('!', x, arrowY + arrowSize + 12);
+          } else {
+            // Upward arrow for peaks
+            const arrowY = y - arrowSize - 5;
+            ctx.moveTo(x, arrowY);
+            ctx.lineTo(x - arrowSize / 2, arrowY - arrowSize);
+            ctx.lineTo(x + arrowSize / 2, arrowY - arrowSize);
+            ctx.closePath();
+            ctx.fill();
+
+            // Add exclamation mark
+            ctx.fillStyle = colors.text.primary;
+            ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('!', x, arrowY - arrowSize - 8);
           }
+
+          ctx.restore();
         }
-
-        // Draw arrows for significant moves
-        significantMoves.forEach(move => {
-          const x = xScaleTime(move.point.timestamp);
-          const y = yScale(move.point.price);
-
-          if (x >= padding.left && x <= width - padding.right) {
-            const arrowSize = chartSettings.trendArrowSize;
-            const color = move.type === 'dip' ? colors.candle.bullish : colors.candle.bearish;
-            const alpha = Math.min(0.8, 0.4 + move.magnitude / 5);
-
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = color;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-
-            // Draw arrow pointing to the significant move
-            ctx.beginPath();
-            if (move.type === 'dip') {
-              // Downward arrow for dips
-              const arrowY = y + arrowSize + 5;
-              ctx.moveTo(x, arrowY);
-              ctx.lineTo(x - arrowSize / 2, arrowY + arrowSize);
-              ctx.lineTo(x + arrowSize / 2, arrowY + arrowSize);
-              ctx.closePath();
-              ctx.fill();
-
-              // Add exclamation mark
-              ctx.fillStyle = colors.text.primary;
-              ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
-              ctx.textAlign = 'center';
-              ctx.fillText('!', x, arrowY + arrowSize + 12);
-            } else {
-              // Upward arrow for peaks
-              const arrowY = y - arrowSize - 5;
-              ctx.moveTo(x, arrowY);
-              ctx.lineTo(x - arrowSize / 2, arrowY - arrowSize);
-              ctx.lineTo(x + arrowSize / 2, arrowY - arrowSize);
-              ctx.closePath();
-              ctx.fill();
-
-              // Add exclamation mark
-              ctx.fillStyle = colors.text.primary;
-              ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, sans-serif';
-              ctx.textAlign = 'center';
-              ctx.fillText('!', x, arrowY - arrowSize - 8);
-            }
-
-            ctx.restore();
-          }
-        });
-      }
+      });
     }
 
     ctx.restore(); // Remove clipping
@@ -1244,11 +1209,56 @@ export default function TickerChart({ data, theme = 'dark', symbol, stats, isRea
             </button>
           </div>
         </div>
+
+        {/* Signal Statistics Panel - Only show if signals exist */}
+        {significantMoves && significantMoves.length > 0 && (
+          <div
+            className="flex items-center justify-between px-2 py-0.5 text-xs border-t"
+            style={{
+              borderColor: colors.grid,
+              backgroundColor: colors.background,
+            }}
+          >
+            {/* Left - Signal Statistics */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span style={{ color: colors.text.secondary }} className="font-semibold">
+                📊 Signals (MovingAverage):
+              </span>
+              <span style={{ color: colors.text.primary }} className="font-semibold">
+                {significantMoves.length} total
+              </span>
+              <span style={{ color: colors.text.secondary }}>|</span>
+              <span className="text-green-400">
+                ↑{significantMoves.filter(m => m.type === 'dip').length} buy
+              </span>
+              <span className="text-red-400">
+                ↓{significantMoves.filter(m => m.type === 'peak').length} sell
+              </span>
+              {!isMobile && (
+                <>
+                  <span style={{ color: colors.text.secondary }}>|</span>
+                  <span style={{ color: colors.text.secondary }} className="text-xs">
+                    Zoom &gt; 150% to view arrows
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Right - Detection Service Info */}
+            {!isMobile && (
+              <div className="flex items-center gap-2">
+                <span style={{ color: colors.text.secondary }} className="text-xs">
+                  Algorithm: MovingAverageDetectionService
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {/*</div>*/}
 
       {/* CHART AREA - Takes remaining space */}
-      <div className="relative flex" style={{ height: 'calc(100% - 25px)' }}>
+      <div className="relative flex" style={{ height: 'calc(100% - 45px)' }}>
         <div className="flex-1 relative">
           <canvas
             ref={canvasRef}

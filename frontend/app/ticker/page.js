@@ -25,6 +25,7 @@ export default function TickerPage() {
   const { theme, toggleTheme } = useAppState();
   const {
     tickerData,
+    significantMoves,
     stats,
     currentSymbol,
     isRealTime,
@@ -98,6 +99,7 @@ export default function TickerPage() {
           <div className="h-full rounded-lg overflow-hidden shadow-lg">
             <TickerChart
               data={tickerData}
+              significantMoves={significantMoves}
               theme={theme}
               symbol={currentSymbol}
               stats={stats}
