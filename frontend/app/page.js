@@ -34,6 +34,12 @@ export default function HomePage() {
       icon: '⚡',
     },
     {
+      title: 'Custom Candles',
+      description: 'Generate custom timeframe candlesticks from ticker data (5s-15m)',
+      path: '/custom-candles',
+      icon: '🕯️',
+    },
+    {
       title: 'Multi-Stock Dashboard',
       description: 'View multiple stocks simultaneously with synchronized controls',
       path: '/dashboard',

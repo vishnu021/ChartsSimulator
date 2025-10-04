@@ -17,6 +17,7 @@ export default function Navigation() {
     { path: '/extrema', label: 'Extrema', icon: '📈' },
     { path: '/charts', label: 'Charts', icon: '📉' },
     { path: '/ticker', label: 'Ticker', icon: '⚡' },
+    { path: '/custom-candles', label: 'Custom Candles', icon: '🕯️' },
     { path: '/dashboard', label: 'Dashboard', icon: '📋' },
   ];
 

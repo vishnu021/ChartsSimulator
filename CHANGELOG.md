@@ -2,6 +2,130 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-04-II] - Custom Candles UI Enhancements
+
+### 🎨 UI/UX Improvements
+- **Crosshair Price & Time Labels**: Added interactive crosshair with labels similar to Ticker page
+  - **Time Label at TOP**: Displays candle time (HH:mm:ss) in box above crosshair
+  - **Price Label on RIGHT**: Displays price at crosshair position with 2 decimal places
+  - **Implementation**: Added tooltip boxes with dark backgrounds and borders in `CustomCandleChart.jsx:594-636`
+  - File: `frontend/components/CustomCandleChart.jsx`
+
+- **Chart Margins**: Custom Candles page already has proper padding (`p-2`) matching Ticker page layout
+  - Verified consistent spacing across all pages
+  - File: `frontend/app/custom-candles/page.js:96`
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - Crosshair displays correctly with time label "12:34:00" at top
+  - Price label "24923.51" shown on right side
+  - Dashed crosshair lines render properly
+  - Zero console errors
+  - Screenshots: `custom-candles-with-crosshair-hover.png`
+
+### 📝 Notes
+- **Backend Routing**: Confirmed `/custom-candles` route works via catch-all `/**` handler in `StaticResourceConfig.java`
+- **Integrated Build**: To access at `http://localhost:9090/custom-candles`, run full build with `mvn clean package`
+- **Dev Mode**: Use separate servers (port 3000 frontend, port 9090 backend) for development
+
+## [Session-2025-10-04] - Custom Candles Bug Fixes & Navigation
+
+### 🐛 Bugs Fixed
+- **Custom Candles Page Loading Issue**: Fixed candles not displaying on `/custom-candles` page
+  - **Root Cause**: Data format mismatch between API response and chart component expectations
+  - **Fix**: Wrapped API array response in object with `candles` property in `page.js:65`
+  - **Root Cause 2**: Ticker time parsing failed due to multiple datetime formats
+  - **Fix**: Added support for both ISO-8601 (`2025-05-16T09:15:00+0530`) and space-separated (`2025-07-18 09:15:00.000`) formats in `CustomCandleService.java:42-54`
+  - **Root Cause 3**: Chart tried to parse time string as Date object causing "Invalid time value" error
+  - **Fix**: Use time string directly instead of parsing, with truncation for mobile in `CustomCandleChart.jsx:551-555`
+  - Files: `frontend/app/custom-candles/page.js`, `frontend/components/CustomCandleChart.jsx`, `src/main/java/.../service/CustomCandleService.java`
+
+- **Undefined Variable Error**: Fixed `externalViewState` reference error in CustomCandleChart
+  - **Root Cause**: Chart component referenced undefined variable from copy-paste
+  - **Fix**: Removed `externalViewState` from dependency array and conditional check
+  - File: `frontend/components/CustomCandleChart.jsx:605,700`
+
+- **ESLint Error**: Removed unused `format` import from CustomCandleChart
+  - **Root Cause**: `date-fns` format function no longer needed after time parsing fix
+  - **Fix**: Removed unused import
+  - File: `frontend/components/CustomCandleChart.jsx:4`
+
+### ✅ Verification
+- **Playwright MCP Testing**: ✅ PASS
+  - Verified chart loads with 376 1-minute candles from 44,995 tickers
+  - Tested 5-minute timeframe successfully (fewer, larger candles)
+  - Confirmed zero console errors
+  - Screenshots: `custom-candles-test.png`, `custom-candles-5min.png`
+- **Navigation**: ✅ Works at http://localhost:3000/custom-candles
+- **Backend**: ✅ Successfully generates candles with multi-format time parsing
+
+## [Session-2025-10-03-I] - Custom Timeframe Candlesticks Feature
+
+### 🚀 Features Added
+- **Custom Candles Page**: New page at `/custom-candles` for generating candlesticks from ticker data with custom timeframes
+  - **Timeframes Available**: 5s, 10s, 15s, 30s, 1m, 5m, 15m (intraday only)
+  - **Backend Computation**: All OHLC calculations performed server-side
+  - **Frontend Display**: Clean UI with timeframe selector and chart visualization
+  - Files: `frontend/app/custom-candles/page.js`, `frontend/components/CustomCandleChart.jsx`
+
+- **Backend API Endpoint**: `/api/custom-candles` REST endpoint for generating custom timeframe candles
+  - **Query Parameters**: `symbol`, `date`, `timeframeSeconds` (default: 60, range: 5-900)
+  - **Time Bucketing**: Groups ticker data into timeframe-based candles using TreeMap
+  - **OHLC Calculation**: Open (first tick), High (max), Low (min), Close (last tick)
+  - **Volume Calculation**: Difference between last and first `volumeTradedToday` in timeframe
+  - **OI Tracking**: Last open interest value in timeframe
+  - Files: `src/main/java/.../controller/CustomCandleController.java`, `src/main/java/.../service/CustomCandleService.java`
+
+- **Navigation Update**: Added "Custom Candles 🕯️" navigation item between Ticker and Dashboard
+  - File: `frontend/components/Navigation.jsx:20`
+
+### 🔧 Technical Implementation
+
+**Backend Service** (`CustomCandleService.java`):
+```java
+- getCandleTime(): Rounds tick times to nearest timeframe boundary
+- createCandleFromTickers(): Converts grouped tickers to candle OHLC
+- generateCustomCandles(): Main service method with TreeMap-based grouping
+```
+
+**Frontend Page** (`custom-candles/page.js`):
+```javascript
+- 7 timeframe buttons (5s to 15m)
+- Reuses ControlPanel component for symbol/date selection
+- Fetches data from /api/custom-candles endpoint
+- Passes timeframeSeconds parameter to backend
+```
+
+**Chart Component** (`CustomCandleChart.jsx`):
+- Copied from `CandleChart.jsx` with modifications
+- Built-in volume bars (inherited from source)
+- Full zoom/scroll functionality
+- Supports all existing chart features
+
+### 📊 Data Flow
+1. User selects symbol, date, and timeframe on frontend
+2. Frontend calls `/api/custom-candles?symbol=X&date=Y&timeframeSeconds=Z`
+3. Backend loads ticker data via `TickerService`
+4. Backend groups tickers into timeframe buckets (TreeMap)
+5. Backend calculates OHLC for each bucket
+6. Frontend displays candlesticks with volume bars
+
+### ✅ Verification
+- **Backend Compilation**: ✅ PASS - Java classes compiled successfully
+- **Frontend Build**: ✅ PASS - Next.js page created and rendered
+- **Navigation**: ✅ PASS - Custom Candles link added to nav menu
+- **API Endpoint**: ✅ Ready - `/api/custom-candles` endpoint available at port 9090
+- **Dev Servers**: ✅ PASS - Both frontend (3000) and backend (9090) running
+- **Manual Testing**: ⏳ PENDING - User should test with HDFCBANK 2025-10-01
+
+### 📝 Notes
+- All computation happens in backend for performance
+- Frontend only handles display and user interactions
+- Volume bars included by default (from CandleChart.jsx)
+- Timeframe validation: 5s minimum, 900s (15m) maximum
+- Volume calculated as sum of all tick volumes in timeframe
+- OI set to 0 (ticker data doesn't include open interest)
+
 ## [Session-2025-10-03-H] - Refined Ticker Line Thickness
 
 ### 🎨 UI Improvements
