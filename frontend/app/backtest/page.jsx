@@ -135,24 +135,26 @@ export default function BacktestPage() {
             </div>
           </div>
 
-          {/* Run Button - Compact Modern Gradient */}
+          {/* Run Button - Enhanced Gradient with Glow */}
           <button
             onClick={runBacktest}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary via-primary to-primary/90 text-white py-3 px-6 rounded-xl font-bold
-                       shadow-lg shadow-primary/20
-                       hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 hover:scale-[1.02]
-                       active:scale-[0.98] active:shadow-md
+            className="w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white py-3 px-6 rounded-xl font-bold
+                       shadow-lg shadow-green-500/30
+                       hover:shadow-2xl hover:shadow-green-500/50 hover:-translate-y-1 hover:scale-[1.03]
+                       active:scale-[0.97] active:shadow-md
                        disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 disabled:scale-100
                        disabled:from-gray-400 disabled:to-gray-500
-                       transition-all duration-300 ease-out"
+                       transition-all duration-300 ease-out
+                       relative overflow-hidden group"
           >
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></span>
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
+              <span className="flex items-center justify-center gap-2 relative z-10">
                 <span className="animate-spin">⏳</span> Running Backtest...
               </span>
             ) : (
-              <span className="flex items-center justify-center gap-2">
+              <span className="flex items-center justify-center gap-2 relative z-10">
                 <span>🚀</span> Run Backtest
               </span>
             )}
@@ -278,8 +280,10 @@ export default function BacktestPage() {
                       <tr
                         key={trade.tradeNumber}
                         onClick={() => setSelectedTrade(trade)}
-                        className={`border-t border-border hover:bg-background/50 cursor-pointer transition-colors ${
-                          selectedTrade?.tradeNumber === trade.tradeNumber ? 'bg-primary/10 border-l-4 border-l-primary' : ''
+                        className={`border-t border-border cursor-pointer transition-all duration-200 ${
+                          selectedTrade?.tradeNumber === trade.tradeNumber
+                            ? 'bg-gradient-to-r from-blue-500/20 via-blue-400/15 to-blue-500/20 border-l-4 border-l-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-[1.01] font-semibold'
+                            : 'hover:bg-accent/20 hover:shadow-md'
                         }`}
                       >
                         <td className="px-4 py-2">{trade.tradeNumber}</td>
@@ -337,12 +341,71 @@ export default function BacktestPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex-1 min-h-0">
-                <TradeChart
-                  trade={selectedTrade}
-                  tickers={result.tickers}
-                  timeWindowMinutes={timeWindowMinutes}
-                />
+              <div className="flex-1 min-h-0 flex flex-col gap-4">
+                <div className="h-2/3">
+                  <TradeChart
+                    trade={selectedTrade}
+                    tickers={result.tickers}
+                    timeWindowMinutes={timeWindowMinutes}
+                  />
+                </div>
+
+                {/* Trade Details Section */}
+                <div className="h-1/3 bg-background/30 rounded-lg p-4 overflow-y-auto">
+                  <h3 className="text-sm font-bold text-text mb-3">📋 Trade Details</h3>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-text-secondary">Entry Time:</span>
+                      <span className="ml-2 text-text font-medium">{selectedTrade.entryTime}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Exit Time:</span>
+                      <span className="ml-2 text-text font-medium">{selectedTrade.exitTime}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Entry Price:</span>
+                      <span className="ml-2 text-text font-medium">₹{selectedTrade.entryPrice.toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Exit Price:</span>
+                      <span className="ml-2 text-text font-medium">₹{selectedTrade.exitPrice.toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Quantity:</span>
+                      <span className="ml-2 text-text font-medium">{selectedTrade.quantity}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Exit Reason:</span>
+                      <span className={`ml-2 font-medium ${
+                        selectedTrade.exitReason === 'TAKE_PROFIT' ? 'text-green-500' :
+                          selectedTrade.exitReason === 'STOP_LOSS' ? 'text-red-500' :
+                            'text-blue-500'
+                      }`}>
+                        {selectedTrade.exitReason.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">P/L:</span>
+                      <span className={`ml-2 font-bold ${selectedTrade.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        ₹{selectedTrade.profitLoss.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">P/L %:</span>
+                      <span className={`ml-2 font-bold ${selectedTrade.profitLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {selectedTrade.profitLossPercent.toFixed(2)}%
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Holding Period:</span>
+                      <span className="ml-2 text-text font-medium">{selectedTrade.holdingPeriod}</span>
+                    </div>
+                    <div>
+                      <span className="text-text-secondary">Trade Type:</span>
+                      <span className="ml-2 text-text font-medium">{selectedTrade.type}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (

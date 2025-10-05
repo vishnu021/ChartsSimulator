@@ -2,6 +2,132 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-05-II+] - Interactive Trade Chart with Crosshair
+
+### 🚀 Features Added
+**Interactive Crosshair:**
+- Real-time crosshair following mouse movement
+- Time display label on top axis (HH:MM:SS format)
+- Price display label on right axis (₹ formatted)
+- Dashed crosshair lines (vertical and horizontal)
+- Crosshair cursor styling
+- Files: `frontend/components/TradeChart.jsx:14`, `frontend/components/TradeChart.jsx:91-102`, `frontend/components/TradeChart.jsx:309-358`, `frontend/components/TradeChart.jsx:388-390`
+
+**Hybrid Visualization (Candlestick Background + Ticker Line):**
+- Translucent 1-minute candlestick background layer (30% opacity)
+- Ticker price line overlay in foreground (bright cyan #00aaff)
+- Combines OHLC candle data with precise tick-by-tick price movements
+- Similar to Ticker page visualization style
+- Files: `frontend/components/TradeChart.jsx:38-74`, `frontend/components/TradeChart.jsx:133-187`
+
+**Green/Red Entry/Exit Markers on Ticker Line:**
+- Entry marker: Green dot and dashed line (#00ff00)
+- Exit marker: Red dot and dashed line (#ff0000)
+- Markers positioned precisely on ticker line at actual trade execution prices
+- Uses exact ticker data at entry/exit times
+- Dashed vertical lines for clear visual separation
+- Files: `frontend/components/TradeChart.jsx:203-277`
+
+### 🐛 Fixes
+**Chart Layout Improvements:**
+- Increased right margin from 30px to 80px to prevent price label trimming
+- File: `frontend/components/TradeChart.jsx:125`
+
+**Candlestick Visibility:**
+- Increased wick thickness from 1px to 2px for better visibility
+- Wicks now clearly visible against translucent background
+- File: `frontend/components/TradeChart.jsx:161`
+
+**Candlestick Positioning (No Gaps):**
+- Fixed candlestick positioning to eliminate gaps between consecutive candles
+- Each candlestick now spans full width from start to end of its minute
+- Changed from center-based to left-edge-based positioning
+- Candle bodies span from left edge (x) to right edge (x + candleWidth)
+- Wicks positioned at candle center for proper alignment
+- Files: `frontend/components/TradeChart.jsx:133-134`, `frontend/components/TradeChart.jsx:147-178`
+
+**Candlestick Time Boundaries:**
+- Candlesticks correctly aggregate by minute (e.g., 9:15 includes 9:15:00 to 9:15:59)
+- Time truncation at minute level ensures proper grouping
+- Already implemented correctly in initial candlestick aggregation logic
+- Files: `frontend/components/TradeChart.jsx:46-68`
+
+### 🎨 UI Enhancements
+**Enhanced Selected Trade Highlighting:**
+- Blue gradient background (from-blue-500/20 via-blue-400/15 to-blue-500/20)
+- Blue left border (4px, border-l-blue-500) for clear visual indicator
+- Glowing shadow effect with blue color (shadow-[0_0_15px_rgba(59,130,246,0.3)])
+- Subtle scale effect (scale-[1.01]) to lift selected row
+- Bold font weight (font-semibold) for emphasis
+- Improved hover state with light accent background and shadow
+- Smoother transitions with duration-200
+- File: `frontend/app/backtest/page.jsx:283-287`
+
+**Run Backtest Button:**
+- Changed from primary to green gradient (green-500 → green-600 → emerald-600)
+- Added glow effect with green-500/30 shadow
+- Enhanced hover state with stronger glow (shadow-2xl, green-500/50)
+- Added animated shimmer effect on hover
+- Increased hover lift and scale for better interactivity
+- File: `frontend/app/backtest/page.jsx:138-161`
+
+**1-Minute Candlestick Background:**
+- Implemented candlestick aggregation from tick data
+- Groups tickers into 1-minute OHLC (Open, High, Low, Close) candles
+- Green candlesticks for bullish candles (close >= open)
+- Red candlesticks for bearish candles (close < open)
+- Translucent rendering (30% opacity) to serve as background context
+- Draws wicks (high-low) and bodies (open-close) with borders
+- Dynamic candle width based on chart size
+
+**Ticker Line Overlay:**
+- Continuous line chart showing all tick prices
+- Time-based positioning for accurate tick placement
+- Bright cyan color for high visibility over candlestick background
+- 2px line width for clear foreground presence
+
+**Trade Details Panel:**
+- Added comprehensive trade information section below chart
+- Displays: Entry/Exit times, Entry/Exit prices, Quantity, P/L, P/L %, Holding Period, Exit Reason, Trade Type
+- Color-coded P/L (green for profit, red for loss)
+- Color-coded exit reasons (TAKE_PROFIT green, STOP_LOSS red, others yellow)
+- Split layout: 2/3 chart, 1/3 trade details
+- File: `frontend/app/backtest/page.jsx:265-316`
+
+**Enhanced Entry/Exit Markers:**
+- Updated markers to overlay on candlestick chart
+- Uses candle time indices for precise positioning
+- Dashed vertical lines for entry (green) and exit (red)
+- Price markers positioned at exact entry/exit prices
+- File: `frontend/components/TradeChart.jsx:164-230`
+
+**Chart Time Axis Update:**
+- X-axis labels now use candlestick timestamps
+- Properly formats millisecond timestamps to HH:MM:SS
+- File: `frontend/components/TradeChart.jsx:242-251`
+
+### 🔧 Technical Improvements
+**Performance Optimization:**
+- Updated useEffect dependency array to use `candlesticks` instead of `filteredTickers`
+- Eliminates redundant re-renders
+- File: `frontend/components/TradeChart.jsx:262`
+
+**Price Range Calculation:**
+- Price range now calculated from candlestick high/low values
+- More accurate chart scaling
+- File: `frontend/components/TradeChart.jsx:102-105`
+
+### 📊 Visual Improvements
+- Chart now shows complete price action within each minute
+- Better visualization of trade execution points
+- Clear distinction between entry and exit on candlesticks
+- Comprehensive trade information for analysis
+
+### ✅ Verification
+- Frontend Lint: ⏳ PENDING
+- Playwright MCP: ⏳ PENDING
+- Manual Testing: ⏳ PENDING
+
 ## [Session-2025-10-05-II] - Split-Screen Chart Visualization for Backtesting
 
 ### 🚀 Features Added
