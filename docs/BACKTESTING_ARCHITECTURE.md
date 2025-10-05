@@ -286,111 +286,160 @@ public class Portfolio {
 
 ### Application Configuration (application.yml)
 
+**Current Production Configuration**:
+
+```yaml
+app:
+  backtest:
+    # Strategy Configuration
+    strategyName: "moving-average"      # Strategy to use for backtesting
+
+    # Position Sizing
+    fixedQuantity: 0                     # Fixed quantity per trade (0 = use percentage-based)
+    positionSizePercent: 15.0            # Percentage of capital to risk per trade (15%)
+    lotSize: 15                          # Lot size for quantity calculation (quantities are multiples of this)
+
+    # Risk Management
+    stopLossPercent: 2.0                 # Stop loss percentage (2%)
+    takeProfitPercent: 5.0               # Take profit percentage (5%)
+
+    # Capital
+    defaultInitialCapital: 100000.0      # Default starting capital (₹100,000)
+```
+
+**Configuration Features**:
+- ✅ **Simple YAML structure** - Flat configuration for easy management
+- ✅ **Lot Size Support** - All quantities rounded to multiples of lot size (e.g., 15, 30, 45...)
+- ✅ **Flexible Position Sizing** - Choose between fixed quantity or percentage-based
+- ✅ **Configurable Risk** - Adjust stop loss, take profit, and position size
+- ✅ **Default Values** - All parameters have sensible defaults
+
+### Configuration Properties Classes
+
+**Current Implementation**:
+
+```java
+/**
+ * Configuration properties for backtesting framework.
+ *
+ * <p>Contains all configurable parameters for running backtests including
+ * position sizing, risk management, default capital, and strategy selection.</p>
+ *
+ * @param strategyName Name of the strategy to use (default: "moving-average")
+ * @param fixedQuantity Fixed quantity per trade (0 = use percentage-based sizing)
+ * @param positionSizePercent Percentage of capital to risk per trade (default: 15%)
+ * @param stopLossPercent Stop loss percentage (default: 2%)
+ * @param takeProfitPercent Take profit percentage (default: 5%)
+ * @param defaultInitialCapital Default starting capital for backtests (default: 100000)
+ * @param lotSize Lot size for quantity calculation - quantity will be rounded to multiple of this (default: 15)
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ */
+@ConfigurationProperties("app.backtest")
+public record BacktestProperties(
+    String strategyName,
+    int fixedQuantity,
+    double positionSizePercent,
+    double stopLossPercent,
+    double takeProfitPercent,
+    double defaultInitialCapital,
+    int lotSize
+) {
+    /**
+     * Creates BacktestProperties with default values if not configured.
+     */
+    public BacktestProperties {
+        if (strategyName == null || strategyName.isEmpty()) strategyName = "moving-average";
+        if (positionSizePercent == 0) positionSizePercent = 15.0;
+        if (stopLossPercent == 0) stopLossPercent = 2.0;
+        if (takeProfitPercent == 0) takeProfitPercent = 5.0;
+        if (defaultInitialCapital == 0) defaultInitialCapital = 100000.0;
+        if (lotSize == 0) lotSize = 15;
+    }
+}
+```
+
+### Lot Size Calculation
+
+**Purpose**: Ensures all trade quantities are multiples of lot size (realistic for options/futures trading)
+
+**Implementation**:
+```java
+@Override
+public int calculatePositionSize(double capital, double price, double riskPercent) {
+    int lotSize = backtestProperties.lotSize();
+
+    // Use fixed quantity if configured (non-zero)
+    if (backtestProperties.fixedQuantity() > 0) {
+        int quantity = backtestProperties.fixedQuantity();
+        // Round to nearest lot size
+        quantity = (quantity / lotSize) * lotSize;
+        return quantity;
+    }
+
+    // Otherwise use percentage-based sizing
+    double positionPercent = backtestProperties.positionSizePercent();
+    double riskCapital = capital * (positionPercent / 100.0);
+    int quantity = (int) Math.floor(riskCapital / price);
+
+    // Round down to nearest lot size multiple
+    quantity = (quantity / lotSize) * lotSize;
+
+    return quantity;
+}
+```
+
+**Example**:
+- Capital: ₹100,000
+- Position Size: 15%
+- Price: ₹165.55
+- Lot Size: 15
+
+Calculation:
+1. Risk capital = ₹100,000 × 15% = ₹15,000
+2. Raw quantity = ₹15,000 / ₹165.55 = 90.6 shares
+3. Floor to integer = 90 shares
+4. Round to lot size = (90 / 15) × 15 = 6 × 15 = **90 shares**
+
+If raw was 95 shares: (95 / 15) × 15 = 6 × 15 = **90 shares** (rounded down)
+
+### Legacy Configuration Structure
+
+**Note**: The framework previously supported complex nested configuration with multiple strategies. This has been simplified to a flat structure. The legacy structure is documented below for reference but is **not currently implemented**:
+
+<details>
+<summary>Click to view legacy configuration structure (not implemented)</summary>
+
 ```yaml
 app:
   backtest:
     # Default strategy to use
     default-strategy: "moving-average"
-
-    # Initial capital for backtesting
     initial-capital: 10000.0
 
     # Risk management
     risk:
-      position-size-percent: 10.0  # 10% of capital per trade
-      max-positions: 1              # Maximum concurrent positions
-      stop-loss-percent: 2.0        # 2% stop loss
-      take-profit-percent: 5.0      # 5% take profit
+      position-size-percent: 10.0
+      max-positions: 1
+      stop-loss-percent: 2.0
+      take-profit-percent: 5.0
 
     # Trading costs
     costs:
-      commission-per-trade: 0.0     # No commission (can add later)
-      slippage-percent: 0.1         # 0.1% slippage
+      commission-per-trade: 0.0
+      slippage-percent: 0.1
 
     # Strategy-specific configurations
     strategies:
       moving-average:
         enabled: true
-        name: "MovingAverageStrategy"
-        description: "Mean reversion with confirmation"
         parameters:
           threshold: 0.5
-          confirmation-window: 10
-          min-follow-through: 0.5
-          min-signal-distance: 100
-        trading-rules:
-          entry: "BUY_ON_DIP"
-          exit: "SELL_ON_PEAK"
-          stop-loss: 2.0
-          take-profit: 5.0
-
-      rsi:
-        enabled: false
-        name: "RSIStrategy"
-        description: "Relative Strength Index momentum"
-        parameters:
-          period: 14
-          oversold: 30
-          overbought: 70
-        trading-rules:
-          entry: "BUY_ON_OVERSOLD"
-          exit: "SELL_ON_OVERBOUGHT"
-          stop-loss: 3.0
-          take-profit: 6.0
-
-      momentum:
-        enabled: false
-        name: "MomentumStrategy"
-        description: "Price momentum trending"
-        parameters:
-          lookback-period: 20
-          momentum-threshold: 2.0
-        trading-rules:
-          entry: "BUY_ON_STRONG_MOMENTUM"
-          exit: "SELL_ON_MOMENTUM_REVERSAL"
-          stop-loss: 2.5
-          take-profit: 7.0
 ```
 
-### Configuration Properties Classes
-
-```java
-@ConfigurationProperties("app.backtest")
-public record BacktestProperties(
-    String defaultStrategy,
-    double initialCapital,
-    RiskConfig risk,
-    CostsConfig costs,
-    Map<String, StrategyConfig> strategies
-) {}
-
-public record RiskConfig(
-    double positionSizePercent,
-    int maxPositions,
-    double stopLossPercent,
-    double takeProfitPercent
-) {}
-
-public record CostsConfig(
-    double commissionPerTrade,
-    double slippagePercent
-) {}
-
-public record StrategyConfig(
-    boolean enabled,
-    String name,
-    String description,
-    Map<String, Object> parameters,
-    TradingRulesConfig tradingRules
-) {}
-
-public record TradingRulesConfig(
-    String entry,
-    String exit,
-    double stopLoss,
-    double takeProfit
-) {}
-```
+This structure is retained in documentation for future enhancement reference.
+</details>
 
 ---
 
@@ -1011,7 +1060,75 @@ const comparison = results.map(r => ({
 
 ## Frontend Integration
 
-### Backtest Panel Component
+### Backtest Dashboard Page
+
+**Location**: `/backtest` - Standalone page accessible from main navigation
+
+**Page Features**:
+- ✅ **Modern Compact Design** - Space-efficient layout with readable fonts
+- ✅ **Gray Input Fields** - Clear visual distinction with `bg-gray-200` and black text
+- ✅ **Default Value Hints** - Inline display of default values (e.g., "default: 100,000")
+- ✅ **Configurable Inputs** - Symbol, Date, Initial Capital
+- ✅ **Backend Parameters Display** - Shows Position Size (15%), Stop Loss (2%), Take Profit (5%)
+- ✅ **Compact Report** - Reduced padding and font sizes to maximize trade history space
+- ✅ **Expanded Trade Table** - 500px max height (vs 384px previously)
+
+**Visual Layout**:
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ 📊 Backtest Dashboard                                                │
+├─────────────────────────────────────────────────────────────────────┤
+│ ⚙️ Backtest Configuration          Strategy: Moving Average         │
+│                                                                      │
+│ SYMBOL            DATE              INITIAL CAPITAL (₹)              │
+│ ┌──────────┐     ┌──────────┐      ┌─────────────┐ default: 100K   │
+│ │NIFTY25O..│     │2025-10-01│      │   100000    │                  │
+│ └──────────┘     └──────────┘      └─────────────┘                  │
+│                                                                      │
+│ Position Size: 15% | Stop Loss: 2% | Take Profit: 5%                │
+│ Backend defaults                                                     │
+│                                                                      │
+│ ┌─────────────────────────────────────────────────────────────────┐ │
+│ │               🚀 Run Backtest                                   │ │
+│ └─────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────┤
+│ Summary Cards (Compact - p-4, text-xl)                              │
+│ ┌────────┐ ┌────────┐ ┌──────────┐ ┌─────────────┐                 │
+│ │Net P/L │ │Win Rate│ │ P Factor │ │Sharpe Ratio │                 │
+│ └────────┘ └────────┘ └──────────┘ └─────────────┘                 │
+├─────────────────────────────────────────────────────────────────────┤
+│ 📈 Performance Metrics (Compact - text-xs)                          │
+│ Strategy: moving-average | Symbol: NIFTY... | Capital: ₹100,000     │
+├─────────────────────────────────────────────────────────────────────┤
+│ 📋 Trade History (30 trades) - 500px height                         │
+│ ┌──┬──────────┬────────┬──────────┬────────┬────┬──────┬─────┬───┐ │
+│ │# │Entry Time│  Entry │Exit Time │  Exit  │Qty │  P/L │ P/L%│Why│ │
+│ ├──┼──────────┼────────┼──────────┼────────┼────┼──────┼─────┼───┤ │
+│ │1 │09:32:59  │ 165.72 │09:34:26  │ 175.57 │ 90 │+59.10│+5.9%│SIG│ │
+│ │2 │09:45:12  │ 171.30 │09:48:45  │ 168.75 │ 90 │-15.30│-1.5%│SL │ │
+│ └──┴──────────┴────────┴──────────┴────────┴────┴──────┴─────┴───┘ │
+│ (scrollable)                                                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Design Improvements (Session 2025-10-05-GG)**:
+
+| Element | Previous | Current | Impact |
+|---------|----------|---------|--------|
+| Input Background | `bg-background/60` (transparent) | `bg-gray-200` | Clearly visible |
+| Input Text | `text-text` (white in dark) | `text-black` | Always readable |
+| Summary Cards Padding | `p-6` | `p-4` | More compact |
+| Summary Font Size | `text-2xl` | `text-xl` | Space-efficient |
+| Metrics Font Size | `text-sm` | `text-xs` | Denser layout |
+| Trade History Height | `max-h-96` (384px) | `max-h-[500px]` | +30% more trades visible |
+| Section Spacing | `space-y-6` | `space-y-4` | Tighter layout |
+
+### Legacy: Inline Backtest Panel Component
+
+**Note**: The framework previously included an inline backtest panel embedded in chart pages. The current implementation uses a dedicated dashboard page instead. The legacy design is retained below for reference:
+
+<details>
+<summary>Click to view legacy inline panel design (not currently used)</summary>
 
 **Location**: Below Signal Statistics Panel in TickerChart
 
@@ -1022,6 +1139,8 @@ const comparison = results.map(r => ({
 │ ✓11 wins (73%) ✗4 losses | P/F: 2.45x | Max DD: -3.21%            │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 ### Trade Markers on Chart
 

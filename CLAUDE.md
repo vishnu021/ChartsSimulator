@@ -26,6 +26,52 @@ mvn spring-boot:run
 * **Integration:** Single Maven build packages frontend into Spring Boot resources
 * **Package Manager:** pnpm for faster installs and better dependency management
 * **Realtime:** WebSocket-based candle/ticker streams, extrema detection
+* **Backtesting:** Strategy testing framework with performance metrics and lot-size support
+
+---
+
+## 🔬 Backtesting Framework
+
+The application includes a comprehensive backtesting system for testing trading strategies on historical data.
+
+### Key Features
+* **Dedicated Dashboard**: Standalone `/backtest` page accessible from main navigation
+* **Configuration-Driven**: All parameters configurable via `application.yml`
+* **Lot Size Support**: Quantities automatically rounded to lot multiples (realistic for options/futures)
+* **Flexible Position Sizing**: Choose fixed quantity or percentage-based (default: 15% of capital)
+* **Risk Management**: Configurable stop-loss (2%) and take-profit (5%) levels
+* **Comprehensive Metrics**: Win rate, profit factor, Sharpe ratio, max drawdown, and detailed trade history
+* **Modern UI**: Compact design with gray input fields, default value hints, and expanded trade table (500px)
+
+### Configuration (application.yml)
+```yaml
+app:
+  backtest:
+    strategyName: "moving-average"      # Strategy to use
+    fixedQuantity: 0                     # 0 = percentage-based
+    positionSizePercent: 15.0            # 15% of capital per trade
+    lotSize: 15                          # Lot size (quantities are multiples)
+    stopLossPercent: 2.0                 # 2% stop loss
+    takeProfitPercent: 5.0               # 5% take profit
+    defaultInitialCapital: 100000.0      # ₹100,000 starting capital
+```
+
+### Backend Components
+* **BacktestController**: REST API at `/api/backtest`
+* **BacktestEngine**: Executes virtual trades and calculates P/L
+* **BacktestProperties**: Configuration record with default values
+* **MovingAverageStrategy**: Mean reversion strategy with confirmation
+* **Lot Size Logic**: Rounds quantities to multiples (e.g., 15, 30, 45, 60...)
+
+### Frontend Page (/backtest)
+* **Input Fields**: Gray background (`bg-gray-200`) with black text for visibility
+* **Default Hints**: Inline display of default values (e.g., "default: 100,000")
+* **Backend Params**: Shows Position Size, Stop Loss, Take Profit from config
+* **Compact Report**: Reduced padding/fonts to maximize trade history space
+* **Trade Table**: 500px max height (30% more than previous 384px)
+
+### Documentation
+See `docs/BACKTESTING_ARCHITECTURE.md` for comprehensive implementation details.
 
 ---
 

@@ -61,10 +61,10 @@ export default function BacktestPage() {
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value)}
                 placeholder="NIFTY25O0724600CE"
-                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-xl text-black text-sm
+                className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm
                            placeholder:text-gray-500 font-medium
-                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-gray-100
-                           hover:border-primary/30 hover:bg-gray-100
+                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white
+                           hover:border-primary/30 hover:bg-white
                            transition-all duration-200"
               />
             </div>
@@ -78,9 +78,9 @@ export default function BacktestPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-xl text-black text-sm font-medium
-                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-gray-100
-                           hover:border-primary/30 hover:bg-gray-100
+                className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm font-medium
+                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white
+                           hover:border-primary/30 hover:bg-white
                            transition-all duration-200"
               />
             </div>
@@ -96,10 +96,10 @@ export default function BacktestPage() {
                 value={initialCapital}
                 onChange={(e) => setInitialCapital(Number(e.target.value))}
                 placeholder="100000"
-                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-xl text-black text-sm
+                className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm
                            placeholder:text-gray-500 font-medium
-                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-gray-100
-                           hover:border-primary/30 hover:bg-gray-100
+                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white
+                           hover:border-primary/30 hover:bg-white
                            transition-all duration-200"
               />
             </div>
@@ -134,8 +134,9 @@ export default function BacktestPage() {
             disabled={loading}
             className="w-full bg-gradient-to-r from-primary via-primary to-primary/90 text-white py-3 px-6 rounded-xl font-bold
                        shadow-lg shadow-primary/20
-                       hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5
-                       disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0
+                       hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 hover:scale-[1.02]
+                       active:scale-[0.98] active:shadow-md
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 disabled:scale-100
                        disabled:from-gray-400 disabled:to-gray-500
                        transition-all duration-300 ease-out"
           >
@@ -252,17 +253,17 @@ export default function BacktestPage() {
               <h2 className="text-lg font-bold text-text mb-3">📋 Trade History ({result.trades.length})</h2>
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-background sticky top-0">
-                    <tr className="text-left text-text-secondary">
-                      <th className="px-4 py-2">#</th>
-                      <th className="px-4 py-2">Entry Time</th>
-                      <th className="px-4 py-2">Entry Price</th>
-                      <th className="px-4 py-2">Exit Time</th>
-                      <th className="px-4 py-2">Exit Price</th>
-                      <th className="px-4 py-2">Qty</th>
-                      <th className="px-4 py-2">P/L</th>
-                      <th className="px-4 py-2">P/L %</th>
-                      <th className="px-4 py-2">Exit Reason</th>
+                  <thead className="bg-surface sticky top-0 z-10 shadow-md">
+                    <tr className="text-left text-text-secondary border-b-2 border-border">
+                      <th className="px-4 py-3 bg-surface">#</th>
+                      <th className="px-4 py-3 bg-surface">Entry Time</th>
+                      <th className="px-4 py-3 bg-surface">Entry Price</th>
+                      <th className="px-4 py-3 bg-surface">Exit Time</th>
+                      <th className="px-4 py-3 bg-surface">Exit Price</th>
+                      <th className="px-4 py-3 bg-surface">Qty</th>
+                      <th className="px-4 py-3 bg-surface">P/L</th>
+                      <th className="px-4 py-3 bg-surface">P/L %</th>
+                      <th className="px-4 py-3 bg-surface">Exit Reason</th>
                     </tr>
                   </thead>
                   <tbody className="text-text">

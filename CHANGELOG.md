@@ -2,6 +2,68 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-05-II] - Backtest UI Polish & Fixes
+
+### 🐛 Bug Fixes
+**Lot Size Configuration:**
+- ✅ Verified lot size is being used from config (BacktestEngine calls Strategy.calculatePositionSize)
+- ✅ MovingAverageStrategy properly rounds quantities to lot size multiples
+- ✅ Configuration working correctly: `app.backtest.lotSize: 15`
+
+### 🎨 UI Improvements
+**Input Field Styling:**
+- Changed background from `bg-gray-200` to `bg-gray-100` (lighter grey, not white)
+- Changed hover/focus from `bg-gray-100` to `bg-white` for better contrast
+- All inputs (Symbol, Date, Initial Capital) now have light grey background
+
+**Run Button Animation:**
+- Added hover scale effect: `hover:scale-[1.02]`
+- Added active press effect: `active:scale-[0.98]`
+- Enhanced shadow animations on hover
+- Smooth transitions for all states
+
+**Trade History Table:**
+- Fixed header scroll overlap issue
+- Added `z-10` to sticky header for proper layering
+- Changed background from `bg-background` to `bg-surface` (solid color)
+- Added `bg-surface` to each `<th>` cell for complete coverage
+- Added shadow and border for better visual separation
+- Increased padding `py-2` → `py-3` for better readability
+
+**Files Modified:**
+- `frontend/app/backtest/page.jsx` - All UI fixes applied
+
+### ✅ Verification
+- Frontend Lint: ✅ PASS (ESLint no errors or warnings)
+- Frontend Dev Server: ✅ Running on http://localhost:3000
+- All UI fixes verified and working
+
+---
+
+## [Session-2025-10-05-HH] - Documentation Updates
+
+### 📚 Documentation Improvements
+**Updated Files:**
+- `docs/BACKTESTING_ARCHITECTURE.md` - Updated configuration section with current implementation
+  - Added lot size calculation documentation with examples
+  - Documented current flat YAML structure vs legacy nested structure
+  - Added frontend dashboard UI documentation with design improvements table
+  - Moved legacy configurations to collapsible sections for reference
+
+- `CLAUDE.md` - Added backtesting framework section
+  - New "🔬 Backtesting Framework" section after Project Overview
+  - Documented key features, configuration, backend components, frontend page
+  - Linked to comprehensive architecture documentation
+
+**Documentation Coverage:**
+- ✅ Configuration system (current + legacy reference)
+- ✅ Lot size calculation with examples
+- ✅ Frontend UI design improvements (Session 2025-10-05-GG)
+- ✅ Backend components and their roles
+- ✅ Quick reference in CLAUDE.md for contributors
+
+---
+
 ## [Session-2025-10-05-GG] - Input Styling Fix, Compact Reports & Lot Size
 
 ### 🎨 UI Improvements
