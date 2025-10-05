@@ -47,4 +47,8 @@ public class SpaController {
     public String customerCandles() {
         return "forward:/custom-candles/index.html";
     }
+    @GetMapping(value = {"/backtest", "/backtest/"})
+    public String backtest() {
+        return "forward:/backtest/index.html";
+    }
 }

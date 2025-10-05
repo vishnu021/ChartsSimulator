@@ -45,6 +45,12 @@ export default function HomePage() {
       path: '/dashboard',
       icon: '📋',
     },
+    {
+      title: 'Backtest Strategy',
+      description: 'Test trading strategies with historical data and performance metrics',
+      path: '/backtest',
+      icon: '🔬',
+    },
   ];
 
   // Theme-aware styles

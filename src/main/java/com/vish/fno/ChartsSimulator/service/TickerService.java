@@ -50,11 +50,11 @@ public class TickerService {
 
         if (!tickerProperties.deduplicateTimestamps()) {
             return stockTickers.stream()
-                .map(st -> new Ticker(formatDateTime(st.tickTimestamp()), st.lastTradedPrice(), st.lastTradedQuantity()))
+                .map(st -> new Ticker(symbol, formatDateTime(st.tickTimestamp()), st.lastTradedPrice(), st.lastTradedQuantity()))
                 .toList();
         }
 
-        return processTickersWithDeduplication(stockTickers);
+        return processTickersWithDeduplication(symbol, stockTickers);
     }
     
     /**
@@ -62,10 +62,11 @@ public class TickerService {
      * When multiple tickers have the same timestamp, subsequent duplicates
      * are offset by incremental amounts to maintain chronological order.
      *
+     * @param symbol Trading symbol
      * @param stockTickers Raw stock ticker data from data loader
      * @return List of processed tickers with deduplicated timestamps
      */
-    private List<Ticker> processTickersWithDeduplication(List<StockTicker> stockTickers) {
+    private List<Ticker> processTickersWithDeduplication(String symbol, List<StockTicker> stockTickers) {
         Map<String, Integer> timeOccurrences = new LinkedHashMap<>();
         List<Ticker> processedTickers = new ArrayList<>();
 
@@ -79,10 +80,10 @@ public class TickerService {
                 timeOccurrences.put(timeKey, occurrence);
                 long adjustedTimestamp = originalTimestamp + (occurrence * DUPLICATE_OFFSET_MS);
                 String adjustedTime = formatDateTime(adjustedTimestamp);
-                processedTickers.add(new Ticker(adjustedTime, stockTicker.lastTradedPrice(), stockTicker.lastTradedQuantity()));
+                processedTickers.add(new Ticker(symbol, adjustedTime, stockTicker.lastTradedPrice(), stockTicker.lastTradedQuantity()));
             } else {
                 timeOccurrences.put(timeKey, 0);
-                processedTickers.add(new Ticker(timeKey, stockTicker.lastTradedPrice(), stockTicker.lastTradedQuantity()));
+                processedTickers.add(new Ticker(symbol, timeKey, stockTicker.lastTradedPrice(), stockTicker.lastTradedQuantity()));
             }
         }
 

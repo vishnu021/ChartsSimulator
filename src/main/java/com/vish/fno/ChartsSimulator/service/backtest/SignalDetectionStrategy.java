@@ -1,0 +1,55 @@
+package com.vish.fno.ChartsSimulator.service.backtest;
+
+import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Ticker;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Interface for signal detection strategies.
+ *
+ * <p>Implementations detect trading signals (dips/peaks) from ticker data
+ * using various technical analysis algorithms.</p>
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ */
+public interface SignalDetectionStrategy {
+
+    /**
+     * Detects trading signals from ticker data.
+     *
+     * <p><b>IMPORTANT</b>: During incremental backtesting, this method is called
+     * repeatedly with growing datasets: tickers[0..i] where i increases.
+     * Implementations must only use data available in the provided list.</p>
+     *
+     * @param tickers List of ticker data points (may be partial during incremental processing)
+     * @param threshold Percentage threshold for significance (e.g., 0.5 for 0.5%)
+     * @return List of detected significant moves (dips and peaks)
+     */
+    List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold);
+
+    /**
+     * Returns unique strategy identifier.
+     *
+     * @return Strategy name (e.g., "moving-average", "rsi")
+     */
+    String getStrategyName();
+
+    /**
+     * Returns human-readable description.
+     *
+     * @deprecated Use class-level Javadoc instead for comprehensive documentation
+     * @return Strategy description
+     */
+    @Deprecated
+    String getStrategyDescription();
+
+    /**
+     * Returns strategy configuration parameters.
+     *
+     * @return Map of parameter names to values
+     */
+    Map<String, Object> getParameters();
+}

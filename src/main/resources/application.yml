@@ -94,6 +94,16 @@ app:
   ticker:
     deduplicateTimestamps: true # Handle duplicate timestamps in ticker API by incrementing by 600ms
 
+  # Backtesting configuration
+  backtest:
+    strategyName: "moving-average"  # Strategy to use for backtesting
+    fixedQuantity: 0             # Fixed quantity per trade (0 = use percentage-based)
+    positionSizePercent: 15.0    # Percentage of capital to risk per trade
+    stopLossPercent: 2.0         # Stop loss percentage
+    takeProfitPercent: 5.0       # Take profit percentage
+    defaultInitialCapital: 100000.0  # Default starting capital
+    lotSize: 15                  # Lot size for quantity calculation (quantity will be multiple of this)
+
   # Tick data processor configuration
   tick-processor:
     enabled: true  # Set to true to enable automatic tick processing on startup

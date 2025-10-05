@@ -19,6 +19,7 @@ export default function Navigation() {
     { path: '/ticker', label: 'Ticker', icon: '⚡' },
     { path: '/custom-candles', label: 'Custom Candles', icon: '🕯️' },
     { path: '/dashboard', label: 'Dashboard', icon: '📋' },
+    { path: '/backtest', label: 'Backtest', icon: '🔬' },
   ];
 
   const isActive = path => {
