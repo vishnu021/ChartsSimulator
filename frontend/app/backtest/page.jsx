@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import TradeChart from '@/components/TradeChart';
 
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NIFTY25O0724600CE');
@@ -9,6 +10,8 @@ export default function BacktestPage() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedTrade, setSelectedTrade] = useState(null);
+  const [timeWindowMinutes, setTimeWindowMinutes] = useState(2);
 
   const runBacktest = async () => {
     setLoading(true);
@@ -33,12 +36,16 @@ export default function BacktestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-text">📊 Backtest Dashboard</h1>
+    <div className="h-screen bg-background overflow-hidden flex flex-col">
+      <div className="p-6">
+        <h1 className="text-3xl font-bold text-text">📊 Backtest Dashboard</h1>
+      </div>
 
-        {/* Input Form - Compact Modern Design */}
-        <div className="bg-gradient-to-br from-surface to-surface/80 p-5 rounded-2xl shadow-xl mb-6 border border-border/50 backdrop-blur-sm">
+      <div className="flex-1 flex gap-4 px-6 pb-6 overflow-hidden">
+        {/* Left Panel - Configuration & Results */}
+        <div className="w-1/2 flex flex-col gap-4 overflow-y-auto pr-2">
+          {/* Input Form - Compact Modern Design */}
+          <div className="bg-gradient-to-br from-surface to-surface/80 p-5 rounded-2xl shadow-xl border border-border/50 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-text flex items-center gap-2">
               <span className="text-xl">⚙️</span>
@@ -150,20 +157,20 @@ export default function BacktestPage() {
               </span>
             )}
           </button>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-8">
-            ❌ Error: {error}
           </div>
-        )}
 
-        {/* Results Display */}
-        {result && (
-          <div className="space-y-4">
-            {/* Summary Cards - Compact */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg">
+              ❌ Error: {error}
+            </div>
+          )}
+
+          {/* Results Display */}
+          {result && (
+            <div className="flex flex-col gap-4">
+              {/* Summary Cards - Compact */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-surface p-4 rounded-lg shadow-lg">
                 <div className="text-xs text-text-secondary mb-1">Net P/L</div>
                 <div className={`text-xl font-bold ${result.netProfitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -249,9 +256,9 @@ export default function BacktestPage() {
             </div>
 
             {/* Trade List - More Space */}
-            <div className="bg-surface p-4 rounded-lg shadow-lg">
+            <div className="bg-surface p-4 rounded-lg shadow-lg flex-1 flex flex-col min-h-0">
               <h2 className="text-lg font-bold text-text mb-3">📋 Trade History ({result.trades.length})</h2>
-              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <div className="overflow-x-auto overflow-y-auto flex-1">
                 <table className="w-full text-sm">
                   <thead className="bg-surface sticky top-0 z-10 shadow-md">
                     <tr className="text-left text-text-secondary border-b-2 border-border">
@@ -268,7 +275,13 @@ export default function BacktestPage() {
                   </thead>
                   <tbody className="text-text">
                     {result.trades.map((trade) => (
-                      <tr key={trade.tradeNumber} className="border-t border-border hover:bg-background/50">
+                      <tr
+                        key={trade.tradeNumber}
+                        onClick={() => setSelectedTrade(trade)}
+                        className={`border-t border-border hover:bg-background/50 cursor-pointer transition-colors ${
+                          selectedTrade?.tradeNumber === trade.tradeNumber ? 'bg-primary/10 border-l-4 border-l-primary' : ''
+                        }`}
+                      >
                         <td className="px-4 py-2">{trade.tradeNumber}</td>
                         <td className="px-4 py-2">{trade.entryTime.substring(11, 19)}</td>
                         <td className="px-4 py-2">₹{trade.entryPrice.toFixed(2)}</td>
@@ -299,6 +312,49 @@ export default function BacktestPage() {
             </div>
           </div>
         )}
+        </div>
+
+        {/* Right Panel - Chart Visualization */}
+        <div className="w-1/2 flex flex-col gap-4">
+          {result && selectedTrade ? (
+            <div className="bg-surface p-4 rounded-lg shadow-lg h-full flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-text">
+                  📈 Trade #{selectedTrade.tradeNumber} - Chart Pattern
+                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-text-secondary">Time Window (min):</label>
+                    <input
+                      type="number"
+                      value={timeWindowMinutes}
+                      onChange={(e) => setTimeWindowMinutes(Number(e.target.value))}
+                      min="1"
+                      max="10"
+                      className="w-16 px-2 py-1 bg-gray-100 border border-gray-300 rounded text-black text-xs
+                                 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0">
+                <TradeChart
+                  trade={selectedTrade}
+                  tickers={result.tickers}
+                  timeWindowMinutes={timeWindowMinutes}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-surface/50 p-8 rounded-lg shadow-lg h-full flex items-center justify-center">
+              <div className="text-center text-text-secondary">
+                <div className="text-6xl mb-4">📊</div>
+                <h3 className="text-xl font-bold mb-2">No Trade Selected</h3>
+                <p className="text-sm">Click on any trade in the history to view its chart pattern</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.model.backtest;
 
+import com.vish.fno.ChartsSimulator.model.Ticker;
 import java.util.List;
 
 /**
@@ -26,6 +27,7 @@ import java.util.List;
  * @param sharpeRatio Risk-adjusted return
  * @param trades All executed trades
  * @param timeline Portfolio value over time
+ * @param tickers Complete ticker data for chart visualization
  *
  * @author ChartsSimulator
  * @since 1.0.0
@@ -51,5 +53,6 @@ public record BacktestResult(
     double largestLoss,
     double sharpeRatio,
     List<Trade> trades,
-    List<PortfolioSnapshot> timeline
+    List<PortfolioSnapshot> timeline,
+    List<Ticker> tickers
 ) {}

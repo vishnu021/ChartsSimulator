@@ -277,7 +277,8 @@ public class BacktestEngine {
             largestLoss,
             sharpeRatio,
             trades,
-            timeline
+            timeline,
+            tickers
         );
     }
 
