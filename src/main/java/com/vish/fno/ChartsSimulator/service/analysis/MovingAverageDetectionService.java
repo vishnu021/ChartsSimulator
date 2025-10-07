@@ -93,7 +93,7 @@ public class MovingAverageDetectionService {
     public List<SignificantMove> detectSignificantMoves(List<Ticker> tickers, double threshold) {
         if (tickers == null || tickers.size() <= MIN_DATA_POINTS) {
             log.debug("Insufficient data points for significant move detection. Size: {}",
-                     tickers == null ? 0 : tickers.size());
+                    tickers == null ? 0 : tickers.size());
             return List.of();
         }
 
@@ -103,8 +103,8 @@ public class MovingAverageDetectionService {
         int lookbackWindow = Math.max(MIN_LOOKBACK, (int) Math.floor(tickers.size() * LOOKBACK_PERCENTAGE));
 
         log.debug("Detecting significant moves with threshold: {}%, lookback window: {}, data points: {}, " +
-                 "confirmation window: {}, min follow-through: {}%",
-                 threshold, lookbackWindow, tickers.size(), CONFIRMATION_WINDOW, MIN_FOLLOW_THROUGH);
+                        "confirmation window: {}, min follow-through: {}%",
+                threshold, lookbackWindow, tickers.size(), CONFIRMATION_WINDOW, MIN_FOLLOW_THROUGH);
 
         int lastSignalIndex = -MIN_SIGNAL_DISTANCE; // Track last signal to avoid clustering
 
@@ -142,14 +142,12 @@ public class MovingAverageDetectionService {
                     double magnitude = Math.max(Math.abs(changeFromPrev), Math.abs(changeToNext));
                     String type = potentialDip ? "dip" : "peak";
 
-                    // Calculate emission time: after confirmation window is checked
-                    // The signal is emitted after validating the next CONFIRMATION_WINDOW points
-                    int emissionIndex = Math.min(i + CONFIRMATION_WINDOW, tickers.size() - 1);
-                    String emissionTime = tickers.get(emissionIndex).time();
+                    // Signal is emitted immediately - no future data delay
+                    String emissionTime = currentTicker.time();
 
                     significantMoves.add(new SignificantMove(
                             currentTicker.time(),  // Reversal point timestamp
-                            emissionTime,          // When signal was actually emitted
+                            emissionTime,          // Immediate signal emission (same as reversal time)
                             currentPrice,
                             type,
                             magnitude
@@ -157,8 +155,8 @@ public class MovingAverageDetectionService {
 
                     lastSignalIndex = i; // Update last signal position
 
-                    log.debug("Confirmed {} at reversal time: {}, emission time: {}, price: {}, magnitude: {}%",
-                             type, currentTicker.time(), emissionTime, currentPrice, String.format("%.2f", magnitude));
+                    log.debug("Confirmed {} at time: {}, price: {}, magnitude: {}%",
+                            type, currentTicker.time(), currentPrice, String.format("%.2f", magnitude));
                 }
             }
         }
@@ -223,8 +221,8 @@ public class MovingAverageDetectionService {
         boolean sufficientMovement = maxMoveInDirection >= MIN_FOLLOW_THROUGH;
 
         log.trace("Signal confirmation at index {}: majority={}, movement={}%, confirmed={}",
-                 signalIndex, majorityConfirmed, String.format("%.2f", maxMoveInDirection),
-                 majorityConfirmed && sufficientMovement);
+                signalIndex, majorityConfirmed, String.format("%.2f", maxMoveInDirection),
+                majorityConfirmed && sufficientMovement);
 
         return majorityConfirmed && sufficientMovement;
     }

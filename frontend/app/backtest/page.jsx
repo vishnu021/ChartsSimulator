@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TradeChart from '@/components/TradeChart';
+import { configService } from '@/services/config/configService';
 
 export default function BacktestPage() {
   const [symbol, setSymbol] = useState('NIFTY25O0724600CE');
@@ -13,14 +14,50 @@ export default function BacktestPage() {
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [timeWindowMinutes, setTimeWindowMinutes] = useState(2);
 
+  // Strategy selection state
+  const [availableStrategies, setAvailableStrategies] = useState([]);
+  const [selectedStrategy, setSelectedStrategy] = useState('');
+  const [stopLossPercent, setStopLossPercent] = useState('');
+  const [takeProfitPercent, setTakeProfitPercent] = useState('');
+
+  // Fetch available strategies on mount
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      try {
+        const apiUrl = configService.getApiUrl();
+        const response = await fetch(`${apiUrl}/api/backtest/strategies`);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableStrategies(data.strategies || []);
+          setSelectedStrategy(data.defaultStrategy || '');
+          setInitialCapital(data.defaultInitialCapital || 100000);
+        }
+      } catch (err) {
+        // Failed to fetch strategies - will use defaults
+      }
+    };
+    fetchStrategies();
+  }, []);
+
   const runBacktest = async () => {
     setLoading(true);
     setError(null);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090';
-      const response = await fetch(
-        `${apiUrl}/api/backtest?symbol=${symbol}&date=${date}&initialCapital=${initialCapital}`
-      );
+      const apiUrl = configService.getApiUrl();
+
+      // Build query params
+      const params = new URLSearchParams({
+        symbol,
+        date,
+        initialCapital: initialCapital.toString()
+      });
+
+      // Add optional overrides
+      if (selectedStrategy) params.append('strategyName', selectedStrategy);
+      if (stopLossPercent) params.append('stopLossPercent', stopLossPercent);
+      if (takeProfitPercent) params.append('takeProfitPercent', takeProfitPercent);
+
+      const response = await fetch(`${apiUrl}/api/backtest?${params}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -51,13 +88,15 @@ export default function BacktestPage() {
               <span className="text-xl">⚙️</span>
               <span>Backtest Configuration</span>
             </h2>
-            <div className="text-xs text-text-secondary bg-primary/10 px-3 py-1 rounded-full">
-              Strategy: Moving Average
-            </div>
+            {selectedStrategy && (
+              <div className="text-xs text-text-secondary bg-primary/10 px-3 py-1 rounded-full">
+                Strategy: {selectedStrategy}
+              </div>
+            )}
           </div>
 
           {/* Single Row Form */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             {/* Symbol */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
@@ -92,11 +131,31 @@ export default function BacktestPage() {
               />
             </div>
 
+            {/* Strategy Selection */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                Strategy
+              </label>
+              <select
+                value={selectedStrategy}
+                onChange={(e) => setSelectedStrategy(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm font-medium
+                           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white
+                           hover:border-primary/30 hover:bg-white
+                           transition-all duration-200"
+              >
+                {availableStrategies.map((strategy) => (
+                  <option key={strategy} value={strategy}>
+                    {strategy}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Initial Capital */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide flex items-center gap-1">
-                <span>Initial Capital (₹)</span>
-                <span className="text-[10px] font-normal text-text-secondary/60 normal-case">default: 100,000</span>
+              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                Capital (₹)
               </label>
               <input
                 type="number"
@@ -112,25 +171,47 @@ export default function BacktestPage() {
             </div>
           </div>
 
-          {/* Strategy Parameters - Compact */}
+          {/* Strategy Parameters - Enhanced with Overrides */}
           <div className="bg-background/30 backdrop-blur-sm p-3 rounded-xl mb-4 border border-border/30">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-text-secondary">Position Size:</span>
-                  <span className="font-bold text-primary">15%</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-text-secondary">Stop Loss:</span>
-                  <span className="font-bold text-red-500">2%</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-text-secondary">Take Profit:</span>
-                  <span className="font-bold text-green-500">5%</span>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Stop Loss */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide flex items-center gap-1">
+                  Stop Loss (%)
+                  <span className="text-[10px] font-normal text-text-secondary/60 normal-case">optional</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={stopLossPercent}
+                  onChange={(e) => setStopLossPercent(e.target.value)}
+                  placeholder="2.0 (default)"
+                  className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm
+                             placeholder:text-gray-500 font-medium
+                             focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:bg-white
+                             hover:border-red-500/30 hover:bg-white
+                             transition-all duration-200"
+                />
               </div>
-              <div className="text-[10px] text-text-secondary/60 italic">
-                Backend defaults
+
+              {/* Take Profit */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide flex items-center gap-1">
+                  Take Profit (%)
+                  <span className="text-[10px] font-normal text-text-secondary/60 normal-case">optional</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={takeProfitPercent}
+                  onChange={(e) => setTakeProfitPercent(e.target.value)}
+                  placeholder="5.0 (default)"
+                  className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-xl text-black text-sm
+                             placeholder:text-gray-500 font-medium
+                             focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-white
+                             hover:border-green-500/30 hover:bg-white
+                             transition-all duration-200"
+                />
               </div>
             </div>
           </div>

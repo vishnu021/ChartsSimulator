@@ -47,9 +47,23 @@ public interface TradingStrategy {
     double getStopLossPercent();
 
     /**
+     * Sets stop loss percentage (for runtime overrides).
+     *
+     * @param stopLossPercent Stop loss percentage
+     */
+    void setStopLossPercent(double stopLossPercent);
+
+    /**
      * Returns take profit percentage.
      *
      * @return Take profit percentage (e.g., 5.0 for 5%)
      */
     double getTakeProfitPercent();
+
+    /**
+     * Sets take profit percentage (for runtime overrides).
+     *
+     * @param takeProfitPercent Take profit percentage
+     */
+    void setTakeProfitPercent(double takeProfitPercent);
 }

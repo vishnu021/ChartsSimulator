@@ -33,7 +33,7 @@ export default function CustomCandleChart({
   const colors = themes[theme];
 
   // Draw volume bars function
-  const drawVolumeBars = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles) => {
+  const drawVolumeBars = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles, xScale) => {
     if (!visibleCandles || visibleCandles.length === 0) return;
 
     const volumeHeight = isDashboard ? 30 : 50; // Height of volume section
@@ -68,7 +68,8 @@ export default function CustomCandleChart({
     visibleCandles.forEach((candle, i) => {
       if (!candle.volume || candle.volume === 0) return;
 
-      const x = padding.left + (i * candleWidth);
+      // Use xScale for consistent positioning with candles
+      const x = xScale(visibleStart + i);
       const barHeight = (candle.volume / maxVolume) * volumeHeight;
       const barY = volumeY + volumeHeight - barHeight;
 
@@ -577,7 +578,7 @@ export default function CustomCandleChart({
     }
 
     // Draw volume bars (above Wyckoff phase strip)
-    drawVolumeBars(ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles);
+    drawVolumeBars(ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles, xScale);
 
     // Draw Wyckoff phase bottom strip
     drawWyckoffPhaseStrip(ctx, width, height, visibleStart, visibleEnd, candleWidth);

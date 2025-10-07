@@ -83,6 +83,10 @@ public class MovingAverageStrategy implements Strategy {
     private final MovingAverageDetectionService detectionService;
     private final BacktestProperties backtestProperties;
 
+    // Runtime override fields (mutable for config overrides)
+    private Double stopLossPercentOverride;
+    private Double takeProfitPercentOverride;
+
     private static final double DEFAULT_THRESHOLD = 0.5;
 
     @Override
@@ -94,12 +98,6 @@ public class MovingAverageStrategy implements Strategy {
     @Override
     public String getStrategyName() {
         return "moving-average";
-    }
-
-    @Override
-    @Deprecated
-    public String getStrategyDescription() {
-        return "See class-level Javadoc for comprehensive strategy documentation";
     }
 
     @Override
@@ -171,11 +169,27 @@ public class MovingAverageStrategy implements Strategy {
 
     @Override
     public double getStopLossPercent() {
-        return backtestProperties.stopLossPercent();
+        return stopLossPercentOverride != null
+            ? stopLossPercentOverride
+            : backtestProperties.stopLossPercent();
+    }
+
+    @Override
+    public void setStopLossPercent(double stopLossPercent) {
+        this.stopLossPercentOverride = stopLossPercent;
+        log.debug("Stop loss percent overridden to {}%", stopLossPercent);
     }
 
     @Override
     public double getTakeProfitPercent() {
-        return backtestProperties.takeProfitPercent();
+        return takeProfitPercentOverride != null
+            ? takeProfitPercentOverride
+            : backtestProperties.takeProfitPercent();
+    }
+
+    @Override
+    public void setTakeProfitPercent(double takeProfitPercent) {
+        this.takeProfitPercentOverride = takeProfitPercent;
+        log.debug("Take profit percent overridden to {}%", takeProfitPercent);
     }
 }

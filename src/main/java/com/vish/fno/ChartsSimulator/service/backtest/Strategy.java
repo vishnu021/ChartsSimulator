@@ -27,5 +27,14 @@ package com.vish.fno.ChartsSimulator.service.backtest;
  * @see TradingStrategy
  */
 public interface Strategy extends SignalDetectionStrategy, TradingStrategy {
-    // Combines both interfaces for complete strategy implementation
+
+    /**
+     * Returns unique strategy identifier.
+     *
+     * @return Strategy name (e.g., "moving-average", "rsi")
+     */
+    default String getStrategyName() {
+        return this.getClass().getSimpleName();
+    }
+
 }

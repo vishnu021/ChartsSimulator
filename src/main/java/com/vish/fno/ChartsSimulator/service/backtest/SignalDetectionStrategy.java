@@ -31,22 +31,6 @@ public interface SignalDetectionStrategy {
     List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold);
 
     /**
-     * Returns unique strategy identifier.
-     *
-     * @return Strategy name (e.g., "moving-average", "rsi")
-     */
-    String getStrategyName();
-
-    /**
-     * Returns human-readable description.
-     *
-     * @deprecated Use class-level Javadoc instead for comprehensive documentation
-     * @return Strategy description
-     */
-    @Deprecated
-    String getStrategyDescription();
-
-    /**
      * Returns strategy configuration parameters.
      *
      * @return Map of parameter names to values

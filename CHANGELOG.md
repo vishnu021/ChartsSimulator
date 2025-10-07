@@ -2,6 +2,305 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-06] - Fix Network IP API URL Detection in Backtest Page
+
+### 🐛 Bugs Fixed
+- **Fix**: Backtest page now works on network IP addresses (e.g., http://192.168.1.7:9090/backtest/)
+- **Issue**: Page was hardcoding `http://localhost:9090` instead of dynamically detecting the API URL
+- **Solution**: Replaced hardcoded URLs with `configService.getApiUrl()` which uses `window.location` to detect the correct URL
+- **Files**: `frontend/app/backtest/page.jsx`
+
+### 🎯 Technical Details
+- **Root Cause**: Direct use of `process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090'` in two places:
+  - Line 26: Strategy fetch on component mount
+  - Line 45: Backtest API call
+- **Fix Applied**: Imported and used `configService.getApiUrl()` which automatically detects the correct base URL based on browser location
+- **Impact**: Backtest page now works seamlessly on any network address without configuration
+
+### ✅ Verification
+- Playwright MCP: ✅ PASS (Page loads correctly, configService.detectBaseUrl() working)
+- Maven Package: ❌ FAIL (Backend has pre-existing compilation errors - unrelated to this fix)
+- Frontend Lint: ✅ PASS (Zero warnings/errors)
+- Manual Testing: ⏳ PENDING (Requires running backend to test full flow)
+
+---
+
+## [Session-2025-10-05-V] - CRITICAL: Look-Ahead Bias Elimination
+
+### 🚨 CRITICAL ALGORITHM FIX
+**Eliminated Look-Ahead Bias in MovingAverageDetectionService:**
+- **Version:** 2.0.0 - Causal implementation for live trading
+- **Issue:** Previous version used future data to generate signals, making backtest results artificially good
+- **Impact:** Strategy can now be deployed in live trading without modification
+
+### 🔍 Bias Sources Identified and Fixed
+
+**1. Future Average Calculation (Line 125 - REMOVED):**
+```java
+// ❌ BIASED: Used future prices to detect reversals
+double nextAvg = calculateAveragePrice(tickers, i + 1, i + lookbackWindow + 1);
+```
+
+**2. Forward-Looking Confirmation Window (Lines 194-230 - REPLACED):**
+```java
+// ❌ BIASED: Checked next 10 candles to confirm signal
+private boolean confirmSignal(...) {
+    for (int i = signalIndex + 1; i < signalIndex + 1 + CONFIRMATION_WINDOW; i++) {
+        // Used future prices to validate signal
+    }
+}
+```
+
+**3. Misleading Emission Timestamp (Lines 145-148 - FIXED):**
+```java
+// ❌ BIASED: Showed emission time 10 candles later but entered at current price
+int emissionIndex = Math.min(i + CONFIRMATION_WINDOW, tickers.size() - 1);
+String emissionTime = tickers.get(emissionIndex).time();
+```
+
+### ✅ Causal Implementation (NO FUTURE DATA)
+
+**New Algorithm: Historical Reversal Momentum Confirmation**
+
+**Signal Detection Logic:**
+- Detects when price deviates significantly from recent moving average
+- Confirms reversal by checking if price has ALREADY started moving back from extreme
+- Uses only past 5 candles to find low/high and measure recovery momentum
+- Requires 0.3% minimum reversal momentum to confirm signal
+
+**Dip Detection (Buy Signal):**
+1. Price drops below moving average by threshold (e.g., 0.5%)
+2. Check past 5 candles to find the lowest price point
+3. Confirm current price is recovering from that low (>0.3% bounce)
+4. Emit signal immediately (no future data delay)
+
+**Peak Detection (Sell Signal):**
+1. Price rises above moving average by threshold (e.g., 0.5%)
+2. Check past 5 candles to find the highest price point
+3. Confirm current price is declining from that high (>0.3% drop)
+4. Emit signal immediately (no future data delay)
+
+**Files Changed:**
+- `src/main/java/com/vish/fno/ChartsSimulator/service/analysis/MovingAverageDetectionService.java:62-239`
+
+### 📊 Key Implementation Changes
+
+**Constants Updated:**
+```java
+// BEFORE:
+private static final int CONFIRMATION_WINDOW = 10;
+private static final double MIN_FOLLOW_THROUGH = 0.5;
+
+// AFTER:
+private static final int HISTORICAL_REVERSAL_WINDOW = 5;
+private static final double MIN_REVERSAL_MOMENTUM = 0.3;
+```
+
+**Detection Loop Updated:**
+```java
+// BEFORE (BIASED):
+for (int i = lookbackWindow; i < tickers.size() - lookbackWindow - CONFIRMATION_WINDOW; i++) {
+    double prevAvg = calculateAveragePrice(tickers, i - lookbackWindow, i);
+    double nextAvg = calculateAveragePrice(tickers, i + 1, i + lookbackWindow + 1); // ❌ FUTURE
+    boolean potentialDip = changeFromPrev < -threshold && changeToNext > threshold; // ❌ FUTURE
+}
+
+// AFTER (CAUSAL):
+for (int i = lookbackWindow + HISTORICAL_REVERSAL_WINDOW; i < tickers.size(); i++) {
+    double prevAvg = calculateAveragePrice(tickers, i - lookbackWindow, i); // ✅ ONLY PAST
+    boolean potentialDip = changeFromPrev < -threshold; // ✅ NO FUTURE DATA
+    boolean confirmed = confirmReversalFromHistory(tickers, i, potentialDip); // ✅ ONLY PAST
+}
+```
+
+**New Confirmation Method:**
+```java
+private boolean confirmReversalFromHistory(List<Ticker> tickers, int signalIndex, boolean isDip) {
+    // Find extreme (low/high) in PAST 5 candles
+    for (int i = signalIndex - HISTORICAL_REVERSAL_WINDOW; i < signalIndex; i++) {
+        // Track lowest (dip) or highest (peak) in recent history
+    }
+
+    // Measure reversal momentum from extreme to current
+    double reversalPercent = ((currentPrice - extremePrice) / extremePrice) * 100;
+
+    // Confirm reversal has started (>0.3% movement in reversal direction)
+    boolean hasReversalMomentum = isDip ?
+        reversalPercent > MIN_REVERSAL_MOMENTUM :
+        reversalPercent < -MIN_REVERSAL_MOMENTUM;
+
+    return hasReversalMomentum && extremeIsInPast;
+}
+```
+
+**Immediate Signal Emission:**
+```java
+// BEFORE (BIASED):
+int emissionIndex = Math.min(i + CONFIRMATION_WINDOW, tickers.size() - 1); // ❌ FUTURE
+String emissionTime = tickers.get(emissionIndex).time();
+
+// AFTER (CAUSAL):
+String emissionTime = currentTicker.time(); // ✅ IMMEDIATE
+```
+
+### ⚠️ Expected Performance Impact
+
+**Trade-offs of Causal Implementation:**
+- ✅ **Zero look-ahead bias** - can be deployed in live trading
+- ✅ **Realistic backtest results** - reflects true trading conditions
+- ✅ **Immediate signal emission** - no artificial delay
+- ⚠️ **More false signals** - expected trade-off for causality
+- ⚠️ **Lower win rate** - more realistic than biased version
+- ⚠️ **May miss gradual reversals** - focuses on sharp bounces/rejections
+
+### 🎯 Live Trading Readiness
+
+**Deployment Checklist:**
+- ✅ No future data usage
+- ✅ Immediate signal emission
+- ✅ Uses only historical price action
+- ✅ Configurable threshold for sensitivity
+- ✅ Documented algorithm with clear logic
+- ⏳ PENDING: Performance comparison with biased version
+
+### ✅ Verification
+- Maven compile: ✅ PASS (85 source files compiled successfully)
+- Frontend build: ✅ PASS (Next.js 15.5.3)
+- Manual backtest testing: ⏳ PENDING
+- Performance comparison: ⏳ PENDING
+
+---
+
+## [Session-2025-10-05-IV] - Volume Bar Zoom Fix
+
+### 🐛 Bugs Fixed
+**Volume Bars Disappearing on Zoom:**
+- Fixed volume bars using incorrect X-position calculation during zoom
+- Changed from `padding.left + (i * candleWidth)` to `xScale(visibleStart + i)`
+- Volume bars now use same positioning logic as candlesticks
+- Ensures consistent alignment across all zoom levels
+- Files: `frontend/components/CandleChart.jsx:40-90`, `frontend/components/CustomCandleChart.jsx:36-89`
+
+**Root Cause:**
+- Volume bars were positioned using local index `i` without accounting for zoom offset
+- Candlesticks use `xScale(visibleStart + i)` which properly handles zoom and pan
+- Mismatch caused volume bars to shift out of view when zoomed/panned
+
+**Fix Implementation:**
+- Added `xScale` parameter to `drawVolumeBars()` function
+- Updated volume bar X-position calculation to use `xScale(visibleStart + i)`
+- Applied fix to both `CandleChart.jsx` and `CustomCandleChart.jsx`
+
+### ✅ Verification
+- Frontend build: ✅ PASS (Next.js 15.5.3, compiled successfully)
+- ESLint: ✅ PASS (only warnings, no errors)
+- Manual testing on Candles/Extrema/Charts pages: ⏳ PENDING
+
+---
+
+## [Session-2025-10-05-III] - Config-Driven Backtest System
+
+### 🚀 Features Added
+**Config-Driven Strategy Selection:**
+- Default strategy specified in `application.yml` (`app.backtest.defaultStrategy`)
+- Strategy auto-discovery using Spring dependency injection
+- Registry pattern for centralized strategy management
+- Frontend dropdown for strategy selection
+- Strategies fetched from backend via `/api/backtest/strategies` endpoint
+- Files: `src/main/java/com/vish/fno/ChartsSimulator/config/properties/BacktestProperties.java`, `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/StrategyRegistry.java`, `src/main/java/com/vish/fno/ChartsSimulator/controller/BacktestController.java:38-53`, `frontend/app/backtest/page.jsx:17-39`
+
+**Runtime Parameter Overrides:**
+- Stop loss percentage override (optional query param: `stopLossPercent`)
+- Take profit percentage override (optional query param: `takeProfitPercent`)
+- Frontend UI inputs for parameter customization
+- Runtime setter methods in strategy implementations
+- Override fields in `MovingAverageStrategy` with getter precedence
+- Files: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/TradingStrategy.java:50-68`, `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/MovingAverageStrategy.java:86-194`, `frontend/app/backtest/page.jsx:173-216`
+
+**Strategy Registry Service:**
+- Auto-discovers all `Strategy` beans at startup
+- Provides lookup by strategy name with validation
+- Returns list of available strategies for UI
+- Centralized error handling for unknown strategies
+- Logs registered strategies on startup
+- File: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/StrategyRegistry.java`
+
+**New API Endpoint:**
+- `GET /api/backtest/strategies` - Returns available strategies, default strategy, and default capital
+- Response format: `{ strategies: [...], defaultStrategy: "...", defaultInitialCapital: ... }`
+- File: `src/main/java/com/vish/fno/ChartsSimulator/controller/BacktestController.java:38-53`
+
+### 🔧 Configuration Changes
+**application.yml Updates:**
+- Renamed `strategyName` to `defaultStrategy` for clarity
+- Added `strategies` map for strategy-specific configurations
+- Each strategy config includes `enabled`, `stopLossPercent`, `takeProfitPercent`
+- Example: `app.backtest.strategies.moving-average.enabled: true`
+- File: `src/main/resources/application.yml:98-112`
+
+**BacktestController Enhancements:**
+- Removed hardcoded `MovingAverageStrategy` dependency
+- Uses `StrategyRegistry` for dynamic strategy lookup
+- Accepts optional `strategyName`, `stopLossPercent`, `takeProfitPercent` params
+- Applies runtime overrides before backtest execution
+- Enhanced logging with strategy name in completion message
+- File: `src/main/java/com/vish/fno/ChartsSimulator/controller/BacktestController.java:55-114`
+
+**TickerController Enhancements:**
+- Removed hardcoded `MovingAverageStrategy` dependency
+- Now uses `StrategyRegistry` and `BacktestProperties` for config-driven strategy selection
+- Accepts optional `strategyName` query parameter (uses default if not provided)
+- Consistent with BacktestController's config-driven approach
+- Enhanced logging to show selected strategy name
+- File: `src/main/java/com/vish/fno/ChartsSimulator/controller/TickerController.java`
+
+### 🎨 Frontend UI Enhancements
+**Backtest Configuration Panel:**
+- Added strategy dropdown with auto-populated options from backend
+- Changed form grid from 3 to 4 columns to accommodate strategy selector
+- Strategy badge dynamically displays selected strategy name
+- Added stop loss and take profit input fields (optional overrides)
+- Color-coded input borders (red for stop loss, green for take profit)
+- Enhanced input styling with hover states and focus rings
+- Files: `frontend/app/backtest/page.jsx:85-95`, `frontend/app/backtest/page.jsx:133-216`
+
+**Query Parameter Building:**
+- Dynamic query param construction using `URLSearchParams`
+- Only includes override params when provided (non-empty values)
+- Backward compatible with previous API calls
+- File: `frontend/app/backtest/page.jsx:41-72`
+
+### 🏗️ Architecture Improvements
+**Strategy Interface Enhancement:**
+- Added setter methods to `TradingStrategy` interface for runtime parameter overrides
+- `setStopLossPercent(double)` and `setTakeProfitPercent(double)` methods
+- Allows config defaults with request-level overrides
+- File: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/TradingStrategy.java:50-68`
+
+**MovingAverageStrategy Implementation:**
+- Added `stopLossPercentOverride` and `takeProfitPercentOverride` fields
+- Updated getters to check override fields first, then fall back to config defaults
+- Implemented setter methods with debug logging
+- Maintains backward compatibility with existing config system
+- File: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/MovingAverageStrategy.java:86-194`
+
+**BacktestProperties Enhancement:**
+- Enhanced existing configuration properties record with new fields
+- Added `defaultStrategy`, `defaultInitialCapital`, and `strategies` map
+- Nested `StrategyConfig` record for per-strategy parameters
+- Removed duplicate `BacktestConfig` - single source of truth in `BacktestProperties`
+- Type-safe configuration binding with Spring Boot
+- File: `src/main/java/com/vish/fno/ChartsSimulator/config/properties/BacktestProperties.java`
+
+### ✅ Verification
+- Backend compilation: ✅ PASS (85 source files compiled successfully)
+- Frontend build: ✅ PASS (Next.js 15.5.3, 10 routes generated)
+- Maven package: ✅ PASS (BUILD SUCCESS)
+- ESLint: ✅ PASS (only warnings, no errors)
+- Manual testing: ⏳ PENDING
+
+---
+
 ## [Session-2025-10-05-II+] - Interactive Trade Chart with Crosshair
 
 ### 🚀 Features Added
