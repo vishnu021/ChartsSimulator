@@ -352,7 +352,8 @@ export const UnifiedChart = ({
       visibleCandles.forEach((candle, i) => {
         if (!candle.volume || candle.volume === 0) return;
 
-        const x = padding.left + (i * candleWidth) + clampedOffset;
+        // Fix: Account for visibleStart offset when positioning volume bars
+        const x = padding.left + ((visibleStart + i) * candleWidth) + clampedOffset;
         const barHeight = (candle.volume / maxVolume) * volumeBarHeight;
         const barY = volumeY + volumeBarHeight - barHeight;
 

@@ -40,14 +40,14 @@ export default function CandleChart({
   const drawVolumeBars = useCallback((ctx, width, height, visibleStart, visibleEnd, candleWidth, visibleCandles, xScale) => {
     if (!visibleCandles || visibleCandles.length === 0) return;
 
-    const volumeHeight = isDashboard ? 30 : 50; // Height of volume section
+    const volumeHeight = isDashboard ? 20 : 50; // Height of volume section (reduced for dashboard)
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
-    const bottomSpace = isDashboard ? (isMobile ? 70 : 100) : 120;
+    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
     const availableHeight = height - bottomSpace;
-    const stripHeight = isDashboard ? 18 : 35;
+    const stripHeight = isDashboard ? 16 : 35;
 
-    // Position volume bars above the Wyckoff phase strip
-    const volumeY = availableHeight - stripHeight - (isDashboard ? 3 : 10) - volumeHeight - 5;
+    // Position volume bars above the Wyckoff phase strip with minimal gap
+    const volumeY = availableHeight - stripHeight - volumeHeight - 2;
 
     // Find max volume for scaling
     const volumes = visibleCandles.map(c => c.volume || 0);
@@ -128,13 +128,13 @@ export default function CandleChart({
     };
     if (!data.wyckoffPhases || data.wyckoffPhases.length === 0) return;
 
-    const stripHeight = isDashboard ? 18 : 35;
+    const stripHeight = isDashboard ? 16 : 35;
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
-    const bottomSpace = isDashboard ? (isMobile ? 20 : 25) : 120;
+    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
     const availableHeight = height - bottomSpace; // Account for bottom reserved space
-    const stripY = availableHeight - stripHeight - (isDashboard ? 3 : 10); // Position closer to bottom for dashboard
+    const stripY = availableHeight - stripHeight; // Positioned at bottom edge
 
     // Draw background for the strip
     ctx.fillStyle = colors.panel || colors.background;
@@ -248,10 +248,10 @@ export default function CandleChart({
     if (!data.wyckoffPhases || !canvas) return null;
 
     const rect = canvas.getBoundingClientRect();
-    const stripHeight = isDashboard ? 20 : 35;
-    const bottomSpace = isDashboard ? (isMobile ? 25 : 30) : 120;
+    const stripHeight = isDashboard ? 16 : 35;
+    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
     const availableHeight = rect.height - bottomSpace; // Account for bottom reserved space
-    const stripY = availableHeight - stripHeight - (isDashboard ? 5 : 10); // Match the drawing position
+    const stripY = availableHeight - stripHeight; // Match the drawing position
 
     // Check if mouse is in the phase strip area
     if (mouseY < stripY || mouseY > stripY + stripHeight) return null;
@@ -413,13 +413,13 @@ export default function CandleChart({
     // Calculate available space ensuring bottom elements are visible
     // Use responsive spacing based on context - adequate for dashboard to prevent overlap
     const topPadding = isDashboard ? (isMobile ? 8 : 12) : padding.top;
-    const bottomReservedSpace = isDashboard ? (isMobile ? 70 : 100) : 120;
+    const bottomReservedSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
     const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
     // Ensure chart doesn't extend beyond available space with balanced padding
     const availableHeight = height - bottomReservedSpace - topPadding;
     const chartHeight = Math.max(100, availableHeight);
-    // Add extra spacing to prevent candles from touching x-axis labels
-    const candleClipHeight = isDashboard ? chartHeight - 35 : chartHeight - 25;
+    // Add extra spacing to prevent candles from touching bottom elements
+    const candleClipHeight = isDashboard ? chartHeight - 28 : chartHeight - 12;
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);
@@ -464,10 +464,10 @@ export default function CandleChart({
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
 
-    // Horizontal grid lines
-    const horizontalLines = isMobile
-      ? CHART_CONSTANTS.GRID_LINES.HORIZONTAL_MOBILE
-      : CHART_CONSTANTS.GRID_LINES.HORIZONTAL_DESKTOP;
+    // Horizontal grid lines (reduced for dashboard to avoid clutter)
+    const horizontalLines = isDashboard
+      ? (isMobile ? 2 : 3)  // Only 2-3 lines for dashboard
+      : (isMobile ? CHART_CONSTANTS.GRID_LINES.HORIZONTAL_MOBILE : CHART_CONSTANTS.GRID_LINES.HORIZONTAL_DESKTOP);
     for (let i = 0; i <= horizontalLines; i++) {
       const price =
         minPrice - pricePadding + (i * (priceRange + 2 * pricePadding)) / horizontalLines;
@@ -479,16 +479,17 @@ export default function CandleChart({
       ctx.stroke();
     }
 
-    // Vertical grid lines
+    // Vertical grid lines (stop at chart end, not beyond)
     const verticalGridLines = isMobile
       ? CHART_CONSTANTS.GRID_LINES.VERTICAL_MOBILE
       : CHART_CONSTANTS.GRID_LINES.VERTICAL_DESKTOP;
     const verticalStepSize = Math.max(1, Math.floor(visibleCandles.length / verticalGridLines));
+    const gridLineEndY = topPadding + chartHeight; // Stop at chart end
     for (let i = 0; i < visibleCandles.length; i += verticalStepSize) {
       const x = xScale(visibleStart + i);
       ctx.beginPath();
       ctx.moveTo(x, topPadding);
-      ctx.lineTo(x, height - padding.bottom);
+      ctx.lineTo(x, gridLineEndY);
       ctx.stroke();
     }
 
@@ -553,13 +554,13 @@ export default function CandleChart({
       if (candle && candle.time) {
         const x = xScale(visibleStart + i);
         const timeLabel = format(new Date(candle.time), isMobile ? 'HH:mm' : 'HH:mm:ss');
-        // Position x-axis labels responsively based on context
+        // Position x-axis labels with compact spacing in dashboard mode
         const availableHeight = height - bottomReservedSpace;
-        const stripHeight = isDashboard ? 20 : 35;
-        const stripSpacing = isDashboard ? 3 : 10;
+        const stripHeight = isDashboard ? 16 : 35;
+        const volumeBarHeight = isDashboard ? 20 : 50;
         const labelY = isDashboard
-          ? availableHeight - stripHeight - stripSpacing - (isMobile ? 12 : 15) // Position above phase strip for dashboard
-          : availableHeight - 80; // Original position for full charts
+          ? availableHeight - stripHeight - volumeBarHeight - 12 // Compact positioning above volume bars
+          : availableHeight - stripHeight - volumeBarHeight - 8; // Minimal spacing for full charts
         ctx.fillText(timeLabel, x, labelY);
       }
     }

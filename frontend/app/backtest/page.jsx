@@ -4,21 +4,64 @@ import { useState, useEffect } from 'react';
 import TradeChart from '@/components/TradeChart';
 import { configService } from '@/services/config/configService';
 
+const CACHE_KEY = 'backtest-params';
+
+// Load cached values from localStorage
+const loadCachedParams = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Save values to localStorage
+const saveCachedParams = (params) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(params));
+  } catch {
+    // Silent fail - not critical
+  }
+};
+
 export default function BacktestPage() {
-  const [symbol, setSymbol] = useState('NIFTY25O0724600CE');
-  const [date, setDate] = useState('2025-10-01');
-  const [initialCapital, setInitialCapital] = useState(100000);
+  // Load cached values or use defaults - use function initialization to avoid re-loading
+  const [symbol, setSymbol] = useState(() => loadCachedParams()?.symbol || 'NIFTY25O0724600CE');
+  const [date, setDate] = useState(() => loadCachedParams()?.date || '2025-10-01');
+  const [initialCapital, setInitialCapital] = useState(() => loadCachedParams()?.initialCapital || 100000);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
-  const [timeWindowMinutes, setTimeWindowMinutes] = useState(2);
+  const [timeWindowMinutes, setTimeWindowMinutes] = useState(() => loadCachedParams()?.timeWindowMinutes || 2);
 
   // Strategy selection state
   const [availableStrategies, setAvailableStrategies] = useState([]);
-  const [selectedStrategy, setSelectedStrategy] = useState('');
-  const [stopLossPercent, setStopLossPercent] = useState('');
-  const [takeProfitPercent, setTakeProfitPercent] = useState('');
+  const [selectedStrategy, setSelectedStrategy] = useState(() => loadCachedParams()?.selectedStrategy || '');
+  const [stopLossPercent, setStopLossPercent] = useState(() => loadCachedParams()?.stopLossPercent || '');
+  const [takeProfitPercent, setTakeProfitPercent] = useState(() => loadCachedParams()?.takeProfitPercent || '');
+
+  // Track if we've loaded from cache to avoid overwriting with defaults
+  const [hasLoadedFromCache] = useState(() => {
+    const cached = loadCachedParams();
+    return !!(cached?.selectedStrategy || cached?.initialCapital);
+  });
+
+  // Cache params whenever they change
+  useEffect(() => {
+    saveCachedParams({
+      symbol,
+      date,
+      initialCapital,
+      selectedStrategy,
+      stopLossPercent,
+      takeProfitPercent,
+      timeWindowMinutes
+    });
+  }, [symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent, timeWindowMinutes]);
 
   // Fetch available strategies on mount
   useEffect(() => {
@@ -29,15 +72,18 @@ export default function BacktestPage() {
         if (response.ok) {
           const data = await response.json();
           setAvailableStrategies(data.strategies || []);
-          setSelectedStrategy(data.defaultStrategy || '');
-          setInitialCapital(data.defaultInitialCapital || 100000);
+          // Only update strategy and capital if not already loaded from cache
+          if (!hasLoadedFromCache) {
+            if (data.defaultStrategy) setSelectedStrategy(data.defaultStrategy);
+            if (data.defaultInitialCapital) setInitialCapital(data.defaultInitialCapital);
+          }
         }
-      } catch (err) {
+      } catch {
         // Failed to fetch strategies - will use defaults
       }
     };
     fetchStrategies();
-  }, []);
+  }, [hasLoadedFromCache]);
 
   const runBacktest = async () => {
     setLoading(true);

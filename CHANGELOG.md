@@ -2,6 +2,77 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-08-B] - Chart Layout Optimization: Absolute Minimum Bottom Padding
+
+### 🎨 UI/Theme Improvements
+- **All Chart Views Bottom Padding at Absolute Minimum**: Maximally reduced spacing for optimal chart area
+  - **Issue**: Excessive bottom padding/margin creating wasted space at bottom of all chart pages
+  - **Final Values**:
+    - **Dashboard mode**: `bottomReservedSpace` 45/50px (mobile/desktop)
+    - **Full chart pages**: `bottomReservedSpace` 45px (unified across Candles, Extrema, Charts)
+    - **Original values**: Dashboard 80-120px, Full charts 120px
+    - **Total reduction**: ~62.5% less reserved space at bottom (from 120px to 45px)
+    - Updated `candleClipHeight`: 28px (dashboard), 12px (full charts) - absolute minimum
+    - Ultra-compact x-axis label positioning:
+      - Dashboard: `availableHeight - stripHeight - volumeBarHeight - 12`
+      - Full charts: `availableHeight - stripHeight - volumeBarHeight - 8`
+    - Simplified volume bar positioning: 2px gap only
+    - Phase strip: Positioned directly at bottom edge (no offset)
+  - **Result**: Absolute maximum chart area utilization with minimal bottom padding
+  - **Files**: `frontend/components/CandleChart.jsx:45,135,252,416,422,561-563`
+
+### ✅ Verification
+- Playwright MCP: ✅ PASS
+  - Dashboard: All 4 charts loaded with reduced bottom padding (dashboard-reduced-padding.png)
+  - Candles page: Chart loaded with reduced bottom padding (candles-reduced-padding.png)
+- Frontend Dev Server: ✅ RUNNING (http://localhost:3000)
+- Backend Server: ✅ RUNNING (http://localhost:9090)
+- Visual Testing: ✅ PASS (Screenshots show optimal spacing with no gaps at bottom)
+- Console Errors: ✅ CLEAN (Only standard React DevTools and HMR messages)
+
+---
+
+## [Session-2025-10-08] - Frontend Enhancements: Caching, Volume Display, Dashboard Layout
+
+### 🚀 Features Added
+- **Backtest Page Caching**: Added localStorage persistence for all backtest parameters
+  - Cached fields: symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent, timeWindowMinutes
+  - File: `frontend/app/backtest/page.jsx:7-29,50-61`
+
+### 🐛 Bugs Fixed
+- **Volume Bars Zoom Fix**: Fixed volume bars disappearing when zooming in on later times in charts
+  - **Issue**: Volume bar x-position calculation didn't account for `visibleStart` offset during zoom
+  - **Fix**: Changed `x = padding.left + (i * candleWidth)` to `x = padding.left + ((visibleStart + i) * candleWidth)`
+  - **Impact**: Volume bars now correctly align with candles at all zoom levels
+  - **File**: `frontend/components/charts/UnifiedChart.jsx:356`
+
+- **Dashboard Chart Layout Fixes**: Fixed spacing issues between chart elements
+  - **Issue 1**: Candles too close to timestamp labels causing overlap
+  - **Issue 2**: X-axis labels appearing below Wyckoff phase strip
+  - **Issue 3**: Extra grid lines causing visual clutter
+  - **Fixes Applied**:
+    - Increased `bottomReservedSpace` from 70/100px to 80/120px
+    - Increased `candleClipHeight` gap from 35px to 50px
+    - Reduced horizontal grid lines for dashboard (2-3 instead of 5)
+    - Stopped vertical grid lines at chart end instead of extending beyond
+    - Adjusted x-axis label position to be above volume bars: `availableHeight - stripHeight - stripSpacing - volumeBarHeight - 18`
+    - Reduced volume bar height for dashboard (25px instead of 30px)
+    - Added consistent spacing (5px instead of 3px) between volume bars and phase strip
+  - **Files**: `frontend/components/CandleChart.jsx:416,422,43,50,135-137,252-254,468-470,487,560-564`
+
+### ✅ Verification
+- Playwright MCP: ✅ PASS (Frontend running on localhost:3000)
+- Frontend Lint: ✅ PASS (Zero warnings/errors)
+- ESLint Fixes: ✅ Removed console statements, fixed React Hook dependencies
+- Manual Testing: ⏳ PENDING (Backend still starting)
+
+### 📊 Impact
+- **User Experience**: Backtest parameters now persist across page refreshes
+- **Chart Accuracy**: Volume data correctly displays at all zoom levels
+- **Visual Clarity**: Dashboard charts have proper spacing with no overlapping elements
+
+---
+
 ## [Session-2025-10-06] - Fix Network IP API URL Detection in Backtest Page
 
 ### 🐛 Bugs Fixed
