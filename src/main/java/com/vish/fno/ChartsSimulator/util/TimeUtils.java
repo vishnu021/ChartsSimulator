@@ -1,5 +1,8 @@
 package com.vish.fno.ChartsSimulator.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -8,16 +11,13 @@ import java.time.format.DateTimeFormatter;
 /**
  * Utility class for time-related operations across the application
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TimeUtils {
 
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final int TRADING_START_MINUTES = 9 * 60 + 15; // 9:15 AM
     private static final int TRADING_END_MINUTES = 15 * 60 + 30;  // 3:30 PM
-
-    private TimeUtils() {
-        // Utility class - prevent instantiation
-    }
 
     /**
      * Convert epoch milliseconds to LocalDateTime in India timezone

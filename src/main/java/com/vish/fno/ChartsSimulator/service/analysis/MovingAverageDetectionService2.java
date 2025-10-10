@@ -132,7 +132,7 @@
 //
 //            if (potentialDip || potentialPeak) {
 //                // Confirm the signal by checking PAST price action for reversal momentum
-//                boolean confirmed = confirmReversalFromHistory(tickers, i, potentialDip);
+//                boolean confirmed = confirmReversalFromHistory(contickers, i, potentialDip);
 //
 //                if (confirmed) {
 //                    double magnitude = Math.abs(changeFromPrev);

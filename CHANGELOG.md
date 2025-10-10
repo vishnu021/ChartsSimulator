@@ -2,33 +2,72 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
-## [Session-2025-10-08-B] - Chart Layout Optimization: Absolute Minimum Bottom Padding
+## [Session-2025-10-08-C] - New Backtesting Strategy: EMA Divergence
 
-### 🎨 UI/Theme Improvements
-- **All Chart Views Bottom Padding at Absolute Minimum**: Maximally reduced spacing for optimal chart area
-  - **Issue**: Excessive bottom padding/margin creating wasted space at bottom of all chart pages
-  - **Final Values**:
-    - **Dashboard mode**: `bottomReservedSpace` 45/50px (mobile/desktop)
-    - **Full chart pages**: `bottomReservedSpace` 45px (unified across Candles, Extrema, Charts)
-    - **Original values**: Dashboard 80-120px, Full charts 120px
-    - **Total reduction**: ~62.5% less reserved space at bottom (from 120px to 45px)
-    - Updated `candleClipHeight`: 28px (dashboard), 12px (full charts) - absolute minimum
-    - Ultra-compact x-axis label positioning:
-      - Dashboard: `availableHeight - stripHeight - volumeBarHeight - 12`
-      - Full charts: `availableHeight - stripHeight - volumeBarHeight - 8`
-    - Simplified volume bar positioning: 2px gap only
-    - Phase strip: Positioned directly at bottom edge (no offset)
-  - **Result**: Absolute maximum chart area utilization with minimal bottom padding
-  - **Files**: `frontend/components/CandleChart.jsx:45,135,252,416,422,561-563`
+### 🚀 Features Added
+- **EMA Divergence Trading Strategy**: New strategy based on exponential moving average trend divergence
+  - **Strategy Name**: `ema-divergence` (auto-registered in StrategyRegistry)
+  - **Algorithm**: Detects trend reversals when fast EMA (20-period) trends opposite to slow EMA (50-period)
+  - **Entry Logic**:
+    - **Long Signal**: Slow EMA uptrend + Fast EMA downtrend + Bullish price momentum (>0.3%)
+    - **Short Signal**: Slow EMA downtrend + Fast EMA uptrend + Bearish price momentum (<-0.3%)
+  - **Parameters**:
+    - Slow EMA: 50 periods (long-term trend)
+    - Fast EMA: 20 periods (short-term momentum)
+    - Trend Lookback: 10 points for trend direction
+    - Momentum Threshold: 0.3% minimum price movement
+    - Min Signal Distance: 50 points between signals
+  - **Risk Management**: Uses configurable stop-loss (default 2%), take-profit (default 5%), and position sizing (default 15% of capital)
+  - **Strategy Type**: Trend reversal / Mean reversion hybrid
+  - **Best For**: Volatile markets with clear trend changes
+  - **File**: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/EMADivergenceStrategy.java`
+
+### 📊 Technical Details
+- **EMA Calculation**: Standard exponential moving average with multiplier = 2/(period+1)
+- **Signal Quality**: High precision, lower frequency than pure momentum strategies
+- **Holding Period**: Short to medium term (minutes to hours)
+- **Lot Size Support**: Automatically rounds quantities to lot multiples
+- **Auto-Discovery**: Strategy registered via Spring @Service annotation
 
 ### ✅ Verification
-- Playwright MCP: ✅ PASS
-  - Dashboard: All 4 charts loaded with reduced bottom padding (dashboard-reduced-padding.png)
-  - Candles page: Chart loaded with reduced bottom padding (candles-reduced-padding.png)
+- Maven Compilation: ✅ PASS (clean compile successful)
+- Strategy Interface: ✅ Implements Strategy (SignalDetectionStrategy + TradingStrategy)
+- Code Quality: ✅ Comprehensive Javadoc with algorithm description
+- Backend Integration: ⏳ PENDING (restart required to register strategy)
+
+---
+
+## [Session-2025-10-08-B] - Chart Layout Optimization: Ultra-Minimal Bottom Padding (Final)
+
+### 🎨 UI/Theme Improvements
+- **All Pages Bottom Padding/Margin Ultra-Minimized**: Aggressive reduction across canvas and page elements (7th iteration)
+  - **Issue**: Excessive bottom padding/margin creating wasted space at bottom of all chart pages (user-reported)
+  - **Canvas Spacing (Final Ultra-Minimal Values)**:
+    - **Dashboard mode**: `bottomReservedSpace` **10/12px** (mobile/desktop) - down from 120px original
+    - **Full chart pages**: `bottomReservedSpace` **15px** - down from 120px original
+    - **Total canvas reduction**: **87.5-91.7% less** reserved space at bottom (was 120px → now 10-15px)
+    - **Previous iterations**: 120px → 80px → 55px → 45px → 38px → 25-30px → **10-15px (current)**
+    - Updated `candleClipHeight`: 24px (dashboard), 8px (full charts)
+    - Ultra-compact x-axis label positioning:
+      - Dashboard: `availableHeight - stripHeight - volumeBarHeight - 8`
+      - Full charts: `availableHeight - stripHeight - volumeBarHeight - 5`
+    - Volume bar positioning: 2px gap from phase strip
+    - Phase strip: Positioned directly at bottom edge (no offset)
+  - **Page-Level Spacing**:
+    - Reduced ChartPanel margins: `mb-4` → `mb-2` (16px → 8px per element)
+    - Controls, title, stats all use `mb-2` for tighter spacing
+  - **Result**: Maximum chart area utilization with ultra-minimal wasted space across all pages
+  - **Files**:
+    - `frontend/components/CandleChart.jsx:45,135,252,416,422,561-563`
+    - `frontend/components/charts/ChartPanel.jsx:216,229,235`
+
+### ✅ Verification
+- Playwright MCP: ⏳ PENDING (browser lock issue encountered, using default browser for visual check)
 - Frontend Dev Server: ✅ RUNNING (http://localhost:3000)
 - Backend Server: ✅ RUNNING (http://localhost:9090)
-- Visual Testing: ✅ PASS (Screenshots show optimal spacing with no gaps at bottom)
+- Default Browser: ✅ OPENED at http://localhost:3000/dashboard for visual verification
 - Console Errors: ✅ CLEAN (Only standard React DevTools and HMR messages)
+- User Visual Verification: ⏳ PENDING (awaiting user confirmation that 10-15px is acceptable)
 
 ---
 

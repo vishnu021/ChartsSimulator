@@ -42,7 +42,7 @@ export default function CandleChart({
 
     const volumeHeight = isDashboard ? 20 : 50; // Height of volume section (reduced for dashboard)
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
-    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
+    const bottomSpace = isDashboard ? (isMobile ? 10 : 12) : 15;
     const availableHeight = height - bottomSpace;
     const stripHeight = isDashboard ? 16 : 35;
 
@@ -132,7 +132,7 @@ export default function CandleChart({
     const padding = canvasUtils.getPadding(isMobile, isDashboard);
 
     // Position strip ensuring it's visible in viewport and doesn't overlap with x-axis
-    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
+    const bottomSpace = isDashboard ? (isMobile ? 10 : 12) : 15;
     const availableHeight = height - bottomSpace; // Account for bottom reserved space
     const stripY = availableHeight - stripHeight; // Positioned at bottom edge
 
@@ -249,7 +249,7 @@ export default function CandleChart({
 
     const rect = canvas.getBoundingClientRect();
     const stripHeight = isDashboard ? 16 : 35;
-    const bottomSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
+    const bottomSpace = isDashboard ? (isMobile ? 10 : 12) : 15;
     const availableHeight = rect.height - bottomSpace; // Account for bottom reserved space
     const stripY = availableHeight - stripHeight; // Match the drawing position
 
@@ -413,13 +413,13 @@ export default function CandleChart({
     // Calculate available space ensuring bottom elements are visible
     // Use responsive spacing based on context - adequate for dashboard to prevent overlap
     const topPadding = isDashboard ? (isMobile ? 8 : 12) : padding.top;
-    const bottomReservedSpace = isDashboard ? (isMobile ? 45 : 50) : 45;
+    const bottomReservedSpace = isDashboard ? (isMobile ? 10 : 12) : 15;
     const { chartWidth } = canvasUtils.getChartDimensions(width, height, padding);
     // Ensure chart doesn't extend beyond available space with balanced padding
     const availableHeight = height - bottomReservedSpace - topPadding;
     const chartHeight = Math.max(100, availableHeight);
     // Add extra spacing to prevent candles from touching bottom elements
-    const candleClipHeight = isDashboard ? chartHeight - 28 : chartHeight - 12;
+    const candleClipHeight = isDashboard ? chartHeight - 24 : chartHeight - 8;
 
     // Clear canvas and draw background
     canvasUtils.clearCanvas(ctx, colors, width, height);
@@ -559,8 +559,8 @@ export default function CandleChart({
         const stripHeight = isDashboard ? 16 : 35;
         const volumeBarHeight = isDashboard ? 20 : 50;
         const labelY = isDashboard
-          ? availableHeight - stripHeight - volumeBarHeight - 12 // Compact positioning above volume bars
-          : availableHeight - stripHeight - volumeBarHeight - 8; // Minimal spacing for full charts
+          ? availableHeight - stripHeight - volumeBarHeight - 8 // Ultra-compact positioning above volume bars
+          : availableHeight - stripHeight - volumeBarHeight - 5; // Minimal spacing for full charts
         ctx.fillText(timeLabel, x, labelY);
       }
     }

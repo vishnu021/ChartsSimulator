@@ -1,0 +1,332 @@
+package com.vish.fno.ChartsSimulator.service.backtest;
+
+import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
+import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * EMA Divergence trading strategy with trend reversal detection.
+ *
+ * <p><b>Algorithm Description:</b></p>
+ * This strategy uses two Exponential Moving Averages (EMA) - a larger period (slow) and
+ * a smaller period (fast) - to detect potential trend reversals through divergence patterns.
+ * When the fast EMA trends opposite to the slow EMA while the slow EMA maintains its trend,
+ * it signals a potential reversal opportunity.
+ *
+ * <p><b>Signal Detection Logic:</b></p>
+ * <ul>
+ *   <li>Slow EMA: 50-period exponential moving average (longer-term trend)</li>
+ *   <li>Fast EMA: 20-period exponential moving average (shorter-term momentum)</li>
+ *   <li>Trend Detection: Compares current EMA vs EMA from N periods ago</li>
+ *   <li>Divergence: Fast EMA trending opposite to Slow EMA direction</li>
+ *   <li>Momentum Confirmation: Price movement in expected reversal direction</li>
+ * </ul>
+ *
+ * <p><b>Entry Rules:</b></p>
+ * <ul>
+ *   <li><b>Long (Buy) Signal:</b>
+ *     <ul>
+ *       <li>Slow EMA is in uptrend (rising over lookback period)</li>
+ *       <li>Fast EMA is in downtrend (falling over lookback period)</li>
+ *       <li>Current price shows upward momentum (bullish price action)</li>
+ *       <li>No open position exists</li>
+ *     </ul>
+ *   </li>
+ *   <li><b>Short (Sell) Signal:</b>
+ *     <ul>
+ *       <li>Slow EMA is in downtrend (falling over lookback period)</li>
+ *       <li>Fast EMA is in uptrend (rising over lookback period)</li>
+ *       <li>Current price shows downward momentum (bearish price action)</li>
+ *       <li>Open position exists</li>
+ *     </ul>
+ *   </li>
+ * </ul>
+ *
+ * <p><b>Exit Rules:</b></p>
+ * <ul>
+ *   <li>Exit on opposite signal (fast/slow EMA divergence reverses)</li>
+ *   <li>Or when stop loss level is hit (configurable, default 2%)</li>
+ *   <li>Or when take profit level is hit (configurable, default 5%)</li>
+ * </ul>
+ *
+ * <p><b>Parameters:</b></p>
+ * <ul>
+ *   <li>slowPeriod: 50 - Slow EMA period for long-term trend</li>
+ *   <li>fastPeriod: 20 - Fast EMA period for short-term momentum</li>
+ *   <li>trendLookback: 10 - Points to look back for trend direction</li>
+ *   <li>momentumThreshold: 0.3% - Minimum price momentum for confirmation</li>
+ *   <li>minSignalDistance: 50 - Minimum points between signals</li>
+ * </ul>
+ *
+ * <p><b>Risk Management (Configurable via application.yml):</b></p>
+ * <ul>
+ *   <li>Stop Loss: Configurable % below entry price (default: 2%)</li>
+ *   <li>Take Profit: Configurable % above entry price (default: 5%)</li>
+ *   <li>Position Size: Configurable % of capital per trade (default: 15%)</li>
+ *   <li>Max Positions: 1 (no pyramiding)</li>
+ * </ul>
+ *
+ * <p><b>Strategy Characteristics:</b></p>
+ * <ul>
+ *   <li>Type: Trend reversal / Mean reversion hybrid</li>
+ *   <li>Best For: Volatile markets with clear trend changes</li>
+ *   <li>Signal Quality: High precision, lower frequency than pure momentum</li>
+ *   <li>Holding Period: Short to medium term (minutes to hours)</li>
+ * </ul>
+ *
+ * @author ChartsSimulator
+ * @since 1.0.0
+ * @version 1.0.0
+ * @see Strategy
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EMADivergenceStrategy implements Strategy {
+
+    private final BacktestProperties backtestProperties;
+
+    // Runtime override fields (mutable for config overrides)
+    private Double stopLossPercentOverride;
+    private Double takeProfitPercentOverride;
+
+    // Strategy parameters
+    private static final int SLOW_EMA_PERIOD = 50;  // Larger EMA for long-term trend
+    private static final int FAST_EMA_PERIOD = 20;  // Smaller EMA for short-term momentum
+    private static final int TREND_LOOKBACK = 10;   // Points to look back for trend direction
+    private static final double MOMENTUM_THRESHOLD = 0.3; // 0.3% minimum price momentum
+    private static final int MIN_SIGNAL_DISTANCE = 50; // Minimum points between signals
+    private static final int MIN_DATA_POINTS = 60;  // Need enough data for EMAs
+
+    @Override
+    public List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold) {
+        if (tickers == null || tickers.size() < MIN_DATA_POINTS) {
+            log.debug("Insufficient data points for EMA divergence detection. Size: {}",
+                    tickers == null ? 0 : tickers.size());
+            return List.of();
+        }
+
+        List<SignificantMove> signals = new ArrayList<>();
+        int lastSignalIndex = -MIN_SIGNAL_DISTANCE;
+
+        log.debug("EMADivergenceStrategy detecting signals for {} tickers (slow={}, fast={}, lookback={})",
+                tickers.size(), SLOW_EMA_PERIOD, FAST_EMA_PERIOD, TREND_LOOKBACK);
+
+        // Calculate EMAs for all points
+        double[] slowEMA = calculateEMA(tickers, SLOW_EMA_PERIOD);
+        double[] fastEMA = calculateEMA(tickers, FAST_EMA_PERIOD);
+
+        // Start after we have enough data for EMAs and trend lookback
+        int startIndex = Math.max(SLOW_EMA_PERIOD, FAST_EMA_PERIOD) + TREND_LOOKBACK;
+
+        for (int i = startIndex; i < tickers.size(); i++) {
+            // Skip if too close to last signal
+            if (i - lastSignalIndex < MIN_SIGNAL_DISTANCE) {
+                continue;
+            }
+
+            Ticker currentTicker = tickers.get(i);
+            double currentPrice = currentTicker.price();
+
+            // Get current and historical EMA values
+            double currentSlowEMA = slowEMA[i];
+            double currentFastEMA = fastEMA[i];
+            double previousSlowEMA = slowEMA[i - TREND_LOOKBACK];
+            double previousFastEMA = fastEMA[i - TREND_LOOKBACK];
+
+            // Determine EMA trends
+            boolean slowEMAUptrend = currentSlowEMA > previousSlowEMA;
+            boolean fastEMAUptrend = currentFastEMA > previousFastEMA;
+
+            // Calculate price momentum (comparing to price a few points ago)
+            int momentumLookback = Math.min(5, i);
+            double previousPrice = tickers.get(i - momentumLookback).price();
+            double priceMomentumPercent = ((currentPrice - previousPrice) / previousPrice) * 100;
+            boolean bullishMomentum = priceMomentumPercent > MOMENTUM_THRESHOLD;
+            boolean bearishMomentum = priceMomentumPercent < -MOMENTUM_THRESHOLD;
+
+            // Detect divergence patterns
+            // BUY signal: Slow EMA uptrend, Fast EMA downtrend, bullish price momentum
+            boolean buySignal = slowEMAUptrend && !fastEMAUptrend && bullishMomentum;
+
+            // SELL signal: Slow EMA downtrend, Fast EMA uptrend, bearish price momentum
+            boolean sellSignal = !slowEMAUptrend && fastEMAUptrend && bearishMomentum;
+
+            if (buySignal || sellSignal) {
+                String type = buySignal ? "dip" : "peak";  // Use same nomenclature as MA strategy
+
+                // Calculate magnitude based on EMA divergence
+                double slowEMAChange = ((currentSlowEMA - previousSlowEMA) / previousSlowEMA) * 100;
+                double fastEMAChange = ((currentFastEMA - previousFastEMA) / previousFastEMA) * 100;
+                double magnitude = Math.abs(slowEMAChange - fastEMAChange);
+
+                signals.add(new SignificantMove(
+                        currentTicker.time(),  // Reversal point timestamp
+                        currentTicker.time(),  // Immediate signal emission
+                        currentPrice,
+                        type,
+                        magnitude
+                ));
+
+                lastSignalIndex = i;
+
+                log.debug("EMA Divergence {} at time: {}, price: {}, slowEMA: {}/{} ({}), fastEMA: {}/{} ({}), momentum: {}%",
+                        type, currentTicker.time(), currentPrice,
+                        String.format("%.2f", previousSlowEMA), String.format("%.2f", currentSlowEMA),
+                        slowEMAUptrend ? "UP" : "DOWN",
+                        String.format("%.2f", previousFastEMA), String.format("%.2f", currentFastEMA),
+                        fastEMAUptrend ? "UP" : "DOWN",
+                        String.format("%.2f", priceMomentumPercent));
+            }
+        }
+
+        log.info("Detected {} EMA divergence signals: {} buy, {} sell",
+                signals.size(),
+                signals.stream().filter(s -> "dip".equals(s.type())).count(),
+                signals.stream().filter(s -> "peak".equals(s.type())).count());
+
+        return signals;
+    }
+
+    /**
+     * Calculates Exponential Moving Average for all data points.
+     * EMA = (Price - Previous_EMA) * Multiplier + Previous_EMA
+     * Multiplier = 2 / (Period + 1)
+     *
+     * @param tickers List of ticker data
+     * @param period EMA period
+     * @return Array of EMA values (same length as tickers)
+     */
+    private double[] calculateEMA(List<Ticker> tickers, int period) {
+        double[] ema = new double[tickers.size()];
+        double multiplier = 2.0 / (period + 1);
+
+        // Initialize EMA with simple moving average for first period
+        double sum = 0;
+        for (int i = 0; i < period && i < tickers.size(); i++) {
+            sum += tickers.get(i).price();
+            ema[i] = sum / (i + 1);  // Progressive average for early values
+        }
+
+        if (tickers.size() > period) {
+            ema[period - 1] = sum / period;  // True SMA for period
+
+            // Calculate EMA for remaining points
+            for (int i = period; i < tickers.size(); i++) {
+                double price = tickers.get(i).price();
+                ema[i] = (price - ema[i - 1]) * multiplier + ema[i - 1];
+            }
+        }
+
+        return ema;
+    }
+
+    @Override
+    public String getStrategyName() {
+        return "ema-divergence";
+    }
+
+    @Override
+    public Map<String, Object> getParameters() {
+        return Map.of(
+                "slowPeriod", SLOW_EMA_PERIOD,
+                "fastPeriod", FAST_EMA_PERIOD,
+                "trendLookback", TREND_LOOKBACK,
+                "momentumThreshold", MOMENTUM_THRESHOLD,
+                "minSignalDistance", MIN_SIGNAL_DISTANCE
+        );
+    }
+
+    @Override
+    public boolean shouldBuy(SignificantMove signal, MarketContext context) {
+        // Only buy if no position open and signal is a dip (buy signal)
+        if (context.hasOpenPosition()) {
+            log.trace("Skipping buy signal - position already open");
+            return false;
+        }
+
+        boolean isDip = "dip".equalsIgnoreCase(signal.type());
+        if (isDip) {
+            log.debug("Buy signal at {} @ {} (EMA divergence detected)",
+                    signal.emissionTime(), signal.price());
+        }
+        return isDip;
+    }
+
+    @Override
+    public boolean shouldSell(SignificantMove signal, MarketContext context) {
+        // Only sell if position is open and signal is a peak (sell signal)
+        if (!context.hasOpenPosition()) {
+            log.trace("Skipping sell signal - no position open");
+            return false;
+        }
+
+        boolean isPeak = "peak".equalsIgnoreCase(signal.type());
+        if (isPeak) {
+            log.debug("Sell signal at {} @ {} (EMA divergence reversal)",
+                    signal.emissionTime(), signal.price());
+        }
+        return isPeak;
+    }
+
+    @Override
+    public int calculatePositionSize(double capital, double price, double riskPercent) {
+        int lotSize = backtestProperties.lotSize();
+
+        // Use fixed quantity if configured (non-zero)
+        if (backtestProperties.fixedQuantity() > 0) {
+            int quantity = backtestProperties.fixedQuantity();
+            // Round to nearest lot size
+            quantity = (quantity / lotSize) * lotSize;
+            log.debug("Position size: {} shares (FIXED quantity from config, rounded to lot size {})",
+                    quantity, lotSize);
+            return quantity;
+        }
+
+        // Otherwise use percentage-based sizing
+        double positionPercent = backtestProperties.positionSizePercent();
+        double riskCapital = capital * (positionPercent / 100.0);
+        int quantity = (int) Math.floor(riskCapital / price);
+
+        // Round down to nearest lot size multiple
+        quantity = (quantity / lotSize) * lotSize;
+
+        log.debug("Position size: {} shares (capital: {}, price: {}, position%: {}%, lot size: {})",
+                quantity, capital, price, positionPercent, lotSize);
+        return quantity;
+    }
+
+    @Override
+    public double getStopLossPercent() {
+        return stopLossPercentOverride != null
+                ? stopLossPercentOverride
+                : backtestProperties.stopLossPercent();
+    }
+
+    @Override
+    public void setStopLossPercent(double stopLossPercent) {
+        this.stopLossPercentOverride = stopLossPercent;
+        log.debug("Stop loss percent overridden to {}%", stopLossPercent);
+    }
+
+    @Override
+    public double getTakeProfitPercent() {
+        return takeProfitPercentOverride != null
+                ? takeProfitPercentOverride
+                : backtestProperties.takeProfitPercent();
+    }
+
+    @Override
+    public void setTakeProfitPercent(double takeProfitPercent) {
+        this.takeProfitPercentOverride = takeProfitPercent;
+        log.debug("Take profit percent overridden to {}%", takeProfitPercent);
+    }
+}

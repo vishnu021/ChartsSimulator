@@ -213,7 +213,7 @@ export const ChartPanel = ({
     <div className={`flex flex-col h-full ${className}`} style={style}>
       {/* Controls */}
       {showControls && (
-        <div className="mb-4">
+        <div className="mb-2">
           <ControlPanel
             onSubmit={handleLoadData}
             theme={theme}
@@ -226,13 +226,13 @@ export const ChartPanel = ({
       )}
 
       {/* Title */}
-      <h1 className="text-2xl font-bold text-white mb-4">
+      <h1 className="text-2xl font-bold text-white mb-2">
         {displayTitle}
       </h1>
 
       {/* Stats */}
       {showStats && currentData && (
-        <div className="mb-4">
+        <div className="mb-2">
           <StatsBar stats={generateStatsData()} theme={theme} />
         </div>
       )}

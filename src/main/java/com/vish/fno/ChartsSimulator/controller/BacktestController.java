@@ -1,17 +1,11 @@
 package com.vish.fno.ChartsSimulator.controller;
 
-import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.BacktestResult;
-import com.vish.fno.ChartsSimulator.service.TickerService;
-import com.vish.fno.ChartsSimulator.service.backtest.BacktestEngine;
-import com.vish.fno.ChartsSimulator.service.backtest.Strategy;
-import com.vish.fno.ChartsSimulator.service.backtest.StrategyRegistry;
+import com.vish.fno.ChartsSimulator.service.backtest.BacktestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,10 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BacktestController {
 
-    private final BacktestEngine backtestEngine;
-    private final StrategyRegistry strategyRegistry;
-    private final TickerService tickerService;
-    private final BacktestProperties backtestProperties;
+    private final BacktestService backtestService;
 
     /**
      * Get available trading strategies.
@@ -42,14 +33,7 @@ public class BacktestController {
      */
     @GetMapping("/api/backtest/strategies")
     public Map<String, Object> getAvailableStrategies() {
-        List<String> strategies = strategyRegistry.getAvailableStrategies();
-        log.debug("📋 Available strategies: {}", strategies);
-
-        return Map.of(
-            "strategies", strategies,
-            "defaultStrategy", backtestProperties.defaultStrategy(),
-            "defaultInitialCapital", backtestProperties.defaultInitialCapital()
-        );
+        return backtestService.getAvailableStrategies();
     }
 
     /**
@@ -72,43 +56,7 @@ public class BacktestController {
             @RequestParam(required = false) Double takeProfitPercent,
             @RequestParam(required = false) Double initialCapital
     ) {
-        // Use defaults from config if not provided
-        String strategy = strategyName != null ? strategyName : backtestProperties.defaultStrategy();
-        double capital = initialCapital != null ? initialCapital : backtestProperties.defaultInitialCapital();
-
-        log.info("🔬 BacktestController /api/backtest - symbol={}, date={}, strategy={}, capital={}",
-                symbol, date, strategy, capital);
-
-        // Get strategy instance
-        Strategy tradingStrategy = strategyRegistry.getStrategy(strategy);
-
-        // Apply parameter overrides if provided
-        if (stopLossPercent != null) {
-            tradingStrategy.setStopLossPercent(stopLossPercent);
-            log.info("🎯 Stop loss overridden to {}%", stopLossPercent);
-        }
-        if (takeProfitPercent != null) {
-            tradingStrategy.setTakeProfitPercent(takeProfitPercent);
-            log.info("🎯 Take profit overridden to {}%", takeProfitPercent);
-        }
-
-        // Get ticker data
-        List<Ticker> tickers = tickerService.getTickerData(symbol, date);
-
-        // Run backtest
-        BacktestResult result = backtestEngine.runBacktest(
-            tradingStrategy,
-            tickers,
-            capital
-        );
-
-        log.info("🔬 Backtest complete - Strategy: {}, P/L: {} ({}%), Trades: {}, Win Rate: {}%",
-                strategy,
-                result.netProfitLoss(),
-                result.profitLossPercent(),
-                result.totalTrades(),
-                result.winRate());
-
-        return result;
+        return backtestService.runBacktest(symbol, date, strategyName, stopLossPercent, takeProfitPercent, initialCapital);
     }
+
 }
