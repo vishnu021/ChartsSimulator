@@ -32,16 +32,52 @@ mvn spring-boot:run
 
 ## 🔬 Backtesting Framework
 
-The application includes a comprehensive backtesting system for testing trading strategies on historical data.
+The application includes a **production-grade backtesting system** with **zero forward bias** for accurate strategy testing on historical data.
 
-### Key Features
+### ⚡ Key Features
+* **Zero Forward Bias**: Tick-by-tick simulation using only historical data available at each moment
+* **Realistic Execution**: Stop loss and take profit checked on **every tick** (not just signals)
+* **Stateful Design**: Fresh engine instance per run prevents state pollution
 * **Dedicated Dashboard**: Standalone `/backtest` page accessible from main navigation
 * **Configuration-Driven**: All parameters configurable via `application.yml`
 * **Lot Size Support**: Quantities automatically rounded to lot multiples (realistic for options/futures)
 * **Flexible Position Sizing**: Choose fixed quantity or percentage-based (default: 15% of capital)
 * **Risk Management**: Configurable stop-loss (2%) and take-profit (5%) levels
 * **Comprehensive Metrics**: Win rate, profit factor, Sharpe ratio, max drawdown, and detailed trade history
-* **Modern UI**: Compact design with gray input fields, default value hints, and expanded trade table (500px)
+* **Market Hours Validated**: Ticker cache filters to 9:15 AM - 3:30 PM IST
+
+### 🏗️ Architecture (Tick-by-Tick Simulation)
+
+#### **Design Philosophy**
+The backtest engine simulates **real-time trading** by processing each tick sequentially and using ONLY data available at that moment. This eliminates forward bias and produces results comparable to live trading.
+
+#### **Execution Order (Per Tick)**
+```java
+for (tick : allTickers) {
+    historicalTickers.add(tick);  // Grow historical data
+
+    // 1. Stop loss (highest priority - risk management)
+    if (price <= stopLoss) closePosition();
+
+    // 2. Take profit (protect gains)
+    if (price >= takeProfit) closePosition();
+
+    // 3. Strategy exit signal (if position open)
+    if (shouldExit(historicalTickers)) closePosition();
+
+    // 4. Strategy entry signal (if no position)
+    if (shouldEnter(historicalTickers)) openPosition();
+}
+```
+
+#### **State Management**
+All simulation state stored in instance variables (new instance per run):
+* `cashBalance` - Current available capital
+* `openPosition` - Active position (null if flat)
+* `completedTrades` - History of closed trades
+* `historicalTickers` - Growing list of ticks seen so far (simulates real-time)
+* `portfolioSnapshots` - Timeline of portfolio values
+* `maxPortfolioValue` / `maxDrawdown` - Risk metrics
 
 ### Configuration (application.yml)
 ```yaml
@@ -58,10 +94,56 @@ app:
 
 ### Backend Components
 * **BacktestController**: REST API at `/api/backtest`
-* **BacktestEngine**: Executes virtual trades and calculates P/L
+* **BacktestEngineFactory**: Factory for creating fresh engine instances (prevents state leakage)
+* **BacktestEngine**: Stateful tick-by-tick simulator (NOT a singleton @Service)
+  - Creates new instance per backtest run
+  - Processes each tick sequentially with only historical data
+  - Checks stop/target every tick (realistic execution)
+  - Maintains all trade state in instance variables
+* **BacktestService**: Orchestrates backtests, uses factory to create engines
 * **BacktestProperties**: Configuration record with default values
-* **MovingAverageStrategy**: Mean reversion strategy with confirmation
+* **Strategy Implementations**:
+  - **MovingAverageStrategy**: Mean reversion with confirmation
+  - **EMADivergenceStrategy**: Trend reversal based on EMA divergence
 * **Lot Size Logic**: Rounds quantities to multiples (e.g., 15, 30, 45, 60...)
+
+### ⚠️ Critical Design Requirements
+
+#### **MANDATORY: Factory Pattern**
+```java
+// ❌ NEVER inject BacktestEngine directly as singleton
+@Autowired BacktestEngine engine;  // WRONG - state pollution!
+
+// ✅ ALWAYS use BacktestEngineFactory
+@Autowired BacktestEngineFactory factory;
+BacktestEngine engine = factory.createEngine();  // CORRECT - fresh state!
+```
+
+#### **MANDATORY: Tick-by-Tick Processing**
+```java
+// ❌ NEVER detect all signals upfront (forward bias!)
+List<SignificantMove> signals = strategy.detectSignals(allTickers);
+
+// ✅ ALWAYS use incremental data (no forward bias)
+for (int i = 0; i < tickers.size(); i++) {
+    historicalData.add(tickers.get(i));
+    List<SignificantMove> signals = strategy.detectSignals(historicalData);
+    // Strategy sees ONLY data up to current tick
+}
+```
+
+#### **MANDATORY: Stop Loss Every Tick**
+```java
+// ❌ NEVER check stops only at signal times
+if (hasNewSignal() && price <= stopLoss) exit();
+
+// ✅ ALWAYS check on EVERY tick
+for (tick : tickers) {
+    if (openPosition != null && tick.price() <= stopLoss) {
+        closePosition(tick, STOP_LOSS);  // Checked every tick!
+    }
+}
+```
 
 ### Frontend Page (/backtest)
 * **Input Fields**: Gray background (`bg-gray-200`) with black text for visibility
@@ -69,6 +151,24 @@ app:
 * **Backend Params**: Shows Position Size, Stop Loss, Take Profit from config
 * **Compact Report**: Reduced padding/fonts to maximize trade history space
 * **Trade Table**: 500px max height (30% more than previous 384px)
+
+### 📊 Comparison: Old vs New Architecture
+
+| Aspect | Old (Signal-Based) | New (Tick-by-Tick) |
+|--------|-------------------|-------------------|
+| **Forward Bias** | ❌ High (uses future data to confirm) | ✅ Zero (only historical data) |
+| **Stop Loss** | ❌ Checked only at signals | ✅ Checked every tick |
+| **State Management** | ❌ Singleton service (state pollution) | ✅ Fresh instance per run |
+| **Historical Context** | ❌ Strategy sees 1 ticker | ✅ Full historical data |
+| **Execution Realism** | ❌ Misses intra-signal stops | ✅ Realistic tick-level execution |
+
+### 🚫 Intentionally Excluded (Out of Scope)
+For strategy comparison purposes, these realistic trading factors are NOT modeled:
+* Slippage
+* Commission/fees
+* Order execution latency
+* Partial fills
+* Limit orders
 
 ### Documentation
 See `docs/BACKTESTING_ARCHITECTURE.md` for comprehensive implementation details.

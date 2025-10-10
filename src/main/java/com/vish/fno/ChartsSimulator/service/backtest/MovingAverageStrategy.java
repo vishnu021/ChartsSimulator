@@ -121,7 +121,7 @@ public class MovingAverageStrategy implements Strategy {
 
         boolean isDip = "dip".equalsIgnoreCase(signal.type());
         if (isDip) {
-            log.debug("Buy signal at {} @ {}", signal.emissionTime(), signal.price());
+            log.debug("[{}] 📊 Buy signal @ {}", signal.emissionTime(), signal.price());
         }
         return isDip;
     }
@@ -136,7 +136,7 @@ public class MovingAverageStrategy implements Strategy {
 
         boolean isPeak = "peak".equalsIgnoreCase(signal.type());
         if (isPeak) {
-            log.debug("Sell signal at {} @ {}", signal.emissionTime(), signal.price());
+            log.debug("[{}] 📊 Sell signal @ {}", signal.emissionTime(), signal.price());
         }
         return isPeak;
     }

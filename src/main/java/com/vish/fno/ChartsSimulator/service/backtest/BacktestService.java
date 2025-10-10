@@ -19,7 +19,7 @@ public class BacktestService {
     private final StrategyRegistry strategyRegistry;
     private final BacktestProperties backtestProperties;
     private final TickerService tickerService;
-    private final BacktestEngine backtestEngine;
+    private final BacktestEngineFactory backtestEngineFactory;
 
     public Map<String, Object> getAvailableStrategies() {
         List<String> strategies = strategyRegistry.getAvailableStrategies();
@@ -54,8 +54,12 @@ public class BacktestService {
         // Get ticker data
         List<Ticker> tickers = tickerService.getTickerData(symbol, date);
 
+        // Create fresh engine instance for this backtest run
+        BacktestEngine engine = backtestEngineFactory.createEngine();
+        log.debug("🏭 Created new BacktestEngine instance for backtest run");
+
         // Run backtest
-        BacktestResult result = backtestEngine.runBacktest(
+        BacktestResult result = engine.runBacktest(
                 tradingStrategy,
                 tickers,
                 capital

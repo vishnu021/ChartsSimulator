@@ -255,7 +255,7 @@ public class EMADivergenceStrategy implements Strategy {
 
         boolean isDip = "dip".equalsIgnoreCase(signal.type());
         if (isDip) {
-            log.debug("Buy signal at {} @ {} (EMA divergence detected)",
+            log.debug("[{}] 📊 Buy signal @ {} (EMA divergence detected)",
                     signal.emissionTime(), signal.price());
         }
         return isDip;
@@ -271,7 +271,7 @@ public class EMADivergenceStrategy implements Strategy {
 
         boolean isPeak = "peak".equalsIgnoreCase(signal.type());
         if (isPeak) {
-            log.debug("Sell signal at {} @ {} (EMA divergence reversal)",
+            log.debug("[{}] 📊 Sell signal @ {} (EMA divergence reversal)",
                     signal.emissionTime(), signal.price());
         }
         return isPeak;
