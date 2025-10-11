@@ -55,15 +55,11 @@ public class BacktestService {
         List<Ticker> tickers = tickerService.getTickerData(symbol, date);
 
         // Create fresh engine instance for this backtest run
-        BacktestEngine engine = backtestEngineFactory.createEngine();
+        BacktestEngine engine = backtestEngineFactory.createEngine(symbol,  date, tradingStrategy, tickers, capital);
         log.debug("🏭 Created new BacktestEngine instance for backtest run");
 
         // Run backtest
-        BacktestResult result = engine.runBacktest(
-                tradingStrategy,
-                tickers,
-                capital
-        );
+        BacktestResult result = engine.runBacktest();
 
         log.info("🔬 Backtest complete - Strategy: {}, P/L: {} ({}%), Trades: {}, Win Rate: {}%",
                 strategy,

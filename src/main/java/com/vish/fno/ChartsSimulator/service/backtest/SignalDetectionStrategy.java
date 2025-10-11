@@ -18,6 +18,19 @@ import java.util.Map;
 public interface SignalDetectionStrategy {
 
     /**
+     * Resets internal strategy state before a new backtest run.
+     *
+     * <p>Stateful strategies (e.g., those caching candlesticks or indicators)
+     * must clear all cached data. Stateless strategies can leave this empty.</p>
+     *
+     * <p><b>Called by BacktestEngine</b> at the start of each backtest to ensure
+     * no state leakage between runs.</p>
+     */
+    default void reset() {
+        // Default: no-op for stateless strategies
+    }
+
+    /**
      * Detects trading signals from ticker data.
      *
      * <p><b>IMPORTANT</b>: During incremental backtesting, this method is called

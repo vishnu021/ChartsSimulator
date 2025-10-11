@@ -1,6 +1,9 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
+import com.vish.fno.ChartsSimulator.model.Ticker;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * Factory for creating fresh BacktestEngine instances.
@@ -27,7 +30,7 @@ public class BacktestEngineFactory {
      *
      * @return Fresh BacktestEngine instance ready for simulation
      */
-    public BacktestEngine createEngine() {
-        return new BacktestEngine();
+    public BacktestEngine createEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double capital) {
+        return new BacktestEngine(symbol, date, strategy, tickers, capital);
     }
 }

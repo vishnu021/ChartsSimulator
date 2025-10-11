@@ -3,6 +3,7 @@ package com.vish.fno.ChartsSimulator.service.backtest;
 import com.vish.fno.ChartsSimulator.model.SignificantMove;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -45,7 +46,24 @@ public class BacktestEngine {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private static final int SNAPSHOT_INTERVAL = 100; // Record portfolio every N ticks
 
-    // ==================== SIMULATION STATE ====================
+    private final String symbol;
+    private final String date;
+    private final Strategy strategy;
+    private final List<Ticker> tickers;
+    private final double initialCapital;
+
+    public BacktestEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double initialCapital) {
+        this.symbol = symbol;
+        this.date = date;
+        this.strategy = strategy;
+        this.tickers = tickers;
+        this.initialCapital = initialCapital;
+        // Initialize
+        this.cashBalance = initialCapital;
+        this.maxPortfolioValue = initialCapital;
+        this.strategy.reset(); // Clear strategy state before backtest
+    }
+// ==================== SIMULATION STATE ====================
 
     /** Current cash balance */
     private double cashBalance;
@@ -71,35 +89,20 @@ public class BacktestEngine {
     /** Max drawdown observed */
     private double maxDrawdown = 0.0;
 
-    /** Initial capital */
-    private double initialCapital;
-
-    /** Strategy being tested */
-    private Strategy strategy;
-
     // ==================== PUBLIC API ====================
 
     /**
      * Execute tick-by-tick backtest with Signal → ActiveOrder flow.
      *
-     * @param strategy Trading strategy
-     * @param tickers Historical tick data (market hours only)
-     * @param initialCapital Starting capital
      * @return Backtest results with trades and metrics
      */
-    public BacktestResult runBacktest(Strategy strategy, List<Ticker> tickers, double initialCapital) {
+    public BacktestResult runBacktest() {
         if (tickers == null || tickers.isEmpty()) {
             throw new IllegalArgumentException("Ticker data cannot be null or empty");
         }
 
         log.info("🚀 Starting backtest: strategy={}, tickers={}, capital={}",
                 strategy.getStrategyName(), tickers.size(), initialCapital);
-
-        // Initialize
-        this.strategy = strategy;
-        this.initialCapital = initialCapital;
-        this.cashBalance = initialCapital;
-        this.maxPortfolioValue = initialCapital;
 
         // Process each tick
         for (int i = 0; i < tickers.size(); i++) {
