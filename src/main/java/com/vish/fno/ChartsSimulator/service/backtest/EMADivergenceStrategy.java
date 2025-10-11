@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * EMA Divergence trading strategy with trend reversal detection.
@@ -107,93 +108,82 @@ public class EMADivergenceStrategy implements Strategy {
     private static final int MIN_DATA_POINTS = 60;  // Need enough data for EMAs
 
     @Override
-    public List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold) {
+    public Optional<Signal> detectSignal(List<Ticker> tickers) {
         if (tickers == null || tickers.size() < MIN_DATA_POINTS) {
             log.debug("Insufficient data points for EMA divergence detection. Size: {}",
                     tickers == null ? 0 : tickers.size());
-            return List.of();
+            return Optional.empty();
         }
 
-        List<SignificantMove> signals = new ArrayList<>();
-        int lastSignalIndex = -MIN_SIGNAL_DISTANCE;
-
-        log.debug("EMADivergenceStrategy detecting signals for {} tickers (slow={}, fast={}, lookback={})",
+        log.trace("EMADivergenceStrategy detecting signal for {} tickers (slow={}, fast={}, lookback={})",
                 tickers.size(), SLOW_EMA_PERIOD, FAST_EMA_PERIOD, TREND_LOOKBACK);
 
         // Calculate EMAs for all points
         double[] slowEMA = calculateEMA(tickers, SLOW_EMA_PERIOD);
         double[] fastEMA = calculateEMA(tickers, FAST_EMA_PERIOD);
 
-        // Start after we have enough data for EMAs and trend lookback
-        int startIndex = Math.max(SLOW_EMA_PERIOD, FAST_EMA_PERIOD) + TREND_LOOKBACK;
+        // Check only the latest tick for signal
+        int currentIndex = tickers.size() - 1;
 
-        for (int i = startIndex; i < tickers.size(); i++) {
-            // Skip if too close to last signal
-            if (i - lastSignalIndex < MIN_SIGNAL_DISTANCE) {
-                continue;
-            }
-
-            Ticker currentTicker = tickers.get(i);
-            double currentPrice = currentTicker.price();
-
-            // Get current and historical EMA values
-            double currentSlowEMA = slowEMA[i];
-            double currentFastEMA = fastEMA[i];
-            double previousSlowEMA = slowEMA[i - TREND_LOOKBACK];
-            double previousFastEMA = fastEMA[i - TREND_LOOKBACK];
-
-            // Determine EMA trends
-            boolean slowEMAUptrend = currentSlowEMA > previousSlowEMA;
-            boolean fastEMAUptrend = currentFastEMA > previousFastEMA;
-
-            // Calculate price momentum (comparing to price a few points ago)
-            int momentumLookback = Math.min(5, i);
-            double previousPrice = tickers.get(i - momentumLookback).price();
-            double priceMomentumPercent = ((currentPrice - previousPrice) / previousPrice) * 100;
-            boolean bullishMomentum = priceMomentumPercent > MOMENTUM_THRESHOLD;
-            boolean bearishMomentum = priceMomentumPercent < -MOMENTUM_THRESHOLD;
-
-            // Detect divergence patterns
-            // BUY signal: Slow EMA uptrend, Fast EMA downtrend, bullish price momentum
-            boolean buySignal = slowEMAUptrend && !fastEMAUptrend && bullishMomentum;
-
-            // SELL signal: Slow EMA downtrend, Fast EMA uptrend, bearish price momentum
-            boolean sellSignal = !slowEMAUptrend && fastEMAUptrend && bearishMomentum;
-
-            if (buySignal || sellSignal) {
-                String type = buySignal ? "dip" : "peak";  // Use same nomenclature as MA strategy
-
-                // Calculate magnitude based on EMA divergence
-                double slowEMAChange = ((currentSlowEMA - previousSlowEMA) / previousSlowEMA) * 100;
-                double fastEMAChange = ((currentFastEMA - previousFastEMA) / previousFastEMA) * 100;
-                double magnitude = Math.abs(slowEMAChange - fastEMAChange);
-
-                signals.add(new SignificantMove(
-                        currentTicker.time(),  // Reversal point timestamp
-                        currentTicker.time(),  // Immediate signal emission
-                        currentPrice,
-                        type,
-                        magnitude
-                ));
-
-                lastSignalIndex = i;
-
-                log.debug("EMA Divergence {} at time: {}, price: {}, slowEMA: {}/{} ({}), fastEMA: {}/{} ({}), momentum: {}%",
-                        type, currentTicker.time(), currentPrice,
-                        String.format("%.2f", previousSlowEMA), String.format("%.2f", currentSlowEMA),
-                        slowEMAUptrend ? "UP" : "DOWN",
-                        String.format("%.2f", previousFastEMA), String.format("%.2f", currentFastEMA),
-                        fastEMAUptrend ? "UP" : "DOWN",
-                        String.format("%.2f", priceMomentumPercent));
-            }
+        // Need enough data for EMAs and trend lookback
+        int minIndex = Math.max(SLOW_EMA_PERIOD, FAST_EMA_PERIOD) + TREND_LOOKBACK;
+        if (currentIndex < minIndex) {
+            return Optional.empty();
         }
 
-        log.info("Detected {} EMA divergence signals: {} buy, {} sell",
-                signals.size(),
-                signals.stream().filter(s -> "dip".equals(s.type())).count(),
-                signals.stream().filter(s -> "peak".equals(s.type())).count());
+        Ticker currentTicker = tickers.get(currentIndex);
+        double currentPrice = currentTicker.price();
 
-        return signals;
+        // Get current and historical EMA values
+        double currentSlowEMA = slowEMA[currentIndex];
+        double currentFastEMA = fastEMA[currentIndex];
+        double previousSlowEMA = slowEMA[currentIndex - TREND_LOOKBACK];
+        double previousFastEMA = fastEMA[currentIndex - TREND_LOOKBACK];
+
+        // Determine EMA trends
+        boolean slowEMAUptrend = currentSlowEMA > previousSlowEMA;
+        boolean fastEMAUptrend = currentFastEMA > previousFastEMA;
+
+        // Calculate price momentum (comparing to price a few points ago)
+        int momentumLookback = Math.min(5, currentIndex);
+        double previousPrice = tickers.get(currentIndex - momentumLookback).price();
+        double priceMomentumPercent = ((currentPrice - previousPrice) / previousPrice) * 100;
+        boolean bullishMomentum = priceMomentumPercent > MOMENTUM_THRESHOLD;
+        boolean bearishMomentum = priceMomentumPercent < -MOMENTUM_THRESHOLD;
+
+        // Detect divergence patterns
+        // BUY signal: Slow EMA uptrend, Fast EMA downtrend, bullish price momentum
+        boolean buySignal = slowEMAUptrend && !fastEMAUptrend && bullishMomentum;
+
+        // SELL signal: Slow EMA downtrend, Fast EMA uptrend, bearish price momentum
+        boolean sellSignal = !slowEMAUptrend && fastEMAUptrend && bearishMomentum;
+
+        if (buySignal || sellSignal) {
+            String type = buySignal ? "dip" : "peak";  // Use same nomenclature as MA strategy
+
+            // Calculate magnitude based on EMA divergence
+            double slowEMAChange = ((currentSlowEMA - previousSlowEMA) / previousSlowEMA) * 100;
+            double fastEMAChange = ((currentFastEMA - previousFastEMA) / previousFastEMA) * 100;
+            double magnitude = Math.abs(slowEMAChange - fastEMAChange);
+
+            log.debug("EMA Divergence {} at time: {}, price: {}, slowEMA: {}/{} ({}), fastEMA: {}/{} ({}), momentum: {}%",
+                    type, currentTicker.time(), currentPrice,
+                    String.format("%.2f", previousSlowEMA), String.format("%.2f", currentSlowEMA),
+                    slowEMAUptrend ? "UP" : "DOWN",
+                    String.format("%.2f", previousFastEMA), String.format("%.2f", currentFastEMA),
+                    fastEMAUptrend ? "UP" : "DOWN",
+                    String.format("%.2f", priceMomentumPercent));
+
+            return Optional.of(new Signal(
+                    currentTicker.time(),  // Reversal point timestamp
+                    currentTicker.time(),  // Immediate signal emission
+                    currentPrice,
+                    type,
+                    magnitude
+            ));
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -246,7 +236,7 @@ public class EMADivergenceStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(SignificantMove signal, MarketContext context) {
+    public boolean shouldBuy(Signal signal, MarketContext context) {
         // Only buy if no position open and signal is a dip (buy signal)
         if (context.hasOpenPosition()) {
             log.trace("Skipping buy signal - position already open");
@@ -262,7 +252,7 @@ public class EMADivergenceStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldSell(SignificantMove signal, MarketContext context) {
+    public boolean shouldSell(Signal signal, MarketContext context) {
         // Only sell if position is open and signal is a peak (sell signal)
         if (!context.hasOpenPosition()) {
             log.trace("Skipping sell signal - no position open");

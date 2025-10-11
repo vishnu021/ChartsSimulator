@@ -2,7 +2,7 @@ package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Candlestick;
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Low Wick Momentum Strategy - Trades strong buying pressure candles.
@@ -145,16 +146,17 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     @Override
-    public List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold) {
+    public Optional<Signal> detectSignal(List<Ticker> tickers) {
         if (tickers == null || tickers.isEmpty()) {
-            return List.of();
+            return Optional.empty();
         }
 
         // Process only new tickers to build candlesticks incrementally
         updateCandlesticks(tickers);
 
         // Detect low wick momentum signals from completed candles
-        return detectLowWickSignals(tickers);
+        List<Signal> signals = detectLowWickSignals(tickers);
+        return signals.isEmpty() ? Optional.empty() : Optional.of(signals.get(0));
     }
 
     /**
@@ -193,12 +195,12 @@ public class LowWickMomentumStrategy implements Strategy {
     /**
      * Detects low upper wick candles and generates momentum signals.
      */
-    private List<SignificantMove> detectLowWickSignals(List<Ticker> tickers) {
+    private List<Signal> detectLowWickSignals(List<Ticker> tickers) {
         if (candlesticks.isEmpty()) {
             return List.of();
         }
 
-        List<SignificantMove> signals = new ArrayList<>();
+        List<Signal> signals = new ArrayList<>();
         Ticker currentTick = tickers.get(tickers.size() - 1);
 
         // Check the most recently completed candle (not the current forming one)
@@ -252,7 +254,7 @@ public class LowWickMomentumStrategy implements Strategy {
                 String.format("%.1f", RISK_REWARD_RATIO));
 
             // Generate signal
-            signals.add(new SignificantMove(
+            signals.add(new Signal(
                 lastCompletedCandle.timestamp(),  // Candle timestamp
                 currentTick.time(),               // Signal emission time
                 entryPrice,                       // Entry at candle close
@@ -308,7 +310,7 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(SignificantMove signal, MarketContext context) {
+    public boolean shouldBuy(Signal signal, MarketContext context) {
         if (context.hasOpenPosition()) {
             log.trace("Skipping buy signal - position already open");
             return false;
@@ -327,7 +329,7 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldSell(SignificantMove signal, MarketContext context) {
+    public boolean shouldSell(Signal signal, MarketContext context) {
         // This strategy only generates buy signals
         // Exits are handled by stop loss / take profit
         return false;

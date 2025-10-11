@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.analysis;
 
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,16 +88,16 @@ public class MovingAverageDetectionService {
      *
      * @param tickers List of ticker data points
      * @param threshold Percentage threshold for significance (e.g., 0.5 for 0.5%)
-     * @return List of detected significant moves (dips and peaks)
+     * @return List of detected signals (dips and peaks)
      */
-    public List<SignificantMove> detectSignificantMoves(List<Ticker> tickers, double threshold) {
+    public List<Signal> detectSignificantMoves(List<Ticker> tickers, double threshold) {
         if (tickers == null || tickers.size() <= MIN_DATA_POINTS) {
             log.debug("Insufficient data points for significant move detection. Size: {}",
                     tickers == null ? 0 : tickers.size());
             return List.of();
         }
 
-        List<SignificantMove> significantMoves = new ArrayList<>();
+        List<Signal> significantMoves = new ArrayList<>();
 
         // Calculate lookback window: 2% of data points, minimum 3
         int lookbackWindow = Math.max(MIN_LOOKBACK, (int) Math.floor(tickers.size() * LOOKBACK_PERCENTAGE));
@@ -145,7 +145,7 @@ public class MovingAverageDetectionService {
                     // Signal is emitted immediately - no future data delay
                     String emissionTime = currentTicker.time();
 
-                    significantMoves.add(new SignificantMove(
+                    significantMoves.add(new Signal(
                             currentTicker.time(),  // Reversal point timestamp
                             emissionTime,          // Immediate signal emission (same as reversal time)
                             currentPrice,
@@ -174,9 +174,9 @@ public class MovingAverageDetectionService {
      * Detects significant price movements using default threshold.
      *
      * @param tickers List of ticker data points
-     * @return List of detected significant moves
+     * @return List of detected signals
      */
-    public List<SignificantMove> detectSignificantMoves(List<Ticker> tickers) {
+    public List<Signal> detectSignificantMoves(List<Ticker> tickers) {
         return detectSignificantMoves(tickers, DEFAULT_THRESHOLD);
     }
 

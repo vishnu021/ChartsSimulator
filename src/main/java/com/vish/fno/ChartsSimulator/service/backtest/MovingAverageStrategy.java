@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
 import com.vish.fno.ChartsSimulator.service.analysis.MovingAverageDetectionService;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Moving Average mean reversion trading strategy with confirmation.
@@ -90,9 +91,11 @@ public class MovingAverageStrategy implements Strategy {
     private static final double DEFAULT_THRESHOLD = 0.5;
 
     @Override
-    public List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold) {
-        log.debug("MovingAverageStrategy detecting signals for {} tickers", tickers.size());
-        return detectionService.detectSignificantMoves(tickers, threshold);
+    public Optional<Signal> detectSignal(List<Ticker> tickers) {
+        log.debug("MovingAverageStrategy detecting signal for {} tickers", tickers.size());
+        List<Signal> signals = detectionService.detectSignificantMoves(tickers, DEFAULT_THRESHOLD);
+        // Return the most recent signal if any found
+        return signals.isEmpty() ? Optional.empty() : Optional.of(signals.get(signals.size() - 1));
     }
 
     @Override
@@ -112,7 +115,7 @@ public class MovingAverageStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(SignificantMove signal, MarketContext context) {
+    public boolean shouldBuy(Signal signal, MarketContext context) {
         // Only buy if no position open and signal is a dip
         if (context.hasOpenPosition()) {
             log.trace("Skipping buy signal - position already open");
@@ -127,7 +130,7 @@ public class MovingAverageStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldSell(SignificantMove signal, MarketContext context) {
+    public boolean shouldSell(Signal signal, MarketContext context) {
         // Only sell if position is open and signal is a peak
         if (!context.hasOpenPosition()) {
             log.trace("Skipping sell signal - no position open");

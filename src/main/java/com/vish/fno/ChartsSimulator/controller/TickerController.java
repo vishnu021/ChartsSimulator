@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.TickerResponse;
 import com.vish.fno.ChartsSimulator.service.TickerService;
@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * REST controller for ticker data endpoints.
@@ -37,35 +39,46 @@ public class TickerController {
      * <p>Uses config-driven strategy selection to detect trading signals
      * from historical tick data. Strategy can be overridden via query parameter.</p>
      *
+     * <p><b>Signal Detection:</b> Processes tickers incrementally, detecting signals
+     * on each tick to simulate real-time trading. Collects all detected signals into response.</p>
+     *
      * @param symbol Trading symbol (e.g., "NIFTY25O0724600CE")
      * @param date Trading date (format: "YYYY-MM-DD")
      * @param strategyName Strategy to use (optional - uses default if not provided)
-     * @param threshold Signal detection threshold percentage (default: 0.5%)
-     * @return TickerResponse containing tickers and significant moves
+     * @return TickerResponse containing tickers and detected signals
      */
     @GetMapping("/api/ticker")
     public TickerResponse getTickerData(
             @RequestParam String symbol,
             @RequestParam String date,
-            @RequestParam(required = false) String strategyName,
-            @RequestParam(required = false, defaultValue = "0.5") double threshold
+            @RequestParam(required = false) String strategyName
     ) {
         // Use default strategy if not provided
         String strategy = strategyName != null ? strategyName : backtestProperties.defaultStrategy();
 
-        log.info("🔍 TickerController /api/ticker - symbol: {}, date: {}, strategy: {}, threshold: {}%",
-                symbol, date, strategy, threshold);
+        log.info("🔍 TickerController /api/ticker - symbol: {}, date: {}, strategy: {}",
+                symbol, date, strategy);
 
         // Get ticker data
         List<Ticker> tickers = tickerService.getTickerData(symbol, date);
 
-        // Get strategy instance and detect signals
+        // Get strategy instance and detect signals incrementally
         Strategy tradingStrategy = strategyRegistry.getStrategy(strategy);
-        List<SignificantMove> significantMoves = tradingStrategy.detectSignals(tickers, threshold);
+        tradingStrategy.reset(); // Clear any previous state
+
+        List<Signal> signals = new ArrayList<>();
+        List<Ticker> historicalData = new ArrayList<>();
+
+        // Process each ticker incrementally (simulates real-time)
+        for (Ticker ticker : tickers) {
+            historicalData.add(ticker);
+            Optional<Signal> signal = tradingStrategy.detectSignal(historicalData);
+            signal.ifPresent(signals::add);
+        }
 
         log.info("🔍 TickerController /api/ticker - Strategy: {}, tickers: {}, signals: {}",
-                tradingStrategy.getStrategyName(), tickers.size(), significantMoves.size());
+                tradingStrategy.getStrategyName(), tickers.size(), signals.size());
 
-        return new TickerResponse(tickers, significantMoves);
+        return new TickerResponse(tickers, signals);
     }
 }

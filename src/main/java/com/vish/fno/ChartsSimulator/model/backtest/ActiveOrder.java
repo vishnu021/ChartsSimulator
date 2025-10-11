@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.model.backtest;
 
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import lombok.Builder;
 
 import java.time.Duration;
@@ -44,7 +44,7 @@ import java.util.Optional;
  */
 @Builder
 public record ActiveOrder(
-    SignificantMove triggerSignal,
+    Signal triggerSignal,
     int orderNumber,
     String symbol,
     int quantity,
@@ -77,7 +77,7 @@ public record ActiveOrder(
      * @return New active order ready for tracking
      */
     public static ActiveOrder openOrder(
-            SignificantMove triggerSignal,
+            Signal triggerSignal,
             int orderNumber,
             String symbol,
             int quantity,

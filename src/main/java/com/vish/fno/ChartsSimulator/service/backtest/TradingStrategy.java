@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
 
 /**
@@ -18,7 +18,7 @@ public interface TradingStrategy {
      * @param context Market context
      * @return true if should buy
      */
-    boolean shouldBuy(SignificantMove signal, MarketContext context);
+    boolean shouldBuy(Signal signal, MarketContext context);
 
     /**
      * Determines if should exit position.
@@ -27,7 +27,7 @@ public interface TradingStrategy {
      * @param context Market context
      * @return true if should sell
      */
-    boolean shouldSell(SignificantMove signal, MarketContext context);
+    boolean shouldSell(Signal signal, MarketContext context);
 
     /**
      * Calculates position size based on capital and risk.

@@ -1,16 +1,22 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Interface for signal detection strategies.
  *
  * <p>Implementations detect trading signals (dips/peaks) from ticker data
  * using various technical analysis algorithms.</p>
+ *
+ * <p><b>Real-time Simulation Design:</b></p>
+ * This interface is designed for tick-by-tick simulation where each call
+ * analyzes the current historical data and returns at most one signal.
+ * This mirrors real-time trading where you process one tick at a time.
  *
  * @author ChartsSimulator
  * @since 1.0.0
@@ -31,17 +37,25 @@ public interface SignalDetectionStrategy {
     }
 
     /**
-     * Detects trading signals from ticker data.
+     * Detects a trading signal from ticker data.
      *
-     * <p><b>IMPORTANT</b>: During incremental backtesting, this method is called
-     * repeatedly with growing datasets: tickers[0..i] where i increases.
-     * Implementations must only use data available in the provided list.</p>
+     * <p><b>IMPORTANT - Real-time Simulation:</b></p>
+     * This method is called on EVERY tick during backtesting with growing historical data.
+     * It should return at most ONE signal based on the current market state, mimicking
+     * real-time trading where you process ticks sequentially.
      *
-     * @param tickers List of ticker data points (may be partial during incremental processing)
-     * @param threshold Percentage threshold for significance (e.g., 0.5 for 0.5%)
-     * @return List of detected significant moves (dips and peaks)
+     * <p><b>Design Rationale:</b></p>
+     * <ul>
+     *   <li>Returns Optional to clearly indicate signal presence/absence</li>
+     *   <li>Single signal per call aligns with tick-by-tick processing</li>
+     *   <li>Strategies maintain their own thresholds internally</li>
+     *   <li>Implementations use only data available in the provided list (no forward bias)</li>
+     * </ul>
+     *
+     * @param tickers List of historical ticker data up to current moment
+     * @return Optional containing the detected signal, or empty if no signal
      */
-    List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold);
+    Optional<Signal> detectSignal(List<Ticker> tickers);
 
     /**
      * Returns strategy configuration parameters.

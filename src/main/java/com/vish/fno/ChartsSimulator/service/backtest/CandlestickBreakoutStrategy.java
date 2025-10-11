@@ -2,7 +2,7 @@ package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Candlestick;
-import com.vish.fno.ChartsSimulator.model.SignificantMove;
+import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Candlestick breakout strategy based on minima breakdown and reversal patterns.
@@ -133,9 +134,9 @@ public class CandlestickBreakoutStrategy implements Strategy {
     }
 
     @Override
-    public List<SignificantMove> detectSignals(List<Ticker> tickers, double threshold) {
+    public Optional<Signal> detectSignal(List<Ticker> tickers) {
         if (tickers == null || tickers.isEmpty()) {
-            return List.of();
+            return Optional.empty();
         }
 
         // Process only new tickers to build candlesticks incrementally
@@ -145,7 +146,8 @@ public class CandlestickBreakoutStrategy implements Strategy {
         updateMinimas();
 
         // Detect breakdown-reversal patterns
-        return detectBreakoutSignals(tickers);
+        List<Signal> signals = detectBreakoutSignals(tickers);
+        return signals.isEmpty() ? Optional.empty() : Optional.of(signals.get(0));
     }
 
     /**
@@ -221,14 +223,14 @@ public class CandlestickBreakoutStrategy implements Strategy {
     /**
      * Detects breakdown-reversal patterns and generates signals.
      */
-    private List<SignificantMove> detectBreakoutSignals(List<Ticker> tickers) {
+    private List<Signal> detectBreakoutSignals(List<Ticker> tickers) {
         if (minimas.size() < 2) {
             return List.of(); // Need at least 2 minimas to detect pattern
         }
 
         Ticker currentTick = tickers.get(tickers.size() - 1);
         double currentPrice = currentTick.price();
-        List<SignificantMove> signals = new ArrayList<>();
+        List<Signal> signals = new ArrayList<>();
 
         // Check if we're in a breakdown state
         if (breakdownState == null) {
@@ -237,7 +239,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
         } else {
             // We're in breakdown state - check for reversal
             if (!breakdownState.signalGenerated) {
-                SignificantMove signal = checkForReversal(currentPrice, currentTick);
+                Signal signal = checkForReversal(currentPrice, currentTick);
                 if (signal != null) {
                     signals.add(signal);
                     // Mark signal as generated and store entry price for stop/target calculation
@@ -296,7 +298,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
     /**
      * Checks if current price reverses back above the broken minima (reversal signal).
      */
-    private SignificantMove checkForReversal(double currentPrice, Ticker tick) {
+    private Signal checkForReversal(double currentPrice, Ticker tick) {
         double brokenLevel = breakdownState.brokenMinima.price();
 
         if (currentPrice > brokenLevel) {
@@ -315,7 +317,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
 
             // Store entry price and stop/target for later use
             // Signal price = entry price (current price at reversal confirmation)
-            return new SignificantMove(
+            return new Signal(
                 tick.time(),  // Reversal point
                 tick.time(),  // Signal emission time
                 entryPrice,   // Entry at current price (confirmed reversal)
@@ -362,7 +364,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(SignificantMove signal, MarketContext context) {
+    public boolean shouldBuy(Signal signal, MarketContext context) {
         if (context.hasOpenPosition()) {
             log.trace("Skipping buy signal - position already open");
             return false;
@@ -383,7 +385,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldSell(SignificantMove signal, MarketContext context) {
+    public boolean shouldSell(Signal signal, MarketContext context) {
         // This strategy only generates buy signals (reversals)
         // Exits are handled by stop loss / take profit
         return false;
