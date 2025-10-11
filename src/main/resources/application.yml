@@ -96,7 +96,7 @@ app:
 
   # Backtesting configuration
   backtest:
-    defaultStrategy: "moving-average"  # Default strategy to use for backtesting
+    defaultStrategy: "LowWickMomentumStrategy"  # Default strategy to use for backtesting
     defaultInitialCapital: 100000.0    # Default starting capital
     fixedQuantity: 0                   # Fixed quantity per trade (0 = use percentage-based)
     positionSizePercent: 15.0          # Percentage of capital to risk per trade
@@ -104,9 +104,21 @@ app:
     takeProfitPercent: 5.0             # Take profit percentage
     lotSize: 15                        # Lot size for quantity calculation (quantity will be multiple of this)
 
+    # Index instruments that trade with quantity=1 (expensive instruments)
+    indexSymbols:
+      - "NIFTY 50"
+      - "NIFTY50"
+      - "BANK NIFTY"
+      - "BANKNIFTY"
+      - "NIFTY BANK"
+      - "SENSEX"
+      - "BANKEX"
+      - "FINNIFTY"
+      - "MIDCPNIFTY"
+
     # Strategy-specific configuration overrides
     strategies:
-      moving-average:
+      MovingAverageStrategy:
         enabled: true
         stopLossPercent: 2.0
         takeProfitPercent: 5.0

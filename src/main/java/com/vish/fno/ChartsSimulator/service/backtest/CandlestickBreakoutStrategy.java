@@ -5,12 +5,11 @@ import com.vish.fno.ChartsSimulator.model.Candlestick;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
+import com.vish.fno.ChartsSimulator.util.CandleUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +83,6 @@ import java.util.Optional;
 public class CandlestickBreakoutStrategy implements Strategy {
 
     private final BacktestProperties backtestProperties;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // Strategy parameters
     private static final int MINIMA_LOOKBACK = 3;  // Candles before/after for minima confirmation
@@ -94,9 +92,6 @@ public class CandlestickBreakoutStrategy implements Strategy {
     // Stateful caching (cleared on reset())
     private final List<Candlestick> candlesticks = new ArrayList<>();
     private final List<MinimaPoint> minimas = new ArrayList<>();
-    private int lastProcessedTickIndex = -1;
-    private Candlestick currentCandle = null;
-    private String lastProcessedMinute = null;
     private BreakdownState breakdownState = null;
 
     // Runtime override fields
@@ -124,9 +119,6 @@ public class CandlestickBreakoutStrategy implements Strategy {
     public void reset() {
         candlesticks.clear();
         minimas.clear();
-        lastProcessedTickIndex = -1;
-        currentCandle = null;
-        lastProcessedMinute = null;
         breakdownState = null;
         stopLossPercentOverride = null;
         takeProfitPercentOverride = null;
@@ -151,29 +143,27 @@ public class CandlestickBreakoutStrategy implements Strategy {
     }
 
     /**
-     * Incrementally builds 1-minute candlesticks from tick data.
+     * Builds 1-minute candlesticks from tick data using map-based grouping.
+     *
+     * <p><b>Approach:</b></p>
+     * <ol>
+     *   <li>Groups all tickers by minute using streams</li>
+     *   <li>Builds complete OHLC candlesticks from grouped tickers</li>
+     *   <li>Replaces candlesticks list with newly built completed candles</li>
+     *   <li>Excludes current/partial minute (last candle is always incomplete)</li>
+     * </ol>
      */
     private void updateCandlesticks(List<Ticker> tickers) {
-        // Only process new tickers since last call
-        for (int i = lastProcessedTickIndex + 1; i < tickers.size(); i++) {
-            Ticker tick = tickers.get(i);
-            String minute = getMinuteKey(tick.time());
-
-            if (!minute.equals(lastProcessedMinute)) {
-                // New minute - finalize current candle and start new one
-                if (currentCandle != null) {
-                    candlesticks.add(currentCandle);
-                    log.trace("Finalized candle: {}", currentCandle);
-                }
-                currentCandle = Candlestick.create(minute, tick.price());
-                lastProcessedMinute = minute;
-            } else {
-                // Same minute - update current candle
-                currentCandle = currentCandle.update(tick.price());
-            }
-
-            lastProcessedTickIndex = i;
+        if (tickers.isEmpty()) {
+            return;
         }
+
+        // Get completed candlesticks from tickers (excludes incomplete last minute)
+        List<Candlestick> completed = CandleUtils.getCompletedCandlesticksFromTickers(tickers);
+
+        // Replace entire list with new candlesticks
+        candlesticks.clear();
+        candlesticks.addAll(completed);
     }
 
     /**
@@ -340,20 +330,6 @@ public class CandlestickBreakoutStrategy implements Strategy {
         return highest;
     }
 
-    /**
-     * Extracts minute-level timestamp from full timestamp.
-     * Example: "2025-10-01 09:25:14.123" → "2025-10-01 09:25:00.000"
-     */
-    private String getMinuteKey(String timestamp) {
-        LocalDateTime dt = LocalDateTime.parse(timestamp, FORMATTER);
-        return dt.withSecond(0).withNano(0).format(FORMATTER);
-    }
-
-    @Override
-    public String getStrategyName() {
-        return "candlestick-breakout";
-    }
-
     @Override
     public Map<String, Object> getParameters() {
         return Map.of(
@@ -364,52 +340,8 @@ public class CandlestickBreakoutStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(Signal signal, MarketContext context) {
-        if (context.hasOpenPosition()) {
-            log.trace("Skipping buy signal - position already open");
-            return false;
-        }
-
-        boolean isDip = "dip".equalsIgnoreCase(signal.type());
-        if (isDip && breakdownState != null) {
-            // Calculate proper stop and target based on breakdown state
-            double entryPrice = signal.price();
-            double stopLoss = breakdownState.lowestAfterBreak;
-            double targetRange = breakdownState.highestBetweenMinimas - entryPrice;
-            double target = entryPrice + (targetRange * TARGET_PERCENT_OF_RANGE / 100.0);
-
-            log.debug("[{}] 📊 Buy signal confirmed @ {} | Stop: {} | Target: {}",
-                signal.emissionTime(), entryPrice, stopLoss, target);
-        }
-        return isDip;
-    }
-
-    @Override
-    public boolean shouldSell(Signal signal, MarketContext context) {
-        // This strategy only generates buy signals (reversals)
-        // Exits are handled by stop loss / take profit
-        return false;
-    }
-
-    @Override
-    public int calculatePositionSize(double capital, double price, double riskPercent) {
-        int lotSize = backtestProperties.lotSize();
-
-        if (backtestProperties.fixedQuantity() > 0) {
-            int quantity = backtestProperties.fixedQuantity();
-            quantity = (quantity / lotSize) * lotSize;
-            log.debug("Position size: {} shares (FIXED quantity, lot size {})", quantity, lotSize);
-            return quantity;
-        }
-
-        double positionPercent = backtestProperties.positionSizePercent();
-        double riskCapital = capital * (positionPercent / 100.0);
-        int quantity = (int) Math.floor(riskCapital / price);
-        quantity = (quantity / lotSize) * lotSize;
-
-        log.debug("Position size: {} shares (capital: {}, price: {}, position%: {}%, lot size: {})",
-            quantity, capital, price, positionPercent, lotSize);
-        return quantity;
+    public BacktestProperties getBacktestProperties() {
+        return backtestProperties;
     }
 
     @Override

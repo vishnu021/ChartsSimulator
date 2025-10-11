@@ -4,16 +4,15 @@ import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Candlestick;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
-import com.vish.fno.ChartsSimulator.model.backtest.MarketContext;
+import com.vish.fno.ChartsSimulator.util.CandleUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -102,7 +101,6 @@ import java.util.Optional;
 public class LowWickMomentumStrategy implements Strategy {
 
     private final BacktestProperties backtestProperties;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     // Strategy parameters
     private static final double MAX_UPPER_WICK_PERCENT = 5.0;  // Max 5% upper wick
@@ -111,12 +109,10 @@ public class LowWickMomentumStrategy implements Strategy {
 
     // Stateful caching (cleared on reset())
     private final List<Candlestick> candlesticks = new ArrayList<>();
-    private int lastProcessedTickIndex = -1;
-    private Candlestick currentCandle = null;
-    private String lastProcessedMinute = null;
 
     // Track last signal's candle to avoid duplicate signals
     private SignalState lastSignalState = null;
+    private String lastCandleTimestamp = null;
 
     // Runtime override fields
     private Double stopLossPercentOverride;
@@ -136,9 +132,6 @@ public class LowWickMomentumStrategy implements Strategy {
     @Override
     public void reset() {
         candlesticks.clear();
-        lastProcessedTickIndex = -1;
-        currentCandle = null;
-        lastProcessedMinute = null;
         lastSignalState = null;
         stopLossPercentOverride = null;
         takeProfitPercentOverride = null;
@@ -155,73 +148,59 @@ public class LowWickMomentumStrategy implements Strategy {
         updateCandlesticks(tickers);
 
         // Detect low wick momentum signals from completed candles
-        List<Signal> signals = detectLowWickSignals(tickers);
-        return signals.isEmpty() ? Optional.empty() : Optional.of(signals.get(0));
+        return detectLowWickSignals(tickers);
     }
 
     /**
-     * Incrementally builds 1-minute candlesticks from tick data.
+     * Builds 1-minute candlesticks from tick data using map-based grouping.
+     *
+     * <p><b>Approach:</b></p>
+     * <ol>
+     *   <li>Groups all tickers by minute using streams</li>
+     *   <li>Builds complete OHLC candlesticks from grouped tickers</li>
+     *   <li>Replaces candlesticks list with newly built completed candles</li>
+     *   <li>Excludes current/partial minute (last candle is always incomplete)</li>
+     * </ol>
      */
     private void updateCandlesticks(List<Ticker> tickers) {
-        // Only process new tickers since last call
-        for (int i = lastProcessedTickIndex + 1; i < tickers.size(); i++) {
-            Ticker tick = tickers.get(i);
-            String minute = getMinuteKey(tick.time());
+        // Get completed candlesticks from tickers (excludes incomplete last minute)
+        List<Candlestick> completed = CandleUtils.getCompletedCandlesticksFromTickers(tickers);
 
-            if (!minute.equals(lastProcessedMinute)) {
-                // New minute - finalize current candle and start new one
-                if (currentCandle != null) {
-                    candlesticks.add(currentCandle);
-                    log.trace("Finalized candle: {} | O:{} H:{} L:{} C:{} | Body:{}% UpperWick:{}%",
-                        currentCandle.timestamp(),
-                        String.format("%.2f", currentCandle.open()),
-                        String.format("%.2f", currentCandle.high()),
-                        String.format("%.2f", currentCandle.low()),
-                        String.format("%.2f", currentCandle.close()),
-                        String.format("%.2f", calculateBodyPercent(currentCandle)),
-                        String.format("%.2f", calculateUpperWickPercent(currentCandle)));
-                }
-                currentCandle = Candlestick.create(minute, tick.price());
-                lastProcessedMinute = minute;
-            } else {
-                // Same minute - update current candle
-                currentCandle = currentCandle.update(tick.price());
-            }
-
-            lastProcessedTickIndex = i;
-        }
+        // Replace entire list with new candlesticks
+        candlesticks.clear();
+        candlesticks.addAll(completed);
     }
 
     /**
      * Detects low upper wick candles and generates momentum signals.
      */
-    private List<Signal> detectLowWickSignals(List<Ticker> tickers) {
+    private Optional<Signal> detectLowWickSignals(List<Ticker> tickers) {
+        // Need at least 1 completed candle to check for signals
         if (candlesticks.isEmpty()) {
-            return List.of();
+            return Optional.empty();
         }
 
-        List<Signal> signals = new ArrayList<>();
         Ticker currentTick = tickers.get(tickers.size() - 1);
-
-        // Check the most recently completed candle (not the current forming one)
-        // We need at least 1 completed candle
-        if (candlesticks.isEmpty()) {
-            return List.of();
-        }
-
         Candlestick lastCompletedCandle = candlesticks.get(candlesticks.size() - 1);
 
         // Avoid duplicate signals - only check if this candle hasn't generated signal yet
         if (lastSignalState != null && lastSignalState.signalCandle.timestamp().equals(lastCompletedCandle.timestamp())) {
-            return List.of(); // Already generated signal for this candle
+            return Optional.empty(); // Already generated signal for this candle
         }
 
+        if(Objects.equals(lastCandleTimestamp, lastCompletedCandle.timestamp())) {
+            return Optional.empty();
+        }
+        lastCandleTimestamp =  lastCompletedCandle.timestamp();
+        double upperWickPercent = CandleUtils.calculateUpperWickPercent(lastCompletedCandle);
+
+        log.info("[{}] >> latest candle: {}, bullish: {} upperWick: {}", currentTick.time(), lastCompletedCandle,
+                CandleUtils.isBullish(lastCompletedCandle), String.format("%.2f", upperWickPercent));
         // Calculate upper wick percentage
-        double upperWickPercent = calculateUpperWickPercent(lastCompletedCandle);
-        double bodyPercent = calculateBodyPercent(lastCompletedCandle);
+//        double bodyPercent = CandleUtils.calculateBodyPercent(lastCompletedCandle);
 
         // Check if candle meets criteria
-        if (upperWickPercent < MAX_UPPER_WICK_PERCENT && bodyPercent > MIN_CANDLE_BODY_PERCENT) {
+        if (CandleUtils.isBullish(lastCompletedCandle) && upperWickPercent < MAX_UPPER_WICK_PERCENT /*&& bodyPercent > MIN_CANDLE_BODY_PERCENT*/) {
             // Strong momentum candle! Generate buy signal
             double entryPrice = lastCompletedCandle.close();
             double stopPrice = lastCompletedCandle.low();
@@ -254,7 +233,7 @@ public class LowWickMomentumStrategy implements Strategy {
                 String.format("%.1f", RISK_REWARD_RATIO));
 
             // Generate signal
-            signals.add(new Signal(
+            return Optional.of(new Signal(
                 lastCompletedCandle.timestamp(),  // Candle timestamp
                 currentTick.time(),               // Signal emission time
                 entryPrice,                       // Entry at candle close
@@ -263,41 +242,7 @@ public class LowWickMomentumStrategy implements Strategy {
             ));
         }
 
-        return signals;
-    }
-
-    /**
-     * Calculates upper wick percentage.
-     * Upper Wick % = ((High - Close) / Close) × 100
-     */
-    private double calculateUpperWickPercent(Candlestick candle) {
-        if (candle.close() == 0) return 0.0;
-        double upperWick = candle.high() - candle.close();
-        return (upperWick / candle.close()) * 100.0;
-    }
-
-    /**
-     * Calculates candle body percentage.
-     * Body % = |Close - Open| / Close × 100
-     */
-    private double calculateBodyPercent(Candlestick candle) {
-        if (candle.close() == 0) return 0.0;
-        double body = Math.abs(candle.close() - candle.open());
-        return (body / candle.close()) * 100.0;
-    }
-
-    /**
-     * Extracts minute-level timestamp from full timestamp.
-     * Example: "2025-10-01 09:25:14.123" → "2025-10-01 09:25:00.000"
-     */
-    private String getMinuteKey(String timestamp) {
-        LocalDateTime dt = LocalDateTime.parse(timestamp, FORMATTER);
-        return dt.withSecond(0).withNano(0).format(FORMATTER);
-    }
-
-    @Override
-    public String getStrategyName() {
-        return "low-wick-momentum";
+        return Optional.empty();
     }
 
     @Override
@@ -310,50 +255,8 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(Signal signal, MarketContext context) {
-        if (context.hasOpenPosition()) {
-            log.trace("Skipping buy signal - position already open");
-            return false;
-        }
-
-        boolean isDip = "dip".equalsIgnoreCase(signal.type());
-        if (isDip && lastSignalState != null) {
-            log.debug("[{}] 📊 Buy signal confirmed @ {} | Upper wick: {}% | Stop: {}, Target: {}",
-                signal.emissionTime(),
-                String.format("%.2f", lastSignalState.entryPrice),
-                String.format("%.2f", signal.magnitude()),
-                String.format("%.2f", lastSignalState.stopPrice),
-                String.format("%.2f", lastSignalState.targetPrice));
-        }
-        return isDip;
-    }
-
-    @Override
-    public boolean shouldSell(Signal signal, MarketContext context) {
-        // This strategy only generates buy signals
-        // Exits are handled by stop loss / take profit
-        return false;
-    }
-
-    @Override
-    public int calculatePositionSize(double capital, double price, double riskPercent) {
-        int lotSize = backtestProperties.lotSize();
-
-        if (backtestProperties.fixedQuantity() > 0) {
-            int quantity = backtestProperties.fixedQuantity();
-            quantity = (quantity / lotSize) * lotSize;
-            log.debug("Position size: {} shares (FIXED quantity, lot size {})", quantity, lotSize);
-            return quantity;
-        }
-
-        double positionPercent = backtestProperties.positionSizePercent();
-        double riskCapital = capital * (positionPercent / 100.0);
-        int quantity = (int) Math.floor(riskCapital / price);
-        quantity = (quantity / lotSize) * lotSize;
-
-        log.debug("Position size: {} shares (capital: {}, price: {}, position%: {}%, lot size: {})",
-            quantity, capital, price, positionPercent, lotSize);
-        return quantity;
+    public BacktestProperties getBacktestProperties() {
+        return backtestProperties;
     }
 
     @Override

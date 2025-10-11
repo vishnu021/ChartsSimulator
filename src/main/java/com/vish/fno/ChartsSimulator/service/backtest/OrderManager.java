@@ -105,13 +105,13 @@ public class OrderManager {
     ) {
         double currentPrice = tick.price();
 
-        // Check if strategy wants to enter
-        if (!strategy.shouldBuy(signal, context)) {
-            return EntryResult.failure("Strategy declined entry");
+        // Check if already in position (engine-level validation)
+        if (context.hasOpenPosition()) {
+            return EntryResult.failure("Position already open");
         }
 
-        // Calculate position size
-        int quantity = strategy.calculatePositionSize(cashBalance, currentPrice, 10.0);
+        // Calculate position size (pass symbol for index instrument detection)
+        int quantity = strategy.calculatePositionSize(tick.symbol(), cashBalance, currentPrice, 10.0);
 
         if (quantity <= 0) {
             log.debug("[{}] ⚠️ Skipping entry - quantity is 0", tick.time());
@@ -151,13 +151,16 @@ public class OrderManager {
     /**
      * Checks if any exit conditions are met for the current position.
      *
-     * <p><b>Exit Priority:</b> Stop Loss → Take Profit → Strategy Exit Signal</p>
+     * <p><b>Exit Priority:</b> Stop Loss → Take Profit</p>
+     *
+     * <p><b>Note:</b> Strategy exit signals removed - exits handled purely by stop/target levels.
+     * If strategy wants different exit logic, it should adjust stop/target dynamically.</p>
      *
      * @param order Current active order
      * @param tick Current tick data
-     * @param currentSignal Current signal (if any)
-     * @param strategy Trading strategy
-     * @param context Market context
+     * @param currentSignal Current signal (unused - kept for future extensions)
+     * @param strategy Trading strategy (unused - kept for future extensions)
+     * @param context Market context (unused - kept for future extensions)
      * @return ExitCheckResult indicating if exit is needed and why
      */
     public ExitCheckResult checkExitConditions(
@@ -180,12 +183,6 @@ public class OrderManager {
         if (currentPrice >= order.takeProfit()) {
             log.debug("[{}] 🎯 Take profit hit @ {} (entry: {})", tick.time(), currentPrice, entryPrice);
             return ExitCheckResult.exit(ExitReason.TAKE_PROFIT);
-        }
-
-        // 3. Strategy exit signal (if signal present)
-        if (currentSignal.isPresent() && strategy.shouldSell(currentSignal.get(), context)) {
-            log.debug("[{}] 📉 Strategy exit signal @ {}", tick.time(), currentPrice);
-            return ExitCheckResult.exit(ExitReason.SIGNAL);
         }
 
         return ExitCheckResult.noExit();

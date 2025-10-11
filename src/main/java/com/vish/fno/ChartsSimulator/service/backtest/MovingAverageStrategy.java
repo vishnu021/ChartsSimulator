@@ -99,11 +99,6 @@ public class MovingAverageStrategy implements Strategy {
     }
 
     @Override
-    public String getStrategyName() {
-        return "moving-average";
-    }
-
-    @Override
     public Map<String, Object> getParameters() {
         return Map.of(
             "threshold", DEFAULT_THRESHOLD,
@@ -115,59 +110,8 @@ public class MovingAverageStrategy implements Strategy {
     }
 
     @Override
-    public boolean shouldBuy(Signal signal, MarketContext context) {
-        // Only buy if no position open and signal is a dip
-        if (context.hasOpenPosition()) {
-            log.trace("Skipping buy signal - position already open");
-            return false;
-        }
-
-        boolean isDip = "dip".equalsIgnoreCase(signal.type());
-        if (isDip) {
-            log.debug("[{}] 📊 Buy signal @ {}", signal.emissionTime(), signal.price());
-        }
-        return isDip;
-    }
-
-    @Override
-    public boolean shouldSell(Signal signal, MarketContext context) {
-        // Only sell if position is open and signal is a peak
-        if (!context.hasOpenPosition()) {
-            log.trace("Skipping sell signal - no position open");
-            return false;
-        }
-
-        boolean isPeak = "peak".equalsIgnoreCase(signal.type());
-        if (isPeak) {
-            log.debug("[{}] 📊 Sell signal @ {}", signal.emissionTime(), signal.price());
-        }
-        return isPeak;
-    }
-
-    @Override
-    public int calculatePositionSize(double capital, double price, double riskPercent) {
-        int lotSize = backtestProperties.lotSize();
-
-        // Use fixed quantity if configured (non-zero)
-        if (backtestProperties.fixedQuantity() > 0) {
-            int quantity = backtestProperties.fixedQuantity();
-            // Round to nearest lot size
-            quantity = (quantity / lotSize) * lotSize;
-            log.debug("Position size: {} shares (FIXED quantity from config, rounded to lot size {})", quantity, lotSize);
-            return quantity;
-        }
-
-        // Otherwise use percentage-based sizing
-        double positionPercent = backtestProperties.positionSizePercent();
-        double riskCapital = capital * (positionPercent / 100.0);
-        int quantity = (int) Math.floor(riskCapital / price);
-
-        // Round down to nearest lot size multiple
-        quantity = (quantity / lotSize) * lotSize;
-
-        log.debug("Position size: {} shares (capital: {}, price: {}, position%: {}%, lot size: {})",
-                 quantity, capital, price, positionPercent, lotSize);
-        return quantity;
+    public BacktestProperties getBacktestProperties() {
+        return backtestProperties;
     }
 
     @Override
