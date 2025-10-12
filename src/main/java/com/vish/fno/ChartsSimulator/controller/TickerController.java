@@ -34,7 +34,7 @@ public class TickerController {
     private final BacktestProperties backtestProperties;
 
     /**
-     * Retrieves ticker data with detected trading signals.
+     * Retrieves ticker data with optional trading signals detection.
      *
      * <p>Uses config-driven strategy selection to detect trading signals
      * from historical tick data. Strategy can be overridden via query parameter.</p>
@@ -45,22 +45,30 @@ public class TickerController {
      * @param symbol Trading symbol (e.g., "NIFTY25O0724600CE")
      * @param date Trading date (format: "YYYY-MM-DD")
      * @param strategyName Strategy to use (optional - uses default if not provided)
+     * @param runStrategy Whether to run strategy detection (optional - defaults to true)
      * @return TickerResponse containing tickers and detected signals
      */
     @GetMapping("/api/ticker")
     public TickerResponse getTickerData(
             @RequestParam String symbol,
             @RequestParam String date,
-            @RequestParam(required = false) String strategyName
+            @RequestParam(required = false) String strategyName,
+            @RequestParam(required = false, defaultValue = "true") boolean runStrategy
     ) {
         // Use default strategy if not provided
         String strategy = strategyName != null ? strategyName : backtestProperties.defaultStrategy();
 
-        log.info("🔍 TickerController /api/ticker - symbol: {}, date: {}, strategy: {}",
-                symbol, date, strategy);
+        log.info("🔍 TickerController /api/ticker - symbol: {}, date: {}, strategy: {}, runStrategy: {}",
+                symbol, date, strategy, runStrategy);
 
         // Get ticker data
         List<Ticker> tickers = tickerService.getTickerData(symbol, date);
+
+        // Skip signal detection if runStrategy is false
+        if (!runStrategy) {
+            log.info("⏭️ TickerController /api/ticker - Skipping strategy execution, tickers: {}", tickers.size());
+            return new TickerResponse(tickers, List.of());
+        }
 
         // Get strategy instance and detect signals incrementally
         Strategy tradingStrategy = strategyRegistry.getStrategy(strategy);

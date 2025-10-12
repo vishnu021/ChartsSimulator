@@ -4,74 +4,49 @@ import { useMemo, useRef, useEffect, useState } from 'react';
 
 /**
  * TradeChart Component
- * Displays a filtered chart view showing ticker data around a specific trade
- * with entry/exit markers and configurable time window
+ * Simple tick-by-tick chart showing actual ticker data for a trade
+ * Time range: 1 minute before entry to 1 minute after exit
  */
-export default function TradeChart({ trade, tickers, timeWindowMinutes }) {
+export default function TradeChart({ trade, tickers }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [mousePos, setMousePos] = useState(null);
 
-  // Parse datetime string to timestamp
-  const parseTime = (timeStr) => {
-    return new Date(timeStr).getTime();
-  };
-
-  // Filter tickers based on trade entry/exit time and window
+  // Filter tickers to show data from last minute before entry to next minute after exit
   const filteredTickers = useMemo(() => {
     if (!trade || !tickers || tickers.length === 0) return [];
 
-    const entryTime = parseTime(trade.entryTime);
-    const exitTime = parseTime(trade.exitTime);
-    const windowMs = timeWindowMinutes * 60 * 1000; // Convert minutes to milliseconds
+    const entryTime = new Date(trade.entryTime).getTime();
+    const exitTime = new Date(trade.exitTime).getTime();
 
-    const startTime = entryTime - windowMs;
-    const endTime = exitTime + windowMs;
+    // Floor entry to minute start, then go back 1 minute
+    const entryDate = new Date(entryTime);
+    entryDate.setSeconds(0, 0);
+    const startTime = entryDate.getTime() - 60000; // -1 minute
+
+    // Ceil exit to next minute start
+    const exitDate = new Date(exitTime);
+    if (exitDate.getSeconds() > 0 || exitDate.getMilliseconds() > 0) {
+      exitDate.setSeconds(0, 0);
+      exitDate.setMinutes(exitDate.getMinutes() + 1);
+    }
+    const endTime = exitDate.getTime();
 
     return tickers.filter(ticker => {
-      const tickerTime = parseTime(ticker.time);
+      const tickerTime = new Date(ticker.time).getTime();
       return tickerTime >= startTime && tickerTime <= endTime;
     });
-  }, [trade, tickers, timeWindowMinutes]);
+  }, [trade, tickers]);
 
-  // Aggregate tickers into 1-minute candlesticks
-  const candlesticks = useMemo(() => {
-    if (filteredTickers.length === 0) return [];
+  // Calculate price range
+  const priceRange = useMemo(() => {
+    if (filteredTickers.length === 0) return { min: 0, max: 0, range: 1 };
 
-    const candles = [];
-    let currentMinute = null;
-    let currentCandle = null;
-
-    filteredTickers.forEach((ticker) => {
-      const tickerTime = new Date(ticker.time);
-      const minute = new Date(tickerTime.getFullYear(), tickerTime.getMonth(), tickerTime.getDate(),
-        tickerTime.getHours(), tickerTime.getMinutes(), 0, 0).getTime();
-
-      if (minute !== currentMinute) {
-        if (currentCandle) {
-          candles.push(currentCandle);
-        }
-        currentMinute = minute;
-        currentCandle = {
-          time: minute,
-          open: ticker.price,
-          high: ticker.price,
-          low: ticker.price,
-          close: ticker.price,
-        };
-      } else {
-        currentCandle.high = Math.max(currentCandle.high, ticker.price);
-        currentCandle.low = Math.min(currentCandle.low, ticker.price);
-        currentCandle.close = ticker.price;
-      }
-    });
-
-    if (currentCandle) {
-      candles.push(currentCandle);
-    }
-
-    return candles;
+    const prices = filteredTickers.map(t => t.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return { min, max, range: max - min || 1 };
   }, [filteredTickers]);
 
   // Update canvas dimensions on resize
@@ -88,22 +63,18 @@ export default function TradeChart({ trade, tickers, timeWindowMinutes }) {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // Mouse move handler
+  // Mouse handlers
   const handleMouseMove = (e) => {
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setMousePos({ x, y });
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const handleMouseLeave = () => {
-    setMousePos(null);
-  };
+  const handleMouseLeave = () => setMousePos(null);
 
   // Draw chart
   useEffect(() => {
-    if (!canvasRef.current || candlesticks.length === 0) return;
+    if (!canvasRef.current || filteredTickers.length === 0) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -112,205 +83,130 @@ export default function TradeChart({ trade, tickers, timeWindowMinutes }) {
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Calculate price range from candlesticks
-    const allPrices = candlesticks.flatMap(c => [c.high, c.low]);
-    const minPrice = Math.min(...allPrices);
-    const maxPrice = Math.max(...allPrices);
-    const priceRange = maxPrice - minPrice || 1;
-
-    // Margins
-    const marginTop = 30;
-    const marginBottom = 50;
-    const marginLeft = 80;
-    const marginRight = 80; // Increased to prevent price label trimming
-    const chartWidth = width - marginLeft - marginRight;
-    const chartHeight = height - marginTop - marginBottom;
+    // Chart dimensions
+    const margin = { top: 40, bottom: 50, left: 80, right: 80 };
+    const chartWidth = width - margin.left - margin.right;
+    const chartHeight = height - margin.top - margin.bottom;
 
     // Helper functions
-    const getY = (price) => marginTop + ((maxPrice - price) / priceRange) * chartHeight;
+    const getY = (price) => margin.top + ((priceRange.max - price) / priceRange.range) * chartHeight;
 
-    // Calculate candle width - use full space for continuity with no gaps
-    const candleWidth = chartWidth / candlesticks.length;
-    const getX = (index) => marginLeft + (index * candleWidth);
+    const timeRange = new Date(filteredTickers[filteredTickers.length - 1].time).getTime() -
+                      new Date(filteredTickers[0].time).getTime();
+    const getX = (tickerTime) => {
+      const offset = new Date(tickerTime).getTime() - new Date(filteredTickers[0].time).getTime();
+      return margin.left + (timeRange > 0 ? (offset / timeRange) * chartWidth : 0);
+    };
 
-    // Draw background grid
+    // Draw grid
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= 5; i++) {
-      const y = marginTop + (i / 5) * chartHeight;
+      const y = margin.top + (i / 5) * chartHeight;
       ctx.beginPath();
-      ctx.moveTo(marginLeft, y);
-      ctx.lineTo(width - marginRight, y);
+      ctx.moveTo(margin.left, y);
+      ctx.lineTo(width - margin.right, y);
       ctx.stroke();
     }
 
-    // Draw candlesticks (translucent background)
-    ctx.globalAlpha = 0.3; // Make candlesticks translucent
-    candlesticks.forEach((candle, i) => {
-      const x = getX(i);
-      const yOpen = getY(candle.open);
-      const yClose = getY(candle.close);
-      const yHigh = getY(candle.high);
-      const yLow = getY(candle.low);
-
-      const isGreen = candle.close >= candle.open;
-
-      // Draw wick (high-low line) at candle center
-      const candleCenter = x + candleWidth / 2;
-      ctx.strokeStyle = isGreen ? '#00ff00' : '#ff0000';
-      ctx.lineWidth = 2; // Increased thickness for better visibility
-      ctx.beginPath();
-      ctx.moveTo(candleCenter, yHigh);
-      ctx.lineTo(candleCenter, yLow);
-      ctx.stroke();
-
-      // Draw candle body spanning full width (no gaps)
-      const bodyTop = Math.min(yOpen, yClose);
-      const bodyHeight = Math.abs(yClose - yOpen) || 1;
-
-      ctx.fillStyle = isGreen ? '#00ff00' : '#ff0000';
-      ctx.fillRect(x, bodyTop, candleWidth, bodyHeight);
-
-      // Draw candle border
-      ctx.strokeStyle = isGreen ? '#00aa00' : '#aa0000';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, bodyTop, candleWidth, bodyHeight);
-    });
-    ctx.globalAlpha = 1.0; // Reset opacity
-
-    // Draw ticker line (foreground overlay)
+    // Draw ticker line
     ctx.strokeStyle = '#00aaff';
     ctx.lineWidth = 2;
     ctx.beginPath();
-
     filteredTickers.forEach((ticker, i) => {
-      const tickerTime = parseTime(ticker.time);
-      // Find the corresponding position based on time
-      const totalTimeRange = parseTime(filteredTickers[filteredTickers.length - 1].time) - parseTime(filteredTickers[0].time);
-      const tickerOffset = tickerTime - parseTime(filteredTickers[0].time);
-      const xRatio = totalTimeRange > 0 ? tickerOffset / totalTimeRange : 0;
-      const x = marginLeft + xRatio * chartWidth;
+      const x = getX(ticker.time);
       const y = getY(ticker.price);
-
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     });
-
     ctx.stroke();
 
-    // Find ticker positions for entry and exit times
-    const entryTime = parseTime(trade.entryTime);
-    const exitTime = parseTime(trade.exitTime);
+    // Draw entry/exit markers
+    const entryTime = new Date(trade.entryTime).getTime();
+    const exitTime = new Date(trade.exitTime).getTime();
 
-    let entryTicker = null;
-    let exitTicker = null;
+    const drawMarker = (time, color, label) => {
+      const ticker = filteredTickers.find(t => new Date(t.time).getTime() >= time);
+      if (!ticker) return;
 
-    // Find the exact ticker at entry and exit times
-    filteredTickers.forEach((ticker) => {
-      const tickerTime = parseTime(ticker.time);
-      if (!entryTicker && tickerTime >= entryTime) entryTicker = ticker;
-      if (!exitTicker && tickerTime >= exitTime) exitTicker = ticker;
-    });
+      const x = getX(ticker.time);
+      const y = getY(ticker.price);
 
-    // Draw entry marker (green) on ticker line
-    if (entryTicker) {
-      const tickerTime = parseTime(entryTicker.time);
-      const totalTimeRange = parseTime(filteredTickers[filteredTickers.length - 1].time) - parseTime(filteredTickers[0].time);
-      const tickerOffset = tickerTime - parseTime(filteredTickers[0].time);
-      const xRatio = totalTimeRange > 0 ? tickerOffset / totalTimeRange : 0;
-      const x = marginLeft + xRatio * chartWidth;
-      const y = getY(entryTicker.price);
-
-      // Draw vertical line
-      ctx.strokeStyle = '#00ff00';
+      // Vertical line
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
       ctx.beginPath();
-      ctx.moveTo(x, marginTop);
-      ctx.lineTo(x, height - marginBottom);
+      ctx.moveTo(x, margin.top);
+      ctx.lineTo(x, height - margin.bottom);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw entry price marker on ticker line
-      ctx.fillStyle = '#00ff00';
+      // Dot on line
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x, y, 6, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Draw label
+      // Label
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 12px monospace';
-      ctx.fillText('ENTRY', x + 5, marginTop + 15);
-    }
+      ctx.fillText(label, x + 5, margin.top + (label === 'ENTRY' ? 15 : 30));
+    };
 
-    // Draw exit marker (red) on ticker line
-    if (exitTicker) {
-      const tickerTime = parseTime(exitTicker.time);
-      const totalTimeRange = parseTime(filteredTickers[filteredTickers.length - 1].time) - parseTime(filteredTickers[0].time);
-      const tickerOffset = tickerTime - parseTime(filteredTickers[0].time);
-      const xRatio = totalTimeRange > 0 ? tickerOffset / totalTimeRange : 0;
-      const x = marginLeft + xRatio * chartWidth;
-      const y = getY(exitTicker.price);
-
-      // Draw vertical line
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(x, marginTop);
-      ctx.lineTo(x, height - marginBottom);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Draw exit price marker on ticker line
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.arc(x, y, 6, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Draw label
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText('EXIT', x + 5, marginTop + 30);
-    }
+    drawMarker(entryTime, '#00ff00', 'ENTRY');
+    drawMarker(exitTime, '#ff0000', 'EXIT');
 
     // Draw Y-axis labels (prices)
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '12px monospace';
     ctx.textAlign = 'right';
     for (let i = 0; i <= 5; i++) {
-      const price = maxPrice - (i / 5) * priceRange;
-      const y = marginTop + (i / 5) * chartHeight;
-      ctx.fillText(`₹${price.toFixed(2)}`, marginLeft - 10, y + 4);
+      const price = priceRange.max - (i / 5) * priceRange.range;
+      const y = margin.top + (i / 5) * chartHeight;
+      ctx.fillText(`₹${price.toFixed(2)}`, margin.left - 10, y + 4);
     }
 
-    // Draw X-axis labels (time)
+    // Draw X-axis labels (time with seconds)
     ctx.textAlign = 'center';
-    const numLabels = Math.min(5, candlesticks.length);
+    const numLabels = Math.min(6, filteredTickers.length);
     for (let i = 0; i < numLabels; i++) {
-      const index = Math.floor((i / (numLabels - 1)) * (candlesticks.length - 1));
-      const candle = candlesticks[index];
-      const x = getX(index);
-      const timeLabel = new Date(candle.time).toTimeString().substring(0, 8); // HH:MM:SS
-      ctx.fillText(timeLabel, x, height - marginBottom + 20);
+      const index = Math.floor((i / (numLabels - 1)) * (filteredTickers.length - 1));
+      const ticker = filteredTickers[index];
+      const x = getX(ticker.time);
+      const timeLabel = new Date(ticker.time).toTimeString().substring(0, 8); // HH:MM:SS
+      ctx.fillText(timeLabel, x, height - margin.bottom + 20);
     }
 
-    // Draw trade info
+    // Draw P/L info
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px monospace';
-    const profitLossColor = trade.profitLoss >= 0 ? '#00ff00' : '#ff0000';
-    ctx.fillText('P/L: ', marginLeft + 10, marginTop + 15);
-    ctx.fillStyle = profitLossColor;
-    ctx.fillText(`₹${trade.profitLoss.toFixed(2)} (${trade.profitLossPercent.toFixed(2)}%)`, marginLeft + 45, marginTop + 15);
+    const plColor = trade.profitLoss >= 0 ? '#00ff00' : '#ff0000';
+    ctx.fillText('P/L: ', margin.left + 10, margin.top - 10);
+    ctx.fillStyle = plColor;
+    ctx.fillText(`₹${trade.profitLoss.toFixed(2)} (${trade.profitLossPercent.toFixed(2)}%)`,
+                 margin.left + 45, margin.top - 10);
 
-    // Draw crosshair if mouse is over chart
-    if (mousePos && mousePos.x >= marginLeft && mousePos.x <= width - marginRight &&
-        mousePos.y >= marginTop && mousePos.y <= height - marginBottom) {
-      const { x: mouseX, y: mouseY } = mousePos;
+    // Draw crosshair and info
+    if (mousePos && mousePos.x >= margin.left && mousePos.x <= width - margin.right &&
+        mousePos.y >= margin.top && mousePos.y <= height - margin.bottom) {
+
+      // Find closest ticker to mouse X
+      let closestTicker = filteredTickers[0];
+      let minDistance = Math.abs(getX(filteredTickers[0].time) - mousePos.x);
+
+      filteredTickers.forEach(ticker => {
+        const tickerX = getX(ticker.time);
+        const distance = Math.abs(tickerX - mousePos.x);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestTicker = ticker;
+        }
+      });
+
+      const tickerX = getX(closestTicker.time);
+      const tickerY = getY(closestTicker.price);
 
       // Draw crosshair lines
       ctx.strokeStyle = '#888888';
@@ -319,46 +215,53 @@ export default function TradeChart({ trade, tickers, timeWindowMinutes }) {
 
       // Vertical line
       ctx.beginPath();
-      ctx.moveTo(mouseX, marginTop);
-      ctx.lineTo(mouseX, height - marginBottom);
+      ctx.moveTo(tickerX, margin.top);
+      ctx.lineTo(tickerX, height - margin.bottom);
       ctx.stroke();
 
       // Horizontal line
       ctx.beginPath();
-      ctx.moveTo(marginLeft, mouseY);
-      ctx.lineTo(width - marginRight, mouseY);
+      ctx.moveTo(margin.left, tickerY);
+      ctx.lineTo(width - margin.right, tickerY);
       ctx.stroke();
 
       ctx.setLineDash([]);
 
-      // Calculate price at mouse Y position
-      const priceAtMouse = maxPrice - ((mouseY - marginTop) / chartHeight) * priceRange;
+      // Highlight the ticker point
+      ctx.fillStyle = '#00aaff';
+      ctx.beginPath();
+      ctx.arc(tickerX, tickerY, 4, 0, 2 * Math.PI);
+      ctx.fill();
 
-      // Calculate time at mouse X position
-      const timeRatio = (mouseX - marginLeft) / chartWidth;
-      const totalTimeRange = parseTime(filteredTickers[filteredTickers.length - 1].time) - parseTime(filteredTickers[0].time);
-      const timeAtMouse = parseTime(filteredTickers[0].time) + (timeRatio * totalTimeRange);
-      const timeStr = new Date(timeAtMouse).toTimeString().substring(0, 8);
-
-      // Draw time label on top
+      // Draw time label (with seconds!)
+      const timeStr = new Date(closestTicker.time).toTimeString().substring(0, 8);
       ctx.fillStyle = '#000000';
-      ctx.fillRect(mouseX - 35, marginTop - 20, 70, 18);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '11px monospace';
+      ctx.fillRect(tickerX - 45, margin.top - 25, 90, 20);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tickerX - 45, margin.top - 25, 90, 20);
+      ctx.fillStyle = '#00ff00';
+      ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(timeStr, mouseX, marginTop - 7);
+      ctx.fillText(timeStr, tickerX, margin.top - 10);
 
-      // Draw price label on right
-      const priceText = `₹${priceAtMouse.toFixed(2)}`;
-      const priceTextWidth = ctx.measureText(priceText).width;
+      // Draw price label
+      const priceStr = `₹${closestTicker.price.toFixed(2)}`;
+      const priceWidth = ctx.measureText(priceStr).width + 16;
+      const priceX = width - margin.right + 5;
+      const priceY = tickerY - 12;
+
       ctx.fillStyle = '#000000';
-      ctx.fillRect(width - marginRight + 5, mouseY - 9, priceTextWidth + 10, 18);
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.fillText(priceText, width - marginRight + 10, mouseY + 4);
+      ctx.fillRect(priceX, priceY, priceWidth, 24);
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(priceX, priceY, priceWidth, 24);
+      ctx.fillStyle = '#00aaff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(priceStr, priceX + priceWidth / 2, priceY + 16);
     }
 
-  }, [candlesticks, trade, dimensions, mousePos, filteredTickers]);
+  }, [filteredTickers, trade, dimensions, mousePos, priceRange]);
 
   if (!trade || !tickers || tickers.length === 0) {
     return (
@@ -373,8 +276,7 @@ export default function TradeChart({ trade, tickers, timeWindowMinutes }) {
       <div className="w-full h-full flex items-center justify-center text-text-secondary">
         <div className="text-center">
           <div className="text-4xl mb-2">⚠️</div>
-          <p>No ticker data in selected time window</p>
-          <p className="text-xs mt-2">Try increasing the time window</p>
+          <p>No ticker data in time range</p>
         </div>
       </div>
     );

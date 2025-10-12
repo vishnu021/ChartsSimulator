@@ -9,7 +9,7 @@ public final class ValidationUtils {
 
     private static final Pattern DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$");
-    private static final Pattern SYMBOL_PATTERN = Pattern.compile("^[A-Z0-9 ]+$");
+    private static final Pattern SYMBOL_PATTERN = Pattern.compile("^[A-Za-z0-9 ]+$");
 
     private ValidationUtils() {
         // Utility class - prevent instantiation

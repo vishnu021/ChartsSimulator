@@ -99,8 +99,8 @@ export const useTickerData = () => {
     setSignificantMoves([]);
 
     try {
-      logger.info(`Loading instant ticker data for ${params.symbol} on ${params.date}`);
-      const response = await tickerService.getTickerData(params.symbol, params.date);
+      logger.info(`Loading instant ticker data for ${params.symbol} on ${params.date} with runStrategy: ${params.runStrategy}`);
+      const response = await tickerService.getTickerData(params.symbol, params.date, 0.5, params.runStrategy !== false);
       logger.debug(`Received ${response.tickers?.length || 0} ticker records and ${response.significantMoves?.length || 0} significant moves`);
 
       const validData = (response.tickers || []).filter(

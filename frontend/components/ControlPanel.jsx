@@ -10,6 +10,7 @@ export default function ControlPanel({
   onThemeToggle: propOnThemeToggle, // Keep prop for backward compatibility
   hideLookbackPeriod = false,
   showModeToggle = false,
+  showSignalsToggle = false,
   isRealTime = false,
   onModeToggle,
 }) {
@@ -21,6 +22,7 @@ export default function ControlPanel({
   const currentToggleTheme = propOnThemeToggle || toggleTheme;
   const [lookbackPeriod, setLookbackPeriod] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
+  const [runStrategy, setRunStrategy] = useState(true);
 
   const colors = themes[currentTheme];
 
@@ -33,7 +35,8 @@ export default function ControlPanel({
 
       const params = {
         symbol: normalizedSymbol,
-        date
+        date,
+        runStrategy
       };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
@@ -68,7 +71,7 @@ export default function ControlPanel({
     try {
       // Normalize symbol to uppercase for API compatibility
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const params = { symbol: normalizedSymbol, date: prevDate };
+      const params = { symbol: normalizedSymbol, date: prevDate, runStrategy };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -85,7 +88,7 @@ export default function ControlPanel({
     try {
       // Normalize symbol to uppercase for API compatibility
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const params = { symbol: normalizedSymbol, date: nextDate };
+      const params = { symbol: normalizedSymbol, date: nextDate, runStrategy };
       if (!hideLookbackPeriod) {
         params.lookbackPeriod = lookbackPeriod;
       }
@@ -146,6 +149,42 @@ export default function ControlPanel({
             required
           />
         </div>
+
+        {/* Run Strategy Checkbox - Only show on ticker page */}
+        {showSignalsToggle && (
+          <div className="flex items-center">
+            <label
+              className="block text-xs font-medium mb-1 opacity-0"
+              style={{ color: colors.text.secondary }}
+            >
+              Strategy
+            </label>
+            <label
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded cursor-pointer transition-all hover:opacity-80"
+              style={{
+                backgroundColor: colors.panelBackground,
+                border: `1px solid ${colors.input.border}`,
+              }}
+              title="Run strategy to detect trading signals"
+            >
+              <input
+                type="checkbox"
+                checked={runStrategy}
+                onChange={e => setRunStrategy(e.target.checked)}
+                className="w-3.5 h-3.5 rounded cursor-pointer"
+                style={{
+                  accentColor: colors.input.focus,
+                }}
+              />
+              <span
+                className="text-xs font-medium whitespace-nowrap"
+                style={{ color: colors.text.primary }}
+              >
+                📊 Signals
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Date Navigation Buttons */}
         <div className="flex gap-1">

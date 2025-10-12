@@ -44,6 +44,7 @@ export default function TickerPage() {
       onThemeToggle={toggleTheme}
       hideLookbackPeriod={true}
       showModeToggle={true}
+      showSignalsToggle={true}
       isRealTime={isRealTime}
       onModeToggle={toggleMode}
     />

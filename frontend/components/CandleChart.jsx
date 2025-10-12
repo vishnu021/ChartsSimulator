@@ -620,36 +620,51 @@ export default function CandleChart({
       ctx.fillText(priceText, priceBoxX + priceBoxWidth / 2, priceBoxY + priceBoxHeight / 2);
 
       // Draw time label at top (inside chart bounds)
-      const candleIndex = Math.floor((mousePos.x - padding.left) / candleWidth) + visibleStart;
-      const hoveredCandle = data.candles[candleIndex];
-      if (hoveredCandle && hoveredCandle.time) {
-        // Extract only time portion (HH:mm:ss) from timestamp
-        let timeText = hoveredCandle.time;
-        // Handle formats like "2024-10-04T09:15:00" or "09:15:00"
-        if (timeText.includes('T')) {
-          timeText = timeText.split('T')[1].split('+')[0].split('.')[0];
-        } else if (timeText.includes(' ')) {
-          timeText = timeText.split(' ')[1].split('.')[0];
+      // Calculate which candle is nearest to the mouse cursor
+      // Candles are visually centered at: padding.left + (localIndex)*candleWidth + candleWidth/2
+      // The boundaries between candles are at: padding.left + i*candleWidth (midpoint between wicks)
+      // So we use floor division without offset to find the correct candle
+      const relativeX = mousePos.x - padding.left;
+      if (relativeX >= 0 && relativeX < chartWidth) {
+        const localIndex = Math.floor(relativeX / candleWidth);
+        // Clamp to visible range - use visibleCandles length directly
+        const clampedLocalIndex = Math.max(0, Math.min(localIndex, visibleCandles.length - 1));
+        const candleIndex = visibleStart + clampedLocalIndex;
+
+        const hoveredCandle = data.candles[candleIndex];
+
+        if (hoveredCandle && hoveredCandle.time) {
+          // Extract only time portion (HH:mm:ss) from timestamp
+          let timeText = hoveredCandle.time;
+          // Handle formats like "2024-10-04T09:15:00" or "09:15:00"
+          if (timeText.includes('T')) {
+            timeText = timeText.split('T')[1].split('+')[0].split('.')[0];
+          } else if (timeText.includes(' ')) {
+            timeText = timeText.split(' ')[1].split('.')[0];
+          }
+          // Truncate to HH:mm:ss if it has milliseconds
+          timeText = timeText.substring(0, 8);
+
+          // Larger, more visible label
+          ctx.font = isDashboard ? 'bold 11px monospace' : 'bold 13px monospace';
+          const timeBoxWidth = Math.max(80, ctx.measureText(timeText).width + 16);
+          const timeBoxHeight = isDashboard ? 20 : 22;
+          // Clamp to stay within chart bounds
+          const timeBoxX = Math.max(padding.left, Math.min(mousePos.x - timeBoxWidth / 2, width - padding.right - timeBoxWidth));
+          const timeBoxY = topPadding + 5; // Just inside top edge
+
+          // Draw with better contrast
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+          ctx.fillRect(timeBoxX, timeBoxY, timeBoxWidth, timeBoxHeight);
+          ctx.strokeStyle = '#4a90e2';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(timeBoxX, timeBoxY, timeBoxWidth, timeBoxHeight);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(timeText, timeBoxX + timeBoxWidth / 2, timeBoxY + timeBoxHeight / 2);
         }
-        // Truncate to HH:mm:ss if it has milliseconds
-        timeText = timeText.substring(0, 8);
-        ctx.font = isDashboard ? '11px monospace' : '12px monospace';
-        const timeBoxWidth = Math.max(70, ctx.measureText(timeText).width + 12);
-        const timeBoxHeight = isDashboard ? 18 : 20;
-        // Clamp to stay within chart bounds
-        const timeBoxX = Math.max(padding.left, Math.min(mousePos.x - timeBoxWidth / 2, width - padding.right - timeBoxWidth));
-        const timeBoxY = topPadding + 5; // Just inside top edge
-
-        ctx.fillStyle = colors.tooltip?.background || 'rgba(0, 0, 0, 0.9)';
-        ctx.fillRect(timeBoxX, timeBoxY, timeBoxWidth, timeBoxHeight);
-        ctx.strokeStyle = colors.tooltip?.border || colors.text.secondary;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(timeBoxX, timeBoxY, timeBoxWidth, timeBoxHeight);
-
-        ctx.fillStyle = colors.tooltip?.text || colors.text.primary;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(timeText, timeBoxX + timeBoxWidth / 2, timeBoxY + timeBoxHeight / 2);
       }
     }
 

@@ -35,6 +35,7 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, offset: 0, verticalOffset: 0 });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showCrosshair, setShowCrosshair] = useState(false);
+  const [showSignals, setShowSignals] = useState(true);
   const colors = themes[theme];
 
 
@@ -678,9 +679,9 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
       }
     }
 
-    // Draw significant trend indicators (arrows for major moves) when zoomed in
+    // Draw significant trend indicators (arrows for major moves)
     // Uses backend-provided significant moves instead of client-side calculation
-    if (significantMoves && significantMoves.length > 0 && viewState.zoom > 1.5) {
+    if (significantMoves && significantMoves.length > 0 && showSignals) {
       // Filter significant moves to only visible ones
       const visibleMoves = significantMoves.filter(move => {
         // Use emissionTime for positioning (when signal was actually confirmed)
@@ -698,14 +699,16 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
 
         if (x >= padding.left && x <= width - padding.right) {
           const arrowSize = chartSettings.trendArrowSize;
-          const color = move.type === 'dip' ? colors.candle.bullish : colors.candle.bearish;
-          const alpha = Math.min(0.8, 0.4 + move.magnitude / 5);
+          // Bright blue color for maximum visibility
+          const color = '#00BFFF'; // Bright blue (Deep Sky Blue)
+          // Maximum opacity for clear visibility
+          const alpha = 1.0;
 
           ctx.save();
           ctx.globalAlpha = alpha;
           ctx.fillStyle = color;
           ctx.strokeStyle = color;
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 3; // Thicker line for better visibility
 
           // Draw arrow pointing to the significant move
           ctx.beginPath();
@@ -969,7 +972,7 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
       ctx.textAlign = 'center';
       ctx.fillText(timeLabel, mousePos.x, padding.top - 11);
     }
-  }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme, drawWyckoffPhaseStrip]);
+  }, [processedData, colors, viewState, mousePos, showCrosshair, isMobile, theme, drawWyckoffPhaseStrip, showSignals]);
 
   // Draw chart on data change
   useEffect(() => {
@@ -1221,11 +1224,11 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
           >
             {/* Left - Signal Statistics */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span style={{ color: colors.text.secondary }} className="font-semibold">
-                📊 Signals (MovingAverage):
+              <span style={{ color: colors.text.primary }} className="font-semibold">
+                📊 Trading Signals:
               </span>
               <span style={{ color: colors.text.primary }} className="font-semibold">
-                {significantMoves.length} total
+                {significantMoves.length} detected
               </span>
               <span style={{ color: colors.text.secondary }}>|</span>
               <span className="text-green-400">
@@ -1234,24 +1237,20 @@ export default function TickerChart({ data, significantMoves = [], theme = 'dark
               <span className="text-red-400">
                 ↓{significantMoves.filter(m => m.type === 'peak').length} sell
               </span>
-              {!isMobile && (
-                <>
-                  <span style={{ color: colors.text.secondary }}>|</span>
-                  <span style={{ color: colors.text.secondary }} className="text-xs">
-                    Zoom &gt; 150% to view arrows
-                  </span>
-                </>
-              )}
+              <span style={{ color: colors.text.secondary }}>|</span>
+              <button
+                onClick={() => setShowSignals(!showSignals)}
+                className="px-2 py-0.5 rounded text-xs font-semibold transition-all hover:opacity-80 flex items-center gap-1"
+                style={{
+                  backgroundColor: showSignals ? colors.candle.bullish : colors.background,
+                  border: `1px solid ${colors.grid}`,
+                  color: showSignals ? '#ffffff' : colors.text.secondary,
+                }}
+                title={showSignals ? 'Hide signal arrows' : 'Show signal arrows'}
+              >
+                📶 {showSignals ? 'Hide Signals' : 'Show Signals'}
+              </button>
             </div>
-
-            {/* Right - Detection Service Info */}
-            {!isMobile && (
-              <div className="flex items-center gap-2">
-                <span style={{ color: colors.text.secondary }} className="text-xs">
-                  Algorithm: MovingAverageDetectionService
-                </span>
-              </div>
-            )}
           </div>
         )}
       </div>

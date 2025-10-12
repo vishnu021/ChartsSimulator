@@ -48,12 +48,17 @@ const setupTickerGlobalEventListeners = () => {
 
 export const tickerService = {
   // Get ticker data via API
-  async getTickerData(symbol, date, threshold = 0.5) {
+  async getTickerData(symbol, date, threshold = 0.5, runStrategy = true) {
     try {
-      logger.info(`Fetching ticker data for ${symbol} on ${date} with threshold ${threshold}%`);
+      logger.info(`Fetching ticker data for ${symbol} on ${date} with threshold ${threshold}%, runStrategy: ${runStrategy}`);
       await configService.loadConfig();
       const apiUrl = configService.getApiUrl();
-      const params = new URLSearchParams({ symbol, date, threshold: threshold.toString() });
+      const params = new URLSearchParams({
+        symbol,
+        date,
+        threshold: threshold.toString(),
+        runStrategy: runStrategy.toString()
+      });
       const url = `${apiUrl}/api/ticker?${params}`;
       logger.debug(`API URL: ${url}`);
 
@@ -73,8 +78,13 @@ export const tickerService = {
       }
 
       const data = await response.json();
-      logger.debug(`Received ${data.tickers?.length || 0} ticker records and ${data.significantMoves?.length || 0} significant moves`);
-      return data;
+      // Backend returns 'signals', but frontend uses 'significantMoves' for consistency
+      const mappedData = {
+        tickers: data.tickers || [],
+        significantMoves: data.signals || []
+      };
+      logger.debug(`Received ${mappedData.tickers.length} ticker records and ${mappedData.significantMoves.length} significant moves`);
+      return mappedData;
     } catch (error) {
       logger.error('Error fetching ticker data:', error);
       throw error;

@@ -6,6 +6,13 @@ import { configService } from '@/services/config/configService';
 
 const CACHE_KEY = 'backtest-params';
 
+// Format time string to HH:MM:SS
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  // Extract time portion from ISO string: "2025-10-01T09:33:28" -> "09:33:28"
+  return isoString.substring(11, 19);
+};
+
 // Load cached values from localStorage
 const loadCachedParams = () => {
   if (typeof window === 'undefined') return null;
@@ -36,7 +43,6 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
-  const [timeWindowMinutes, setTimeWindowMinutes] = useState(() => loadCachedParams()?.timeWindowMinutes || 2);
 
   // Strategy selection state
   const [availableStrategies, setAvailableStrategies] = useState([]);
@@ -58,10 +64,9 @@ export default function BacktestPage() {
       initialCapital,
       selectedStrategy,
       stopLossPercent,
-      takeProfitPercent,
-      timeWindowMinutes
+      takeProfitPercent
     });
-  }, [symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent, timeWindowMinutes]);
+  }, [symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent]);
 
   // Fetch available strategies on mount
   useEffect(() => {
@@ -414,9 +419,9 @@ export default function BacktestPage() {
                         }`}
                       >
                         <td className="px-4 py-2">{trade.tradeNumber}</td>
-                        <td className="px-4 py-2">{trade.entryTime.substring(11, 19)}</td>
+                        <td className="px-4 py-2 font-mono">{formatTime(trade.entryTime)}</td>
                         <td className="px-4 py-2">₹{trade.entryPrice.toFixed(2)}</td>
-                        <td className="px-4 py-2">{trade.exitTime.substring(11, 19)}</td>
+                        <td className="px-4 py-2 font-mono">{formatTime(trade.exitTime)}</td>
                         <td className="px-4 py-2">₹{trade.exitPrice.toFixed(2)}</td>
                         <td className="px-4 py-2">{trade.quantity}</td>
                         <td className={`px-4 py-2 font-medium ${trade.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
@@ -449,31 +454,14 @@ export default function BacktestPage() {
         <div className="w-1/2 flex flex-col gap-4">
           {result && selectedTrade ? (
             <div className="bg-surface p-4 rounded-lg shadow-lg h-full flex flex-col">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-text">
-                  📈 Trade #{selectedTrade.tradeNumber} - Chart Pattern
-                </h2>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-text-secondary">Time Window (min):</label>
-                    <input
-                      type="number"
-                      value={timeWindowMinutes}
-                      onChange={(e) => setTimeWindowMinutes(Number(e.target.value))}
-                      min="1"
-                      max="10"
-                      className="w-16 px-2 py-1 bg-gray-100 border border-gray-300 rounded text-black text-xs
-                                 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                  </div>
-                </div>
-              </div>
+              <h2 className="text-lg font-bold text-text mb-4">
+                📈 Trade #{selectedTrade.tradeNumber} - Chart Pattern
+              </h2>
               <div className="flex-1 min-h-0 flex flex-col gap-4">
                 <div className="h-2/3">
                   <TradeChart
                     trade={selectedTrade}
                     tickers={result.tickers}
-                    timeWindowMinutes={timeWindowMinutes}
                   />
                 </div>
 
@@ -483,11 +471,11 @@ export default function BacktestPage() {
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <span className="text-text-secondary">Entry Time:</span>
-                      <span className="ml-2 text-text font-medium">{selectedTrade.entryTime}</span>
+                      <span className="ml-2 text-text font-medium font-mono text-sm">{formatTime(selectedTrade.entryTime)}</span>
                     </div>
                     <div>
                       <span className="text-text-secondary">Exit Time:</span>
-                      <span className="ml-2 text-text font-medium">{selectedTrade.exitTime}</span>
+                      <span className="ml-2 text-text font-medium font-mono text-sm">{formatTime(selectedTrade.exitTime)}</span>
                     </div>
                     <div>
                       <span className="text-text-secondary">Entry Price:</span>
