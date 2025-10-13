@@ -39,6 +39,41 @@ export default function TradeChart({ trade, tickers }) {
     });
   }, [trade, tickers]);
 
+  // Aggregate tickers into 1-minute candlesticks for visual reference
+  const candlesticks = useMemo(() => {
+    if (filteredTickers.length === 0) return [];
+
+    const candles = [];
+    let currentMinute = null;
+    let currentCandle = null;
+
+    filteredTickers.forEach(ticker => {
+      const tickerDate = new Date(ticker.time);
+      const minute = new Date(tickerDate.getFullYear(), tickerDate.getMonth(),
+                              tickerDate.getDate(), tickerDate.getHours(),
+                              tickerDate.getMinutes(), 0, 0).getTime();
+
+      if (minute !== currentMinute) {
+        if (currentCandle) candles.push(currentCandle);
+        currentMinute = minute;
+        currentCandle = {
+          time: minute,
+          open: ticker.price,
+          high: ticker.price,
+          low: ticker.price,
+          close: ticker.price
+        };
+      } else {
+        currentCandle.high = Math.max(currentCandle.high, ticker.price);
+        currentCandle.low = Math.min(currentCandle.low, ticker.price);
+        currentCandle.close = ticker.price;
+      }
+    });
+
+    if (currentCandle) candles.push(currentCandle);
+    return candles;
+  }, [filteredTickers]);
+
   // Calculate price range
   const priceRange = useMemo(() => {
     if (filteredTickers.length === 0) return { min: 0, max: 0, range: 1 };
@@ -109,7 +144,41 @@ export default function TradeChart({ trade, tickers }) {
       ctx.stroke();
     }
 
-    // Draw ticker line
+    // Draw candlesticks as background reference (translucent)
+    if (candlesticks.length > 0) {
+      // Calculate candle width based on 1 minute time period
+      const oneMinuteMs = 60000;
+      const candleWidth = timeRange > 0 ? (oneMinuteMs / timeRange) * chartWidth : chartWidth / candlesticks.length;
+
+      ctx.globalAlpha = 0.3; // Make candlesticks dim
+      candlesticks.forEach((candle) => {
+        // Position candlestick based on its actual timestamp (start of minute)
+        const x = getX(candle.time);
+        const yOpen = getY(candle.open);
+        const yClose = getY(candle.close);
+        const yHigh = getY(candle.high);
+        const yLow = getY(candle.low);
+
+        const isGreen = candle.close >= candle.open;
+        const color = isGreen ? '#00ff00' : '#ff0000';
+
+        // Draw wick (centered in the candle)
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + candleWidth / 2, yHigh);
+        ctx.lineTo(x + candleWidth / 2, yLow);
+        ctx.stroke();
+
+        // Draw body
+        const bodyHeight = Math.abs(yClose - yOpen) || 1;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth, bodyHeight);
+      });
+      ctx.globalAlpha = 1.0; // Reset opacity
+    }
+
+    // Draw ticker line (on top, prominent)
     ctx.strokeStyle = '#00aaff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -261,7 +330,7 @@ export default function TradeChart({ trade, tickers }) {
       ctx.fillText(priceStr, priceX + priceWidth / 2, priceY + 16);
     }
 
-  }, [filteredTickers, trade, dimensions, mousePos, priceRange]);
+  }, [filteredTickers, candlesticks, trade, dimensions, mousePos, priceRange]);
 
   if (!trade || !tickers || tickers.length === 0) {
     return (

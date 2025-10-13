@@ -2,6 +2,81 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-14-Candlestick-Alignment-Fix] - Fixed Candlestick Time Alignment in Backtest Chart
+
+### 🐛 Bugs Fixed
+
+**User Report:**
+"In the backtest page, I see in the screenshot the second candlestick starts around 09:42:52, but ideally it should start at 09:43:00 as the candlestick of 9:42 will have the data from 9:42:00 to 9:42:59:999"
+
+**Problem:**
+Candlesticks in the TradeChart component were positioned by **index** (evenly spaced) instead of by their **actual timestamps**, causing misalignment with the time axis. This made candlesticks appear at incorrect time positions - for example, the 09:43 candlestick appeared to start at 09:42:52 instead of 09:43:00.
+
+**Root Cause:**
+In `frontend/components/TradeChart.jsx:153`, candlesticks were positioned using:
+```javascript
+const x = margin.left + (i * candleWidth);  // Index-based positioning
+```
+This ignored the actual timestamp of each candlestick, while the ticker line and X-axis labels were correctly positioned by timestamp using the `getX()` function.
+
+### 📦 Changes Made
+
+**File: `frontend/components/TradeChart.jsx` (lines 147-179)**
+
+**Fix Applied:** Changed candlestick positioning from index-based to timestamp-based
+
+**Before (Index-Based):**
+```javascript
+// Draw candlesticks as background reference (translucent)
+if (candlesticks.length > 0) {
+  const candleWidth = chartWidth / candlesticks.length;  // Even spacing
+
+  ctx.globalAlpha = 0.3;
+  candlesticks.forEach((candle, i) => {
+    const x = margin.left + (i * candleWidth);  // Position by index
+    // ... drawing code
+  });
+}
+```
+
+**After (Timestamp-Based):**
+```javascript
+// Draw candlesticks as background reference (translucent)
+if (candlesticks.length > 0) {
+  // Calculate candle width based on 1 minute time period
+  const oneMinuteMs = 60000;
+  const candleWidth = timeRange > 0 ? (oneMinuteMs / timeRange) * chartWidth : chartWidth / candlesticks.length;
+
+  ctx.globalAlpha = 0.3;
+  candlesticks.forEach((candle) => {
+    // Position candlestick based on its actual timestamp (start of minute)
+    const x = getX(candle.time);  // Position by timestamp
+    // ... drawing code
+  });
+}
+```
+
+### ✅ Verification
+
+- **Playwright MCP**: ✅ PASS
+  - Navigated to http://localhost:3000/backtest
+  - Executed backtest for NIFTY25O0724600CE on 2025-10-01
+  - Selected Trade #5 (entry at 09:43:59)
+  - Screenshot confirmed candlesticks now align correctly with time axis
+  - The 09:42 candlestick covers 09:42:00 to 09:42:59
+  - The 09:43 candlestick starts at 09:43:00 (not 09:42:52)
+
+- **Manual Testing**: ✅ PASS
+  - Candlesticks properly aligned with X-axis time labels
+  - Each candlestick positioned at its minute boundary
+  - Entry/exit markers correctly overlay candlestick boundaries
+
+### 🎯 Impact
+
+This fix ensures accurate visual representation of price action timing in backtest charts, making it easier to understand exactly when trades occurred relative to price movements within each minute.
+
+---
+
 ## [Session-2025-10-12-Backtest-Time-Improvements] - Improved Backtest Chart Time Display and Data Range
 
 ### 🐛 Bugs Fixed
