@@ -20,6 +20,7 @@ public class BacktestService {
     private final BacktestProperties backtestProperties;
     private final TickerService tickerService;
     private final BacktestEngineFactory backtestEngineFactory;
+    private final BacktestReportGenerator reportGenerator;
 
     public Map<String, Object> getAvailableStrategies() {
         List<String> strategies = strategyRegistry.getAvailableStrategies();
@@ -67,6 +68,9 @@ public class BacktestService {
                 result.profitLossPercent(),
                 result.totalTrades(),
                 result.winRate());
+
+        // Generate console and CSV reports
+        reportGenerator.generateReport(result);
 
         return result;
     }

@@ -145,9 +145,13 @@ public class MovingAverageDetectionService {
                     // Signal is emitted immediately - no future data delay
                     String emissionTime = currentTicker.time();
 
+                    // Signals expire after 5 minutes (for UI display purposes)
+                    String expiryTime = addMinutes(emissionTime, 5);
+
                     significantMoves.add(new Signal(
                             currentTicker.time(),  // Reversal point timestamp
                             emissionTime,          // Immediate signal emission (same as reversal time)
+                            expiryTime,            // Signal expires after 5 minutes
                             currentPrice,
                             type,
                             magnitude
@@ -245,5 +249,26 @@ public class MovingAverageDetectionService {
         }
 
         return count > 0 ? sum / count : 0.0;
+    }
+
+    /**
+     * Adds minutes to a timestamp string.
+     *
+     * @param timestamp Timestamp string in format "YYYY-MM-DD HH:mm:ss.SSS"
+     * @param minutes Number of minutes to add
+     * @return New timestamp string with minutes added
+     */
+    private String addMinutes(String timestamp, int minutes) {
+        try {
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                timestamp,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            java.time.LocalDateTime newDateTime = dateTime.plusMinutes(minutes);
+            return newDateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        } catch (Exception e) {
+            log.error("Error adding minutes to timestamp: {}", timestamp, e);
+            return timestamp; // Return original if parsing fails
+        }
     }
 }

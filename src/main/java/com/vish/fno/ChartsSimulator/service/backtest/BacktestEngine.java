@@ -139,12 +139,30 @@ public class BacktestEngine {
             handlePositionExit(tick, currentPrice);
         }
 
-        // 2. Detect new signals on every tick
-        detectSignal();
+        // 2. Detect new signals ONLY if no position is open
+        // If position is open, skip signal detection to avoid storing stale signals
+        if (activeOrder.isEmpty()) {
+            detectSignal();
+        } else {
+            // Discard any existing signal when position is open
+            if (currentSignal.isPresent()) {
+                log.debug("[{}] 🚫 Discarding signal - position already open", tick.time());
+                currentSignal = Optional.empty();
+            }
+        }
 
-        // 3. Try to enter position if signal is present and no position is open
+        // 3. Try to enter position if signal is present, valid, and no position is open
         if (activeOrder.isEmpty() && currentSignal.isPresent()) {
-            handlePositionEntry(tick, currentPrice, tickIndex);
+            // Check if signal has expired
+            if (isSignalExpired(currentSignal.get(), tick.time())) {
+                log.info("[{}] ⏰ Signal expired - skipping entry (emitted: {}, expired: {})",
+                        tick.time(),
+                        currentSignal.get().emissionTime(),
+                        currentSignal.get().expiryTime());
+                currentSignal = Optional.empty();
+            } else {
+                handlePositionEntry(tick, currentPrice, tickIndex);
+            }
         }
 
         // 4. Record portfolio snapshot periodically
@@ -311,5 +329,29 @@ public class BacktestEngine {
                 String.format("%.2f", result.profitLossPercent()),
                 result.totalTrades(),
                 String.format("%.1f", result.winRate()));
+    }
+
+    /**
+     * Checks if a signal has expired.
+     *
+     * @param signal Signal to check
+     * @param currentTime Current tick time
+     * @return true if signal has expired, false otherwise
+     */
+    private boolean isSignalExpired(Signal signal, String currentTime) {
+        try {
+            java.time.LocalDateTime signalExpiry = java.time.LocalDateTime.parse(
+                signal.expiryTime(),
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            java.time.LocalDateTime current = java.time.LocalDateTime.parse(
+                currentTime,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            return current.isAfter(signalExpiry);
+        } catch (Exception e) {
+            log.error("Error checking signal expiry: signal={}, current={}", signal.expiryTime(), currentTime, e);
+            return false; // If parsing fails, assume not expired
+        }
     }
 }

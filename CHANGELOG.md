@@ -2,6 +2,189 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-15-Backtest-Report-Generation] - Added Console Logging and CSV Export for Backtest Results
+
+### 🚀 Features Added
+
+**User Request:**
+"After the backtest has run, log the report in console as well, like entry time, price, exit time, price, p/L and reason, also create a csv file for this with naming convention of file as symbol_date_strategy_timestampvalue.csv and keep these files in backtest_reports folder"
+
+**Problem:**
+Backtest results were only returned via API response. Users had no way to:
+1. View detailed trade-by-trade results in console logs
+2. Export results to CSV for analysis in spreadsheet tools
+3. Keep historical records of backtest runs
+
+### 📦 Changes Made
+
+**File 1: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/BacktestReportGenerator.java` - NEW**
+
+Created a new service class that handles backtest report generation in two formats:
+
+**1. Console Table Report:**
+```
+================================================================================
+📈 BACKTEST TRADE REPORT - NIFTY50 | 2025-10-01 09:15-15:30 | moving-average
+================================================================================
+No   | Entry Time          | Entry $    | Exit Time           | Exit $     | Qty      | P/L        | P/L %    | Exit Reason
+--------------------------------------------------------------------------------
+1    | 2025-10-01 09:25:00 | 25500.00   | 2025-10-01 10:15:00 | 25750.00   | 15       | 3750.00    | 0.98     | TAKE_PROFIT
+2    | 2025-10-01 11:30:00 | 25680.00   | 2025-10-01 12:00:00 | 25550.00   | 15       | -1950.00   | -0.51    | STOP_LOSS
+--------------------------------------------------------------------------------
+📊 SUMMARY: Total Trades: 2 | Winners: 1 | Losers: 1 | Win Rate: 50.00% | Net P/L: ₹1800.00 (1.8%)
+================================================================================
+```
+
+**2. CSV File Export:**
+- Filename format: `{symbol}_{date}_{strategy}_{timestamp}.csv`
+- Example: `NIFTY50_20251001_moving_average_20251015_001230.csv`
+- Location: `backtest_reports/` directory
+- Content:
+  - Trade-by-trade details (entry/exit times, prices, P/L, reasons, holding period)
+  - Complete summary metrics (win rate, profit factor, drawdown, Sharpe ratio, etc.)
+
+**Key Features:**
+```java
+@Component
+public class BacktestReportGenerator {
+    // Generates formatted console table with 140-char wide layout
+    private void logTradeReport(BacktestResult result) {
+        // Displays all trades with entry/exit details, P/L, and exit reasons
+    }
+
+    // Creates CSV file with naming convention: symbol_date_strategy_timestamp.csv
+    private String generateCsvReport(BacktestResult result) {
+        // Includes trade data + comprehensive summary section
+    }
+
+    // Main entry point called after backtest completes
+    public void generateReport(BacktestResult result);
+}
+```
+
+**File 2: `src/main/java/com/vish/fno/ChartsSimulator/service/backtest/BacktestService.java` - MODIFIED**
+
+**Changes:**
+1. Added `BacktestReportGenerator` dependency injection
+2. Called `reportGenerator.generateReport(result)` after backtest completes
+
+**Before:**
+```java
+@RequiredArgsConstructor
+public class BacktestService {
+    private final StrategyRegistry strategyRegistry;
+    private final BacktestProperties backtestProperties;
+    private final TickerService tickerService;
+    private final BacktestEngineFactory backtestEngineFactory;
+
+    public BacktestResult runBacktest(...) {
+        BacktestResult result = engine.runBacktest();
+        log.info("Backtest complete - ...");
+        return result;  // ❌ No report generation
+    }
+}
+```
+
+**After:**
+```java
+@RequiredArgsConstructor
+public class BacktestService {
+    private final StrategyRegistry strategyRegistry;
+    private final BacktestProperties backtestProperties;
+    private final TickerService tickerService;
+    private final BacktestEngineFactory backtestEngineFactory;
+    private final BacktestReportGenerator reportGenerator;  // ✅ Added
+
+    public BacktestResult runBacktest(...) {
+        BacktestResult result = engine.runBacktest();
+        log.info("Backtest complete - ...");
+        reportGenerator.generateReport(result);  // ✅ Generate reports
+        return result;
+    }
+}
+```
+
+**File 3: `.gitignore` - MODIFIED**
+
+Added `backtest_reports/` directory to prevent CSV files from being committed to git:
+
+```gitignore
+# Backtest Reports
+backtest_reports/
+```
+
+### 📊 CSV File Structure
+
+**Trade Data Section:**
+```csv
+Trade No,Entry Time,Entry Price,Exit Time,Exit Price,Quantity,P/L,P/L %,Exit Reason,Holding Period
+1,2025-10-01 09:25:00,25500.00,2025-10-01 10:15:00,25750.00,15,3750.00,0.98,TAKE_PROFIT,50m 0s
+2,2025-10-01 11:30:00,25680.00,2025-10-01 12:00:00,25550.00,15,-1950.00,-0.51,STOP_LOSS,30m 0s
+```
+
+**Summary Section:**
+```csv
+SUMMARY
+Symbol,NIFTY50
+Strategy,moving-average
+Period,2025-10-01 09:15-15:30
+Initial Capital,100000.00
+Final Value,101800.00
+Net P/L,1800.00
+P/L Percent,1.80
+Total Trades,2
+Winning Trades,1
+Losing Trades,1
+Win Rate,50.00
+Profit Factor,1.92
+Max Drawdown,1950.00
+Max Drawdown Percent,1.95
+Average Win,3750.00
+Average Loss,-1950.00
+Largest Win,3750.00
+Largest Loss,-1950.00
+Sharpe Ratio,0.45
+```
+
+### ✅ Verification
+
+**Maven Build:**
+```bash
+mvn clean compile -DskipTests
+```
+Result: ✅ **BUILD SUCCESS** (98 source files compiled)
+
+**File Creation Test:**
+- Report generator automatically creates `backtest_reports/` directory if it doesn't exist
+- CSV files saved with timestamp-based unique naming
+- Console logs display formatted trade table after each backtest
+
+### 🎯 Benefits
+
+1. **Console Visibility:** Immediate view of all trades in formatted table
+2. **Historical Records:** CSV files preserved for future analysis
+3. **Spreadsheet Integration:** Easy import into Excel/Google Sheets
+4. **Audit Trail:** Timestamp-based filenames prevent overwrites
+5. **Complete Data:** Both trade details and summary metrics included
+6. **Clean Git:** Reports excluded from version control via .gitignore
+
+### 📁 File Naming Convention
+
+Format: `{symbol}_{date}_{strategy}_{timestamp}.csv`
+
+Examples:
+- `NIFTY50_20251001_moving_average_20251015_001230.csv`
+- `BANKNIFTY_20251002_ema_divergence_20251015_103045.csv`
+- `RELIANCE_20251003_moving_average_20251015_143520.csv`
+
+Where:
+- `symbol` = Trading symbol (sanitized, special chars → underscores)
+- `date` = Date from result period (YYYYMMDD format)
+- `strategy` = Strategy name (sanitized)
+- `timestamp` = Report generation time (YYYYMMdd_HHmmss format)
+
+---
+
 ## [Session-2025-10-14-Remove-Unused-Methods] - Removed Unused Methods from Model Classes
 
 ### 🧹 Code Cleanup

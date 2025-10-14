@@ -238,7 +238,10 @@ public class LowWickMomentumStrategy implements Strategy {
                 currentTick.time()
             );
 
-            log.info("[{}] 🎯 LOW WICK SIGNAL: Candle closed @ {}. Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}, bullish: {} with upperWick {}%)",
+            // Calculate signal expiry (1 minute after emission)
+            String expiryTime = addMinutes(currentTick.time(), 1);
+
+            log.info("[{}] 🎯 LOW WICK SIGNAL: Candle closed @ {}. Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}, bullish: {} with upperWick {}%, expires: {})",
                 currentTick.time(),
                 String.format("%.2f", entryPrice),
                 String.format("%.2f", entryPrice),
@@ -248,12 +251,14 @@ public class LowWickMomentumStrategy implements Strategy {
                 String.format("%.2f", targetPercent),
                 String.format("%.1f", RISK_REWARD_RATIO),
                     CandleUtils.isBullish(lastCompletedCandle),
-                    String.format("%.2f", upperWickPercent));
+                    String.format("%.2f", upperWickPercent),
+                expiryTime);
 
             // Generate signal
             return Optional.of(new Signal(
                 lastCompletedCandle.timestamp(),  // Candle timestamp
                 currentTick.time(),               // Signal emission time
+                expiryTime,                       // Signal expiry time (1 minute)
                 entryPrice,                       // Entry at candle close
                 "dip",                           // Buy signal
                 upperWickPercent                 // Store wick % for analysis
@@ -327,5 +332,26 @@ public class LowWickMomentumStrategy implements Strategy {
     public void setTakeProfitPercent(double takeProfitPercent) {
         this.takeProfitPercentOverride = takeProfitPercent;
         log.debug("Take profit percent overridden to {}%", takeProfitPercent);
+    }
+
+    /**
+     * Adds minutes to a timestamp string.
+     *
+     * @param timestamp Timestamp string in format "YYYY-MM-DD HH:mm:ss.SSS"
+     * @param minutes Number of minutes to add
+     * @return New timestamp string with minutes added
+     */
+    private String addMinutes(String timestamp, int minutes) {
+        try {
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                timestamp,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            java.time.LocalDateTime newDateTime = dateTime.plusMinutes(minutes);
+            return newDateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        } catch (Exception e) {
+            log.error("Error adding minutes to timestamp: {}", timestamp, e);
+            return timestamp; // Return original if parsing fails
+        }
     }
 }

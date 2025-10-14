@@ -166,17 +166,21 @@ public class EMADivergenceStrategy implements Strategy {
             double fastEMAChange = ((currentFastEMA - previousFastEMA) / previousFastEMA) * 100;
             double magnitude = Math.abs(slowEMAChange - fastEMAChange);
 
-            log.debug("EMA Divergence {} at time: {}, price: {}, slowEMA: {}/{} ({}), fastEMA: {}/{} ({}), momentum: {}%",
+            // Calculate signal expiry (1 minute after emission)
+            String expiryTime = addMinutes(currentTicker.time(), 1);
+
+            log.debug("EMA Divergence {} at time: {}, price: {}, slowEMA: {}/{} ({}), fastEMA: {}/{} ({}), momentum: {}%, expires: {}",
                     type, currentTicker.time(), currentPrice,
                     String.format("%.2f", previousSlowEMA), String.format("%.2f", currentSlowEMA),
                     slowEMAUptrend ? "UP" : "DOWN",
                     String.format("%.2f", previousFastEMA), String.format("%.2f", currentFastEMA),
                     fastEMAUptrend ? "UP" : "DOWN",
-                    String.format("%.2f", priceMomentumPercent));
+                    String.format("%.2f", priceMomentumPercent), expiryTime);
 
             return Optional.of(new Signal(
                     currentTicker.time(),  // Reversal point timestamp
                     currentTicker.time(),  // Immediate signal emission
+                    expiryTime,            // Signal expiry time (1 minute)
                     currentPrice,
                     type,
                     magnitude
@@ -259,5 +263,26 @@ public class EMADivergenceStrategy implements Strategy {
     public void setTakeProfitPercent(double takeProfitPercent) {
         this.takeProfitPercentOverride = takeProfitPercent;
         log.debug("Take profit percent overridden to {}%", takeProfitPercent);
+    }
+
+    /**
+     * Adds minutes to a timestamp string.
+     *
+     * @param timestamp Timestamp string in format "YYYY-MM-DD HH:mm:ss.SSS"
+     * @param minutes Number of minutes to add
+     * @return New timestamp string with minutes added
+     */
+    private String addMinutes(String timestamp, int minutes) {
+        try {
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                timestamp,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            java.time.LocalDateTime newDateTime = dateTime.plusMinutes(minutes);
+            return newDateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        } catch (Exception e) {
+            log.error("Error adding minutes to timestamp: {}", timestamp, e);
+            return timestamp; // Return original if parsing fails
+        }
     }
 }

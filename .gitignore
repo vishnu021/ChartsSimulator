@@ -71,6 +71,9 @@ combined_code.txt
 # Logs
 logs/
 
+# Backtest Reports
+backtest_reports/
+
 # Vercel
 .vercel
 

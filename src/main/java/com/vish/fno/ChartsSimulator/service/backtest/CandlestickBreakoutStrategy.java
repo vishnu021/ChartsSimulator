@@ -301,15 +301,19 @@ public class CandlestickBreakoutStrategy implements Strategy {
             double targetRange = breakdownState.highestBetweenMinimas - entryPrice;
             double target = entryPrice + (targetRange * TARGET_PERCENT_OF_RANGE / 100.0);
 
-            log.info("[{}] 🎯 REVERSAL SIGNAL: price {} crossed back above broken minima {}. Entry: {}, Stop: {}, Target: {} ({}% of range {})",
+            // Calculate signal expiry (1 minute after emission)
+            String expiryTime = addMinutes(tick.time(), 1);
+
+            log.info("[{}] 🎯 REVERSAL SIGNAL: price {} crossed back above broken minima {}. Entry: {}, Stop: {}, Target: {} ({}% of range {}), expires: {}",
                 tick.time(), currentPrice, brokenLevel, entryPrice, stopLoss, target,
-                TARGET_PERCENT_OF_RANGE, String.format("%.2f", targetRange));
+                TARGET_PERCENT_OF_RANGE, String.format("%.2f", targetRange), expiryTime);
 
             // Store entry price and stop/target for later use
             // Signal price = entry price (current price at reversal confirmation)
             return new Signal(
                 tick.time(),  // Reversal point
                 tick.time(),  // Signal emission time
+                expiryTime,   // Signal expiry time (1 minute)
                 entryPrice,   // Entry at current price (confirmed reversal)
                 "dip",        // Buy signal
                 targetRange   // Store range for debugging
@@ -399,5 +403,26 @@ public class CandlestickBreakoutStrategy implements Strategy {
     public void setTakeProfitPercent(double takeProfitPercent) {
         this.takeProfitPercentOverride = takeProfitPercent;
         log.debug("Take profit percent overridden to {}%", takeProfitPercent);
+    }
+
+    /**
+     * Adds minutes to a timestamp string.
+     *
+     * @param timestamp Timestamp string in format "YYYY-MM-DD HH:mm:ss.SSS"
+     * @param minutes Number of minutes to add
+     * @return New timestamp string with minutes added
+     */
+    private String addMinutes(String timestamp, int minutes) {
+        try {
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                timestamp,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+            );
+            java.time.LocalDateTime newDateTime = dateTime.plusMinutes(minutes);
+            return newDateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+        } catch (Exception e) {
+            log.error("Error adding minutes to timestamp: {}", timestamp, e);
+            return timestamp; // Return original if parsing fails
+        }
     }
 }
