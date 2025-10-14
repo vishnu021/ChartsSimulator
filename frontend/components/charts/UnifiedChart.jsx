@@ -455,10 +455,23 @@ export const UnifiedChart = ({
       // Helper function to get time at X coordinate
       const getTimeAtX = (x) => {
         if (x < padding.left || x > width - padding.right) return null;
-        const candleIndex = Math.floor((x - padding.left - clampedOffset) / candleWidth);
-        const adjustedIndex = candleIndex + visibleStart;
-        if (adjustedIndex < 0 || adjustedIndex >= primaryData.length) return null;
-        return primaryData[adjustedIndex]?.time;
+
+        // Find the closest candle by comparing actual positions
+        let closestIndex = -1;
+        let closestDistance = Infinity;
+
+        for (let i = 0; i < visibleEnd - visibleStart; i++) {
+          const candleX = padding.left + ((visibleStart + i) * candleWidth) + clampedOffset;
+          const distance = Math.abs(candleX - x);
+
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestIndex = visibleStart + i;
+          }
+        }
+
+        if (closestIndex < 0 || closestIndex >= primaryData.length) return null;
+        return primaryData[closestIndex]?.time;
       };
 
       // Draw enhanced crosshair with price and time labels

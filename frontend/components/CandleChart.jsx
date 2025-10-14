@@ -620,18 +620,25 @@ export default function CandleChart({
       ctx.fillText(priceText, priceBoxX + priceBoxWidth / 2, priceBoxY + priceBoxHeight / 2);
 
       // Draw time label at top (inside chart bounds)
-      // Calculate which candle is nearest to the mouse cursor
-      // Candles are visually centered at: padding.left + (localIndex)*candleWidth + candleWidth/2
-      // The boundaries between candles are at: padding.left + i*candleWidth (midpoint between wicks)
-      // So we use floor division without offset to find the correct candle
-      const relativeX = mousePos.x - padding.left;
-      if (relativeX >= 0 && relativeX < chartWidth) {
-        const localIndex = Math.floor(relativeX / candleWidth);
-        // Clamp to visible range - use visibleCandles length directly
-        const clampedLocalIndex = Math.max(0, Math.min(localIndex, visibleCandles.length - 1));
-        const candleIndex = visibleStart + clampedLocalIndex;
+      // Find the candle whose X position is closest to the mouse cursor
+      // This accounts for zoom and ensures accurate time display
+      let closestCandle = null;
+      let closestDistance = Infinity;
+      let closestIndex = -1;
 
-        const hoveredCandle = data.candles[candleIndex];
+      for (let i = 0; i < visibleCandles.length; i++) {
+        const candleX = xScale(visibleStart + i);
+        const distance = Math.abs(candleX - mousePos.x);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestCandle = visibleCandles[i];
+          closestIndex = visibleStart + i;
+        }
+      }
+
+      if (closestCandle && closestIndex >= 0) {
+        const hoveredCandle = data.candles[closestIndex];
 
         if (hoveredCandle && hoveredCandle.time) {
           // Extract only time portion (HH:mm:ss) from timestamp

@@ -213,6 +213,22 @@ const formatTime = (time) => {
       second: '2-digit'
     });
   }
+
+  // Handle string timestamps (e.g., "2025-10-13T12:41:00+05:30")
+  if (typeof time === 'string') {
+    let timeStr = time;
+
+    // Extract time portion from ISO format (HH:mm:ss)
+    if (timeStr.includes('T')) {
+      timeStr = timeStr.split('T')[1].split('+')[0].split('.')[0];
+    } else if (timeStr.includes(' ')) {
+      timeStr = timeStr.split(' ')[1].split('.')[0];
+    }
+
+    // Truncate to HH:mm:ss if it has milliseconds
+    return timeStr.substring(0, 8);
+  }
+
   return String(time);
 };
 
