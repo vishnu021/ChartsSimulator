@@ -2,6 +2,136 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-14-Remove-Unused-Methods] - Removed Unused Methods from Model Classes
+
+### 🧹 Code Cleanup
+
+**User Request:**
+"In candlestick record and other places I see lot of unused methods/constructor, remove these"
+
+**Problem:**
+Several model classes contained unused methods that added unnecessary complexity:
+- Methods were never called anywhere in the codebase
+- Some methods had accompanying unused imports and constants
+- Keeping unused code reduces code maintainability and clarity
+
+### 📦 Changes Made
+
+**File 1: `src/main/java/com/vish/fno/ChartsSimulator/model/Candlestick.java`**
+
+**Removed Methods:**
+1. `update(double price)` - Updates candlestick with new tick (unused)
+2. `range()` - Returns high-low range (unused)
+3. `body()` - Returns close-open body size (unused)
+4. `isBullish()` - Checks if close > open (unused)
+5. `isBearish()` - Checks if close < open (unused)
+6. Commented-out `create()` static factory method
+
+**After Cleanup:**
+```java
+public record Candlestick(
+    String timestamp,
+    double open,
+    double high,
+    double low,
+    double close,
+    long volume,
+    int tickCount
+) {
+}
+```
+
+**File 2: `src/main/java/com/vish/fno/ChartsSimulator/model/FuturesAnalysis.java`**
+
+**Removed Methods:**
+1. `getContractDescription()` - Returns formatted contract description (unused)
+2. `getExpiryStatus()` - Returns expiry status string (unused)
+
+**Kept Factory Methods (USED in FuturesAnalysisService):**
+- `futures()` - Factory method for creating futures analysis ✅ USED
+- `notFutures()` - Factory method for non-futures symbols ✅ USED
+
+**File 3: `src/main/java/com/vish/fno/ChartsSimulator/model/StockTicker.java`**
+
+**Removed:**
+1. `formatDateTime(long timestamp)` - Formats timestamp (unused)
+2. `toString()` override - Custom string representation (unused)
+3. `Instant` import (no longer needed)
+4. `ZoneId` import (no longer needed)
+5. `DateTimeFormatter` import (no longer needed)
+6. `INDIA_ZONE` constant (no longer needed)
+7. `DEFAULT_FORMATTER` constant (no longer needed)
+
+**After Cleanup:**
+```java
+public record StockTicker(
+    String mode,
+    boolean tradable,
+    long instrumentToken,
+    double lastTradedPrice,
+    // ... other fields
+    MarketDepth marketDepth
+) {
+}
+```
+
+### ✅ Verification
+
+**Files Checked for Unused Methods:**
+- ✅ Candlestick.java - Cleaned up (5 methods removed)
+- ✅ FuturesAnalysis.java - Cleaned up (2 methods removed)
+- ✅ StockTicker.java - Cleaned up (2 methods + 3 imports removed)
+- ✅ Signal.java - Simple record, no methods
+- ✅ ActiveOrder.java - All methods ARE used in OrderManager/BacktestEngine
+- ✅ Ticker.java - Simple record, no methods
+- ✅ Candle.java - Simple record, no methods
+- ✅ Extrema.java - Simple record, no methods
+- ✅ SymbolData.java - Simple record, no methods
+- ✅ Position.java - Simple record, no methods
+- ✅ Trade.java - Simple record, no methods
+- ✅ BacktestResult.java - Simple record, no methods
+- ✅ CandleMetaData.java - Simple record, no methods
+- ✅ TickerRequest.java - Simple record, no methods
+- ✅ TickerResponse.java - Simple record, no methods
+- ✅ CandleRequest.java - Simple record, no methods
+- ✅ ChartTypeRequest.java - Simple record, no methods
+- ✅ ChartTypeResponse.java - Simple record, no methods
+- ✅ MarketContext.java - Simple record, no methods
+- ✅ PortfolioSnapshot.java - Simple record, no methods
+- ✅ ExitReason.java - Simple enum, no custom methods
+- ✅ TradeType.java - Simple enum, no custom methods
+
+**Maven Build:**
+```bash
+mvn clean compile -DskipTests
+```
+Result: ✅ **BUILD SUCCESS**
+
+### 📊 Impact
+
+**Before:**
+- 3 model classes with unused methods
+- 9 total unused methods/overrides
+- 3 unused imports in StockTicker
+- 2 unused constants in StockTicker
+- Total: ~70 lines of unused code
+
+**After:**
+- All model classes contain only essential code
+- No unused methods remain
+- Cleaner imports
+- ~70 lines of unnecessary code removed
+
+### 🎯 Benefits
+
+1. **Code Clarity:** Removed confusion from unused methods
+2. **Maintainability:** Less code to maintain and understand
+3. **Performance:** Slightly smaller compiled classes
+4. **Documentation:** Cleaner API surface area
+5. **Future Proofing:** Prevents accidentally using deprecated patterns
+
+---
+
 ## [Session-2025-10-14-Crosshair-Time-Fix-Complete] - Fixed Crosshair Time Accuracy and Format (Candles Page)
 
 ### 🐛 Bugs Fixed

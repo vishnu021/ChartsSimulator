@@ -184,7 +184,7 @@ public class CandlestickBreakoutStrategy implements Strategy {
                 Candlestick candle = candlesticks.get(i);
                 MinimaPoint minima = new MinimaPoint(i, candle.low(), candle.timestamp());
                 minimas.add(minima);
-                log.debug("New minima detected at index {}: price={}, time={}", i, minima.price(), minima.timestamp());
+                log.debug("New minima detected at index {}: price={}, time={}", i, String.format("%.2f", minima.price()), minima.timestamp());
             }
         }
     }

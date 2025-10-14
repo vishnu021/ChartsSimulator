@@ -214,9 +214,6 @@ public class LowWickMomentumStrategy implements Strategy {
         }
         lastCandleTimestamp =  lastCompletedCandle.timestamp();
         double upperWickPercent = CandleUtils.calculateUpperWickPercent(lastCompletedCandle);
-
-        log.info("[{}] >> latest candle: {}, bullish: {} upperWick: {}", currentTick.time(), lastCompletedCandle,
-                CandleUtils.isBullish(lastCompletedCandle), String.format("%.2f", upperWickPercent));
         // Calculate upper wick percentage
 //        double bodyPercent = CandleUtils.calculateBodyPercent(lastCompletedCandle);
 
@@ -241,17 +238,17 @@ public class LowWickMomentumStrategy implements Strategy {
                 currentTick.time()
             );
 
-            log.info("[{}] 🎯 LOW WICK SIGNAL: Candle closed @ {} with only {}% upper wick (max {}%). Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}",
+            log.info("[{}] 🎯 LOW WICK SIGNAL: Candle closed @ {}. Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}, bullish: {} with upperWick {}%)",
                 currentTick.time(),
                 String.format("%.2f", entryPrice),
-                String.format("%.2f", upperWickPercent),
-                MAX_UPPER_WICK_PERCENT,
                 String.format("%.2f", entryPrice),
                 String.format("%.2f", stopPrice),
                 String.format("%.2f", stopPercent),
                 String.format("%.2f", targetPrice),
                 String.format("%.2f", targetPercent),
-                String.format("%.1f", RISK_REWARD_RATIO));
+                String.format("%.1f", RISK_REWARD_RATIO),
+                    CandleUtils.isBullish(lastCompletedCandle),
+                    String.format("%.2f", upperWickPercent));
 
             // Generate signal
             return Optional.of(new Signal(

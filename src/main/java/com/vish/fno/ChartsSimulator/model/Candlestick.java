@@ -22,71 +22,7 @@ public record Candlestick(
     double high,
     double low,
     double close,
+    long volume,
     int tickCount
 ) {
-    /**
-     * Creates a new candlestick starting with a single price.
-     *
-     * @param timestamp Candlestick timestamp
-     * @param price Initial price (used for O, H, L, C)
-     * @return New candlestick with single price
-     */
-    public static Candlestick create(String timestamp, double price) {
-        return new Candlestick(timestamp, price, price, price, price, 1);
-    }
-
-    /**
-     * Updates this candlestick with a new tick price.
-     * Returns a new Candlestick instance (immutable update).
-     *
-     * @param price New tick price
-     * @return New candlestick with updated OHLC
-     */
-    public Candlestick update(double price) {
-        return new Candlestick(
-            this.timestamp,
-            this.open,  // Open never changes
-            Math.max(this.high, price),  // Update high
-            Math.min(this.low, price),   // Update low
-            price,  // Close is the latest price
-            this.tickCount + 1
-        );
-    }
-
-    /**
-     * Returns the range (high - low) of this candlestick.
-     *
-     * @return Price range
-     */
-    public double range() {
-        return high - low;
-    }
-
-    /**
-     * Returns the body size (close - open).
-     * Positive = bullish, Negative = bearish.
-     *
-     * @return Body size
-     */
-    public double body() {
-        return close - open;
-    }
-
-    /**
-     * Checks if this is a bullish candlestick (close > open).
-     *
-     * @return true if bullish
-     */
-    public boolean isBullish() {
-        return close > open;
-    }
-
-    /**
-     * Checks if this is a bearish candlestick (close < open).
-     *
-     * @return true if bearish
-     */
-    public boolean isBearish() {
-        return close < open;
-    }
 }

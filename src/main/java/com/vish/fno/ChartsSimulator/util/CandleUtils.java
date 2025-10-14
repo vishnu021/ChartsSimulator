@@ -197,36 +197,51 @@ public final class CandleUtils {
         double close = ticks.get(ticks.size() - 1).price();  // Last tick = close
         double high = ticks.stream().mapToDouble(Ticker::price).max().orElse(open);
         double low = ticks.stream().mapToDouble(Ticker::price).min().orElse(open);
+        long volume = ticks.stream().mapToLong(Ticker::volume).sum();
         int tickCount = ticks.size();
 
-        return new Candlestick(timestamp, open, high, low, close, tickCount);
+        return new Candlestick(timestamp, open, high, low, close, volume, tickCount);
     }
 
-    /**
-     * Checks if a candlestick is bullish (close > open).
-     *
-     * @param candle Candlestick to check
-     * @return true if bullish, false otherwise
-     */
+
     public static boolean isBullish(Candlestick candle) {
         return candle.close() > candle.open();
     }
 
-    /**
-     * Checks if a candlestick is bearish (close < open).
-     *
-     * @param candle Candlestick to check
-     * @return true if bearish, false otherwise
-     */
     public static boolean isBearish(Candlestick candle) {
         return candle.close() < candle.open();
+    }
+
+    public static double getBodyLength(Candlestick candle) {
+        if(isBullish(candle)) {
+            return candle.close() - candle.open();
+        }
+        return candle.open() - candle.close();
+    }
+
+    public static double getTotalLength(Candlestick candle) {
+        return candle.high() - candle.low();
+    }
+
+    public static double getUpperWick(Candlestick candle) {
+        if(isBullish(candle)) {
+            return candle.high() - candle.close();
+        }
+        return candle.high() - candle.open();
+    }
+
+    public static double getLowerWick(Candlestick candle) {
+        if(isBullish(candle)) {
+            return candle.open() - candle.low();
+        }
+        return candle.close() - candle.low();
     }
 
     /**
      * Calculates the body percentage of a candlestick.
      * Body % = |Close - Open| / Close × 100
      *
-     * @param candle Candlestick to analyze
+     * @param candle to analyze
      * @return Body percentage (0-100)
      */
     public static double calculateBodyPercent(Candlestick candle) {
@@ -239,26 +254,32 @@ public final class CandleUtils {
      * Calculates the upper wick percentage of a candlestick.
      * Upper Wick % = ((High - Close) / Close) × 100
      *
-     * @param candle Candlestick to analyze
+     * @param candle to analyze
      * @return Upper wick percentage
      */
     public static double calculateUpperWickPercent(Candlestick candle) {
-        if (candle.close() == 0) return 0.0;
-        double upperWick = candle.high() - candle.close();
-        return (upperWick / candle.close()) * 100.0;
+        double upperWick = getUpperWick(candle);
+        double totalLength = getTotalLength(candle);
+        if(upperWick == 0.0 || totalLength == 0.0)  {
+            return 0.0;
+        }
+        return upperWick/totalLength * 100.0;
     }
 
     /**
      * Calculates the lower wick percentage of a candlestick.
      * Lower Wick % = ((Open - Low) / Open) × 100
      *
-     * @param candle Candlestick to analyze
+     * @param candle to analyze
      * @return Lower wick percentage
      */
     public static double calculateLowerWickPercent(Candlestick candle) {
-        if (candle.open() == 0) return 0.0;
-        double lowerWick = candle.open() - candle.low();
-        return (lowerWick / candle.open()) * 100.0;
+        double lowerWick = getLowerWick(candle);
+        double totalLength = getTotalLength(candle);
+        if(lowerWick == 0.0 || totalLength == 0.0)  {
+            return 0.0;
+        }
+        return lowerWick/totalLength * 100.0;
     }
 
     /**

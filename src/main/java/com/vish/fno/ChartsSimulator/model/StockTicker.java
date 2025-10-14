@@ -1,8 +1,5 @@
 package com.vish.fno.ChartsSimulator.model;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public record StockTicker(
@@ -27,26 +24,6 @@ public record StockTicker(
         double openInterestDayLow,
         MarketDepth marketDepth
 ) {
-
-    private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
-    private static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    String formatDateTime(long timestamp) {
-        return Instant.ofEpochMilli(timestamp)
-                .atZone(INDIA_ZONE)
-                .format(DEFAULT_FORMATTER);
-    }
-
-    @Override
-    public String toString() {
-        return String.format(
-                "[%s] LTP: %.2f Vol: %d OI: %d",
-                formatDateTime(this.tickTimestamp),
-                this.lastTradedPrice,
-                this.lastTradedQuantity,
-                this.oi
-        );
-    }
 }
 
 
