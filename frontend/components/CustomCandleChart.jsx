@@ -628,7 +628,8 @@ export default function CustomCandleChart({
       ctx.fillText(priceText, priceBoxX + 5, priceBoxY + 14);
 
       // Find candle index at mouse position
-      const candleIndex = Math.floor((mousePos.x - padding.left) / candleWidth) + visibleStart;
+      // Round to nearest candle (accounting for candle centering) and add visibleStart offset
+      const candleIndex = Math.round((mousePos.x - padding.left) / candleWidth - 0.5) + visibleStart;
       const hoveredCandle = data.candles[candleIndex];
 
       // Time label at top

@@ -538,7 +538,9 @@ export default function Chart({ data, theme = 'dark' }) {
         maxPrice +
         pricePadding -
         ((mousePos.y - padding.top) / chartHeight) * (priceRange + 2 * pricePadding);
-      const candleIndex = Math.floor((mousePos.x - padding.left - clampedOffset) / candleWidth);
+      // Calculate candle index by finding which candle the mouse is over
+      // Round to nearest candle (accounting for candle centering) and add visibleStart offset
+      const candleIndex = Math.round((mousePos.x - padding.left) / candleWidth - 0.5) + visibleStart;
 
       // Price label
       ctx.fillStyle = colors.tooltip.background;

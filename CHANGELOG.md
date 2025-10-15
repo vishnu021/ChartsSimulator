@@ -2,6 +2,95 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-15-Custom-Candle-Timestamp-Fix] - Fixed Candle Timestamp Display
+
+### 🐛 Bug Fixed
+
+**User Report:**
+"In the Custom Candles page, when hovering over the first candle the crosshair shows 9:16, but it should be 9:15, as 9:15 timestamp corresponds to tickers from 9:15:00 to 9:15:59.999"
+
+**Problem:**
+Candle timestamps were showing the END time of the period instead of the START time. For example, a 1-minute candle representing data from 9:15:00 to 9:15:59.999 was labeled as "9:16" instead of "9:15".
+
+**Root Cause:**
+In `CustomCandleService.java`, the `getCandleTime()` method was adding the timeframe duration to calculate the closing time of the candle:
+```java
+LocalTime candleTime = LocalTime.ofSecondOfDay(candleSeconds + timeframeSeconds);
+```
+
+**Solution:**
+Changed the timestamp to represent the START of the candle period (opening time):
+```java
+LocalTime candleTime = LocalTime.ofSecondOfDay(candleSeconds);
+```
+
+### 📦 Changes Made
+
+**File: `src/main/java/com/vish/fno/ChartsSimulator/service/CustomCandleService.java`**
+- Modified `getCandleTime()` method (line 74-86)
+- Removed `+ timeframeSeconds` from line 82
+- Updated comment to clarify: "e.g., 9:15 candle represents 9:15:00 to 9:15:59.999"
+
+### ✅ Impact
+- Custom Candles page now displays correct timestamps
+- Crosshair shows 9:15 for the first candle (not 9:16)
+- Bottom timeline shows correct starting times
+- Consistent with standard candlestick chart conventions
+
+---
+
+## [Session-2025-10-15-Candles-Crosshair-Timestamp-Fix] - Fixed Crosshair Timestamp Snapping on Candles Page
+
+### 🐛 Bug Fixed
+
+**User Report:**
+"When I am hovering over the candle, in the same candle I see different timestamps based on where I am hovering. If I hover on left side of the candle I see 9:15, and when I hover on the right side I see 9:16, but the data from external api only mentions 9:15 for that candle."
+
+**Problem:**
+On the Candles page, hovering over different parts of the same candle showed different timestamps. The crosshair was calculating timestamps based on exact pixel position rather than snapping to the candle the mouse is over.
+
+**Root Cause:**
+In `Chart.jsx` (line 541), the candleIndex calculation was using a linear pixel-to-index mapping that didn't account for proper candle alignment:
+```javascript
+const candleIndex = Math.floor((mousePos.x - padding.left - clampedOffset) / candleWidth);
+```
+
+**Solution:**
+Changed the calculation to snap to the nearest candle and account for the visible offset:
+```javascript
+// Calculate candle index by finding which candle the mouse is over
+// Round to nearest candle (accounting for candle centering) and add visibleStart offset
+const candleIndex = Math.round((mousePos.x - padding.left) / candleWidth - 0.5) + visibleStart;
+```
+
+### 📦 Changes Made
+
+**File: `frontend/components/Chart.jsx`**
+- Modified candleIndex calculation (line 541-543)
+- Changed from `Math.floor` with `clampedOffset` to `Math.round` with `visibleStart`
+- Added clarifying comments about candle snapping behavior
+
+**File: `frontend/components/CustomCandleChart.jsx`**
+- Applied same fix to candleIndex calculation (line 631-632)
+- Changed from `Math.floor` to `Math.round` with -0.5 offset
+- Ensures consistent crosshair behavior across both chart components
+
+**File: `frontend/components/charts/UnifiedChart.jsx`** ⭐ **CRITICAL FIX**
+- Fixed `getTimeAtX` function (line 456-465) used by **Candles, Extrema, and Charts pages**
+- Replaced inefficient loop-based "closest candle" search with proper snapping calculation
+- Changed from iterating through all candles to direct calculation: `Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5) + visibleStart`
+- This component is used by the main chart pages, making this the most important fix
+
+### ✅ Impact
+- Crosshair now shows consistent timestamp when hovering over any part of the same candle **across all pages**
+- Timestamp accurately reflects the candle's opening time (e.g., 9:15 for entire candle)
+- Fixes apply to: **Candles page, Extrema page, Charts page, Custom Candles page**
+- Improved user experience with predictable crosshair behavior
+- Consistent with standard candlestick chart interaction patterns
+- More efficient rendering (eliminated unnecessary loop in UnifiedChart)
+
+---
+
 ## [Session-2025-10-15-Backtest-Report-Generation] - Added Console Logging and CSV Export for Backtest Results
 
 ### 🚀 Features Added

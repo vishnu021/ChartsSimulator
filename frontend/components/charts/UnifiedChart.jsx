@@ -456,22 +456,12 @@ export const UnifiedChart = ({
       const getTimeAtX = (x) => {
         if (x < padding.left || x > width - padding.right) return null;
 
-        // Find the closest candle by comparing actual positions
-        let closestIndex = -1;
-        let closestDistance = Infinity;
+        // Calculate candle index by snapping to nearest candle
+        // Account for clampedOffset and round to nearest candle (accounting for candle centering)
+        const candleIndex = Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5) + visibleStart;
 
-        for (let i = 0; i < visibleEnd - visibleStart; i++) {
-          const candleX = padding.left + ((visibleStart + i) * candleWidth) + clampedOffset;
-          const distance = Math.abs(candleX - x);
-
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = visibleStart + i;
-          }
-        }
-
-        if (closestIndex < 0 || closestIndex >= primaryData.length) return null;
-        return primaryData[closestIndex]?.time;
+        if (candleIndex < 0 || candleIndex >= primaryData.length) return null;
+        return primaryData[candleIndex]?.time;
       };
 
       // Draw enhanced crosshair with price and time labels

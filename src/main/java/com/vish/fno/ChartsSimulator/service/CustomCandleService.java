@@ -78,8 +78,9 @@ public class CustomCandleService {
         // Round down to nearest timeframe boundary
         int candleSeconds = (totalSeconds / timeframeSeconds) * timeframeSeconds;
 
-        // Convert back to time and add timeframe to get the closing time of the candle
-        LocalTime candleTime = LocalTime.ofSecondOfDay(candleSeconds + timeframeSeconds);
+        // Convert back to time to get the opening time of the candle
+        // e.g., 9:15 candle represents 9:15:00 to 9:15:59.999
+        LocalTime candleTime = LocalTime.ofSecondOfDay(candleSeconds);
 
         return candleTime.format(TIME_FORMATTER);
     }
