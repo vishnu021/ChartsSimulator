@@ -76,14 +76,17 @@ const candleIndex = Math.round((mousePos.x - padding.left) / candleWidth - 0.5) 
 - Ensures consistent crosshair behavior across both chart components
 
 **File: `frontend/components/charts/UnifiedChart.jsx`** ⭐ **CRITICAL FIX**
-- Fixed `getTimeAtX` function (line 456-465) used by **Candles, Extrema, and Charts pages**
-- Replaced inefficient loop-based "closest candle" search with proper snapping calculation
-- Changed from iterating through all candles to direct calculation: `Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5) + visibleStart`
+- Fixed `getTimeAtX` function (line 456-467) used by **Candles, Extrema, and Charts pages**
+- **Initial fix**: Replaced inefficient loop-based "closest candle" search with proper snapping calculation
+- **Zoom bug fix**: Removed incorrect `+ visibleStart` that caused timestamp drift when zooming
+- Correct formula: `Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5)`
+- The formula `(x - padding.left - clampedOffset) / candleWidth` already returns the absolute index, so adding `visibleStart` was double-counting
 - This component is used by the main chart pages, making this the most important fix
 
 ### ✅ Impact
 - Crosshair now shows consistent timestamp when hovering over any part of the same candle **across all pages**
 - Timestamp accurately reflects the candle's opening time (e.g., 9:15 for entire candle)
+- **Zoom fix**: Timestamps remain accurate when zooming in/out (no more drift to later timestamps)
 - Fixes apply to: **Candles page, Extrema page, Charts page, Custom Candles page**
 - Improved user experience with predictable crosshair behavior
 - Consistent with standard candlestick chart interaction patterns

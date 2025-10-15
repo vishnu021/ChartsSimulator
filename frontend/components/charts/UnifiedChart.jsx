@@ -457,8 +457,10 @@ export const UnifiedChart = ({
         if (x < padding.left || x > width - padding.right) return null;
 
         // Calculate candle index by snapping to nearest candle
-        // Account for clampedOffset and round to nearest candle (accounting for candle centering)
-        const candleIndex = Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5) + visibleStart;
+        // The rendering formula is: x = padding.left + (visibleStart + i) * candleWidth + clampedOffset
+        // Solving for (visibleStart + i): (x - padding.left - clampedOffset) / candleWidth
+        // This already gives us the absolute index, so NO need to add visibleStart again!
+        const candleIndex = Math.round((x - padding.left - clampedOffset) / candleWidth - 0.5);
 
         if (candleIndex < 0 || candleIndex >= primaryData.length) return null;
         return primaryData[candleIndex]?.time;
