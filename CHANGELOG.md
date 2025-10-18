@@ -39,6 +39,68 @@ LocalTime candleTime = LocalTime.ofSecondOfDay(candleSeconds);
 
 ---
 
+## [Session-2025-10-15-Backtest-Page-Layout-Fix] - Improved Backtest Page Layout and Scrolling
+
+### 🎨 UI Improvements
+
+**User Report:**
+"In the backtest page the report of the backtest results gets very close to the bottom of the screen, add some padding margin and a scroll bar for 📋 Trade History panel and not for entire left side"
+
+**Problem:**
+- Backtest results were getting too close to the screen bottom
+- The entire left panel was scrollable, making navigation confusing
+- Trade History table needed independent scrolling
+
+**Solution:**
+1. Removed `overflow-y-auto` from left panel container (line 134)
+2. Added `max-h-[600px]` to Trade History section for independent scrolling (line 393)
+3. Increased bottom padding from `pb-6` to `pb-8` (line 132)
+4. Added `mb-4` bottom margin to Trade History panel
+
+### 📦 Changes Made
+
+**File: `frontend/app/backtest/page.jsx`**
+- Line 132: Increased bottom padding from `pb-6` to `pb-8`
+- Line 134: Removed `overflow-y-auto` from left panel, added `overflow-hidden`
+- Line 393: Added `max-h-[600px] mb-4` to Trade History container
+- Removed `flex-1` from Trade History container to prevent it from expanding indefinitely
+
+### ✅ Impact (Initial Fix)
+- Trade History panel now has independent scrolling with fixed max height (600px)
+- Rest of the page (input form, summary cards, metrics) remains visible without scrolling
+- Better spacing from screen bottom prevents content from feeling cramped
+- Improved user experience with clearer visual hierarchy
+
+### 🎨 Additional Improvements (Compact Layout)
+
+**User Feedback:**
+"Still the last trade is not that much visible, increase the margin from bottom, also make the other layouts like input form, summary, metrics a bit more compact to have just a bit more space for trade history"
+
+**Additional Changes:**
+1. **Made all sections more compact** - Reduced padding throughout:
+   - Input form: `p-5` → `p-3`, gaps: `gap-3 mb-4` → `gap-2 mb-2`
+   - Strategy parameters: `p-3 mb-4` → `p-2 mb-2`
+   - Run button: `py-3` → `py-2`
+   - Summary cards: `p-4 gap-3` → `p-3 gap-2`
+   - Metrics section: `p-4 gap-3` → `p-3 gap-2`
+   - Trade History: `p-4 mb-3` → `p-3 mb-2`
+
+2. **Increased Trade History space**:
+   - Max height: `600px` → `700px` (100px more space)
+   - Bottom margin: `mb-4` → `mb-12` (16px → 48px, 3x more)
+
+3. **Reduced heading sizes**:
+   - Section headings: `text-lg` → `text-base` for compactness
+
+### ✅ Final Impact
+- **More space for Trade History**: 700px max height (up from 600px)
+- **Last trade clearly visible**: 48px bottom margin prevents cutoff
+- **Compact, efficient design**: All other sections take less vertical space
+- **Better information density**: More trades visible without scrolling
+- **Professional appearance**: Balanced layout with proper spacing
+
+---
+
 ## [Session-2025-10-15-Candles-Crosshair-Timestamp-Fix] - Fixed Crosshair Timestamp Snapping on Candles Page
 
 ### 🐛 Bug Fixed

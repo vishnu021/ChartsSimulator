@@ -129,12 +129,12 @@ export default function BacktestPage() {
         <h1 className="text-3xl font-bold text-text">📊 Backtest Dashboard</h1>
       </div>
 
-      <div className="flex-1 flex gap-4 px-6 pb-6 overflow-hidden">
+      <div className="flex-1 flex gap-4 px-6 pb-8 overflow-hidden">
         {/* Left Panel - Configuration & Results */}
-        <div className="w-1/2 flex flex-col gap-4 overflow-y-auto pr-2">
+        <div className="w-1/2 flex flex-col gap-4 pr-2 overflow-hidden">
           {/* Input Form - Compact Modern Design */}
-          <div className="bg-gradient-to-br from-surface to-surface/80 p-5 rounded-2xl shadow-xl border border-border/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="bg-gradient-to-br from-surface to-surface/80 p-3 rounded-2xl shadow-xl border border-border/50 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-text flex items-center gap-2">
               <span className="text-xl">⚙️</span>
               <span>Backtest Configuration</span>
@@ -147,7 +147,7 @@ export default function BacktestPage() {
           </div>
 
           {/* Single Row Form */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
             {/* Symbol */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
@@ -223,8 +223,8 @@ export default function BacktestPage() {
           </div>
 
           {/* Strategy Parameters - Enhanced with Overrides */}
-          <div className="bg-background/30 backdrop-blur-sm p-3 rounded-xl mb-4 border border-border/30">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-background/30 backdrop-blur-sm p-2 rounded-xl mb-2 border border-border/30">
+            <div className="grid grid-cols-2 gap-2">
               {/* Stop Loss */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide flex items-center gap-1">
@@ -271,7 +271,7 @@ export default function BacktestPage() {
           <button
             onClick={runBacktest}
             disabled={loading}
-            className="w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white py-3 px-6 rounded-xl font-bold
+            className="w-full bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white py-2 px-6 rounded-xl font-bold
                        shadow-lg shadow-green-500/30
                        hover:shadow-2xl hover:shadow-green-500/50 hover:-translate-y-1 hover:scale-[1.03]
                        active:scale-[0.97] active:shadow-md
@@ -302,10 +302,10 @@ export default function BacktestPage() {
 
           {/* Results Display */}
           {result && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               {/* Summary Cards - Compact */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-surface p-4 rounded-lg shadow-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="bg-surface p-3 rounded-lg shadow-lg">
                 <div className="text-xs text-text-secondary mb-1">Net P/L</div>
                 <div className={`text-xl font-bold ${result.netProfitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   ₹{result.netProfitLoss.toFixed(2)}
@@ -315,7 +315,7 @@ export default function BacktestPage() {
                 </div>
               </div>
 
-              <div className="bg-surface p-4 rounded-lg shadow-lg">
+              <div className="bg-surface p-3 rounded-lg shadow-lg">
                 <div className="text-xs text-text-secondary mb-1">Win Rate</div>
                 <div className="text-xl font-bold text-primary">
                   {result.winRate.toFixed(2)}%
@@ -325,7 +325,7 @@ export default function BacktestPage() {
                 </div>
               </div>
 
-              <div className="bg-surface p-4 rounded-lg shadow-lg">
+              <div className="bg-surface p-3 rounded-lg shadow-lg">
                 <div className="text-xs text-text-secondary mb-1">Profit Factor</div>
                 <div className="text-xl font-bold text-text">
                   {result.profitFactor.toFixed(2)}
@@ -335,7 +335,7 @@ export default function BacktestPage() {
                 </div>
               </div>
 
-              <div className="bg-surface p-4 rounded-lg shadow-lg">
+              <div className="bg-surface p-3 rounded-lg shadow-lg">
                 <div className="text-xs text-text-secondary mb-1">Sharpe Ratio</div>
                 <div className="text-xl font-bold text-text">
                   {result.sharpeRatio.toFixed(2)}
@@ -347,9 +347,9 @@ export default function BacktestPage() {
             </div>
 
             {/* Detailed Metrics - Compact */}
-            <div className="bg-surface p-4 rounded-lg shadow-lg">
-              <h2 className="text-lg font-bold text-text mb-3">📈 Performance Metrics</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            <div className="bg-surface p-3 rounded-lg shadow-lg">
+              <h2 className="text-base font-bold text-text mb-2">📈 Performance Metrics</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
                 <div>
                   <span className="text-text-secondary">Strategy:</span>
                   <span className="ml-2 text-text font-medium">{result.strategyName}</span>
@@ -389,10 +389,10 @@ export default function BacktestPage() {
               </div>
             </div>
 
-            {/* Trade List - More Space */}
-            <div className="bg-surface p-4 rounded-lg shadow-lg flex-1 flex flex-col min-h-0">
-              <h2 className="text-lg font-bold text-text mb-3">📋 Trade History ({result.trades.length})</h2>
-              <div className="overflow-x-auto overflow-y-auto flex-1">
+            {/* Trade List - Scrollable Panel with Fixed Height */}
+            <div className="bg-surface p-3 rounded-lg shadow-lg flex flex-col max-h-[700px] mb-12">
+              <h2 className="text-base font-bold text-text mb-2">📋 Trade History ({result.trades.length})</h2>
+              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0">
                 <table className="w-full text-sm">
                   <thead className="bg-surface sticky top-0 z-10 shadow-md">
                     <tr className="text-left text-text-secondary border-b-2 border-border">
