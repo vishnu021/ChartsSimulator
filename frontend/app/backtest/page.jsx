@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import TradeChart from '@/components/TradeChart';
+import DayOverviewChart from '@/components/DayOverviewChart';
 import { configService } from '@/services/config/configService';
 
 const CACHE_KEY = 'backtest-params';
@@ -584,8 +585,17 @@ export default function BacktestPage() {
               <h2 className="text-lg font-bold text-text mb-4">
                 📈 Trade #{selectedTrade.tradeNumber} - Chart Pattern
               </h2>
-              <div className="flex-1 min-h-0 flex flex-col gap-4">
-                <div className="h-2/3">
+              <div className="flex-1 min-h-0 flex flex-col gap-3">
+                {/* Day Overview Chart - Minimal */}
+                <div className="h-[150px] flex-shrink-0">
+                  <DayOverviewChart
+                    tickers={result.tickers}
+                    selectedTrade={selectedTrade}
+                  />
+                </div>
+
+                {/* Detailed Trade Chart */}
+                <div className="flex-1 min-h-0">
                   <TradeChart
                     trade={selectedTrade}
                     tickers={result.tickers}
@@ -593,9 +603,9 @@ export default function BacktestPage() {
                 </div>
 
                 {/* Trade Details Section */}
-                <div className="h-1/3 bg-background/30 rounded-lg p-4 overflow-y-auto">
-                  <h3 className="text-sm font-bold text-text mb-3">📋 Trade Details</h3>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="h-[250px] flex-shrink-0 bg-background/30 rounded-lg p-2 overflow-y-auto">
+                  <h3 className="text-xs font-bold text-text mb-2">📋 Trade Details</h3>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <span className="text-text-secondary">Entry Time:</span>
                       <span className="ml-2 text-text font-medium font-mono text-sm">{formatTime(selectedTrade.entryTime)}</span>
