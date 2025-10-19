@@ -331,7 +331,7 @@ public class LowWickMomentumStrategy implements Strategy {
             double targetPercent = ((targetPrice - entryPrice) / entryPrice) * 100.0;
 
             log.debug("Dynamic take profit: entry={}, target={}, percent={}%",
-                entryPrice, targetPrice, String.format("%.2f", targetPercent));
+                entryPrice, String.format("%.2f", targetPrice), String.format("%.2f", targetPercent));
             return targetPercent;
         }
 

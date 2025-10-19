@@ -9,10 +9,10 @@ import UnifiedChart from './UnifiedChart';
  * with interactive controls for visibility and layer ordering
  */
 export const EnhancedCombinedChart = ({ data, theme = 'dark', ...props }) => {
-  const [showCandlesticks, setShowCandlesticks] = useState(true);
+  const [showCandlesticks, setShowCandlesticks] = useState(false);
   const [showHeikinAshi, setShowHeikinAshi] = useState(true);
   const [heikinAshiOnFront, setHeikinAshiOnFront] = useState(false);
-  const [heikinAshiColorMode, setHeikinAshiColorMode] = useState('yellow'); // 'yellow' or 'traditional'
+  const [heikinAshiColorMode, setHeikinAshiColorMode] = useState('traditional'); // 'yellow' or 'traditional'
 
   const colors = themes[theme];
 

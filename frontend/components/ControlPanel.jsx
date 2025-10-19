@@ -22,7 +22,7 @@ export default function ControlPanel({
   const currentToggleTheme = propOnThemeToggle || toggleTheme;
   const [lookbackPeriod, setLookbackPeriod] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
-  const [runStrategy, setRunStrategy] = useState(true);
+  const [runStrategy, setRunStrategy] = useState(false);
 
   const colors = themes[currentTheme];
 

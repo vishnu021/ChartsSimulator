@@ -70,8 +70,8 @@ public class BacktestService {
 
         log.info("🔬 Backtest complete - Strategy: {}, P/L: {} ({}%), Trades: {}, Win Rate: {}%",
                 strategy,
-                result.netProfitLoss(),
-                result.profitLossPercent(),
+                String.format("%.2f", result.netProfitLoss()),
+                String.format("%.2f", result.profitLossPercent()),
                 result.totalTrades(),
                 result.winRate());
 

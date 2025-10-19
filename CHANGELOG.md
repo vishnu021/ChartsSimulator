@@ -2,6 +2,102 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-19-UI-Defaults-and-Theme-Refinement] - Improved Default States and Softer Light Theme
+
+### 🎨 UI Improvements
+
+**User Requests:**
+1. "In Ticker page make the signals checkbox unchecked by default"
+2. "In charts page, disable regular candles by default and have the r/G enabled by default"
+3. "Rework on the light theme and ensure the colors are not too bright"
+4. "Ensure the color properties are coming from a common theme file"
+
+**Problem:**
+- Ticker page signals checkbox was checked by default, causing unnecessary strategy runs
+- Charts page showed regular candles by default with yellow Heikin Ashi mode
+- Light theme colors were too bright and harsh on the eyes
+- Color properties needed to be centralized in common theme file
+
+**Solution:**
+1. **Ticker Page - Signals Checkbox**: Changed default state from `true` to `false` in ControlPanel.jsx
+2. **Charts Page - Default Display**:
+   - Disabled regular candles by default (`showCandlesticks: false`)
+   - Enabled Heikin Ashi by default (`showHeikinAshi: true`)
+   - Changed default color mode to R/G (traditional) from yellow (`heikinAshiColorMode: 'traditional'`)
+3. **Light Theme Colors**: Complete rework with softer, muted colors
+   - Background colors: More subtle off-white and gray-blue tones
+   - Text colors: Softer dark grays instead of harsh blacks
+   - Candle colors: Professional emerald green and rose red (instead of bright colors)
+   - Border and grid colors: Softer, less contrasting
+   - Accent colors: Softer purple instead of bright blue
+4. **Centralized Theme**: All theme colors already properly centralized in:
+   - `frontend/components/chartConfig.js` (chart-specific themes)
+   - `frontend/app/globals.css` (global CSS variables)
+
+### 📦 Changes Made
+
+**File: `/frontend/components/ControlPanel.jsx`**
+- **Line 25**: Changed `useState(true)` to `useState(false)` for runStrategy state
+- **Impact**: Signals checkbox now unchecked by default on Ticker page
+
+**File: `/frontend/components/charts/EnhancedCombinedChart.jsx`**
+- **Line 12**: Changed `useState(true)` to `useState(false)` for showCandlesticks
+- **Line 15**: Changed `useState('yellow')` to `useState('traditional')` for heikinAshiColorMode
+- **Impact**: Regular candles disabled by default, R/G color mode enabled
+
+**File: `/frontend/components/chartConfig.js`**
+- **Lines 57-111**: Complete light theme color rework
+  - Background: `#fafbfc` (very soft off-white)
+  - Panel Background: `#f5f7fa` (muted light gray-blue)
+  - Control Panel: `#eaeef3` (subtle gray)
+  - Grid: `#dce1e8` (very soft grid lines)
+  - Text Primary: `#3d4852` (softer dark gray)
+  - Text Secondary: `#6c7985` (muted gray)
+  - Candle Bullish: `#14a855` (softer emerald green)
+  - Candle Bearish: `#d14d72` (softer rose red)
+  - Accent: `#7c7fdb` (softer purple)
+  - All opacity values reduced for gentler appearance
+
+**File: `/frontend/app/globals.css`**
+- **Lines 7-16**: Updated CSS custom properties to match new light theme colors
+  - `--bg-primary: 250, 251, 252` (softer off-white)
+  - `--bg-secondary: 245, 247, 250` (muted light gray-blue)
+  - `--text-primary: 61, 72, 82` (softer dark gray)
+  - `--text-secondary: 108, 121, 133` (muted gray)
+  - `--border-primary: 209, 216, 223` (softer borders)
+  - `--accent: 124, 127, 219` (softer purple)
+
+### ✅ Verification
+
+**Playwright MCP Testing - PASS**
+- ✅ Backend running on port 9090 (dev mode with `-Pdev`)
+- ✅ Frontend dev server running on port 3000
+- ✅ Ticker page: Signals checkbox unchecked by default (verified with `element.checked === false`)
+- ✅ Charts page: Regular candles disabled by default (button shows "Regular" without ✓)
+- ✅ Charts page: Heikin Ashi enabled by default (button shows "Heikin Ashi✓")
+- ✅ Charts page: R/G mode active (button shows "🔴🟢 R/G")
+- ✅ Light theme: Colors are softer and less bright (visual verification via screenshot)
+- ✅ No console errors or warnings
+
+**Frontend Lint - PASS**
+- ✅ No linting errors
+
+**Build Status**
+- ✅ Development servers running successfully
+- ⏳ Production build not tested (changes verified in dev mode)
+
+### 📸 Screenshots
+- `charts-page-updated.png`: Charts page with R/G mode enabled by default
+- `charts-page-light-theme.png`: New softer light theme colors
+
+### 🎯 User Impact
+- **Better Defaults**: Users get cleaner chart views without regular candles cluttering the display
+- **Eye Comfort**: Softer light theme reduces eye strain during extended use
+- **Efficiency**: Signals checkbox unchecked by default prevents unnecessary strategy calculations
+- **Visual Clarity**: R/G Heikin Ashi mode provides better trend visualization out of the box
+
+---
+
 ## [Session-2025-10-19-Backtest-UI-Improvements] - Enhanced Trade History and Keyboard Navigation
 
 ### 🎨 UI Improvements

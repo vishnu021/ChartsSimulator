@@ -4,16 +4,16 @@
 
 /* CSS Custom Properties for theme variables */
 :root {
-  /* Light theme variables */
-  --bg-primary: 248, 250, 252;        /* #f8fafc */
-  --bg-secondary: 241, 245, 249;      /* #f1f5f9 */
-  --bg-tertiary: 226, 232, 240;       /* #e2e8f0 */
-  --text-primary: 30, 41, 59;         /* #1e293b */
-  --text-secondary: 71, 85, 105;      /* #475569 */
-  --text-tertiary: 100, 116, 139;     /* #64748b */
-  --border-primary: 226, 232, 240;    /* #e2e8f0 */
+  /* Light theme variables - softer and less bright */
+  --bg-primary: 250, 251, 252;        /* #fafbfc - very soft off-white */
+  --bg-secondary: 245, 247, 250;      /* #f5f7fa - muted light gray-blue */
+  --bg-tertiary: 234, 238, 243;       /* #eaeef3 - subtle gray */
+  --text-primary: 61, 72, 82;         /* #3d4852 - softer dark gray */
+  --text-secondary: 108, 121, 133;    /* #6c7985 - muted gray */
+  --text-tertiary: 133, 145, 160;     /* #8591a0 - lighter muted gray */
+  --border-primary: 209, 216, 223;    /* #d1d8df - softer borders */
   --surface-primary: 255, 255, 255;   /* #ffffff */
-  --accent: 59, 130, 246;             /* #3b82f6 */
+  --accent: 124, 127, 219;            /* #7c7fdb - softer purple */
 }
 
 [data-theme="dark"] {

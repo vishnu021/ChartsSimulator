@@ -55,59 +55,59 @@ export const themes = {
     glow: 'rgba(79, 70, 229, 0.3)',
   },
   light: {
-    background: '#f8fafc',  // Softer off-white background
-    panelBackground: '#f1f5f9',  // Light blue-gray panels
-    controlPanel: '#e2e8f0',  // Refined control panel
-    panel: '#f1f5f9',
-    grid: '#d1d9e0',  // Softer grid lines
+    background: '#fafbfc',  // Very soft off-white background
+    panelBackground: '#f5f7fa',  // Muted light gray-blue panels
+    controlPanel: '#eaeef3',  // Subtle control panel
+    panel: '#f5f7fa',
+    grid: '#dce1e8',  // Very soft grid lines
     text: {
-      primary: '#334155',  // Softer primary text - less harsh
-      secondary: '#64748b',  // Warmer secondary text
-      maxima: '#0891b2',  // Professional teal for highs
-      minima: '#e11d48',  // Slightly softer red for lows
+      primary: '#3d4852',  // Softer dark gray - less harsh
+      secondary: '#6c7985',  // Muted gray text
+      maxima: '#0d9488',  // Softer teal for highs
+      minima: '#d14d72',  // Muted rose for lows
     },
     candle: {
-      bullish: '#16a34a',  // Softer professional green
-      bearish: '#e11d48',  // Softer professional red
+      bullish: '#14a855',  // Softer emerald green
+      bearish: '#d14d72',  // Softer rose red
     },
     volume: {
-      bullish: 'rgba(22, 163, 74, 0.6)',  // Semi-transparent green
-      bearish: 'rgba(225, 29, 72, 0.6)',  // Semi-transparent red
-      border: '#cbd5e1',
-      text: '#64748b',
-      label: '#64748b',
+      bullish: 'rgba(20, 168, 85, 0.5)',  // Semi-transparent soft green
+      bearish: 'rgba(209, 77, 114, 0.5)',  // Semi-transparent soft rose
+      border: '#d1d8df',
+      text: '#6c7985',
+      label: '#6c7985',
     },
     ticker: {
-      line: '#1e293b',
-      shadow: '#6366f1',
+      line: '#3d4852',
+      shadow: '#7c7fdb',
       area: {
-        top: 'rgba(30, 41, 59, 0.2)',
-        bottom: 'rgba(99, 102, 241, 0.08)',
+        top: 'rgba(61, 72, 82, 0.15)',
+        bottom: 'rgba(124, 127, 219, 0.06)',
       },
-      point: '#1e293b',
-      pointShadow: '#6366f1',
+      point: '#3d4852',
+      pointShadow: '#7c7fdb',
     },
     lines: {
       maxima: '#d97706',  // Warm amber for maxima
-      minima: '#be185d',  // Deep pink for minima
-      crosshair: '#64748b',
+      minima: '#c2185b',  // Softer magenta for minima
+      crosshair: '#8591a0',
     },
     tooltip: {
-      background: 'rgba(241, 245, 249, 0.98)',  // More opaque tooltip
-      border: '#cbd5e1',
+      background: 'rgba(245, 247, 250, 0.98)',  // More opaque tooltip
+      border: '#d1d8df',
     },
     input: {
       background: '#ffffff',
-      border: '#cbd5e1',
-      focus: '#6366f1',
+      border: '#d1d8df',
+      focus: '#7c7fdb',
     },
     // New enhancements
-    accent: '#6366f1',
-    success: '#059669',
+    accent: '#7c7fdb',
+    success: '#14a855',
     warning: '#d97706',
-    error: '#dc2626',
-    shadow: 'rgba(0, 0, 0, 0.1)',
-    glow: 'rgba(99, 102, 241, 0.2)',
+    error: '#d14d72',
+    shadow: 'rgba(0, 0, 0, 0.08)',
+    glow: 'rgba(124, 127, 219, 0.15)',
   },
 };
 

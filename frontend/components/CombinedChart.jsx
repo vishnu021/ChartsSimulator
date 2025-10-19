@@ -19,6 +19,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
   const [showCrosshair, setShowCrosshair] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showHeikinAshi, setShowHeikinAshi] = useState(true);
+  const [showRegularCandles, setShowRegularCandles] = useState(false);
 
   const colors = themes[theme];
 
@@ -353,43 +354,45 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
     ctx.setLineDash([]);
 
-    // Draw regular candlesticks (background)
-    visibleCandles.forEach((candle, i) => {
-      const x = xScale(visibleStart + i);
-      const isGreen = candle.close >= candle.open;
-      const color = isGreen ? colors.candle.bullish : colors.candle.bearish;
+    // Draw regular candlesticks (background) - only if enabled
+    if (showRegularCandles) {
+      visibleCandles.forEach((candle, i) => {
+        const x = xScale(visibleStart + i);
+        const isGreen = candle.close >= candle.open;
+        const color = isGreen ? colors.candle.bullish : colors.candle.bearish;
 
-      // Draw wick
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, yScale(candle.high));
-      ctx.lineTo(x, yScale(candle.low));
-      ctx.stroke();
+        // Draw wick
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, yScale(candle.high));
+        ctx.lineTo(x, yScale(candle.low));
+        ctx.stroke();
 
-      // Draw body with fill
-      const bodyTop = yScale(Math.max(candle.open, candle.close));
-      const bodyBottom = yScale(Math.min(candle.open, candle.close));
-      const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+        // Draw body with fill
+        const bodyTop = yScale(Math.max(candle.open, candle.close));
+        const bodyBottom = yScale(Math.min(candle.open, candle.close));
+        const bodyHeight = Math.max(1, bodyBottom - bodyTop);
 
-      ctx.fillStyle = color;
-      ctx.fillRect(
-        x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
-        bodyTop,
-        candleWidth * chartSettings.candleBodyWidthRatio,
-        bodyHeight
-      );
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
+          bodyTop,
+          candleWidth * chartSettings.candleBodyWidthRatio,
+          bodyHeight
+        );
 
-      // Add subtle border to regular candles for distinction
-      ctx.strokeStyle = colors.background;
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(
-        x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
-        bodyTop,
-        candleWidth * chartSettings.candleBodyWidthRatio,
-        bodyHeight
-      );
-    });
+        // Add subtle border to regular candles for distinction
+        ctx.strokeStyle = colors.background;
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(
+          x - (candleWidth * chartSettings.candleBodyWidthRatio) / 2,
+          bodyTop,
+          candleWidth * chartSettings.candleBodyWidthRatio,
+          bodyHeight
+        );
+      });
+    }
 
     // Draw Heikin Ashi candles first (foreground) - YELLOW OUTLINE ONLY
     if (showHeikinAshi && visibleHeikinAshi.length > 0) {
@@ -487,6 +490,7 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     colors,
     isMobile,
     showHeikinAshi,
+    showRegularCandles,
     getTimeIntervals,
     drawWyckoffPhaseStrip,
   ]);
@@ -588,6 +592,10 @@ export default function CombinedChart({ data, theme = 'dark' }) {
     setShowHeikinAshi(prev => !prev);
   };
 
+  const toggleRegularCandles = () => {
+    setShowRegularCandles(prev => !prev);
+  };
+
   if (!data) return null;
 
   return (
@@ -621,6 +629,19 @@ export default function CombinedChart({ data, theme = 'dark' }) {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={toggleRegularCandles}
+            className={`px-3 py-1 rounded-md transition-all text-sm ${
+              showRegularCandles ? 'opacity-100' : 'opacity-90'
+            }`}
+            style={{
+              backgroundColor: colors.panelBackground,
+              border: `1px solid ${colors.grid}`,
+              color: colors.text.primary,
+            }}
+          >
+            Regular Candles
+          </button>
+          <button
             onClick={toggleHeikinAshi}
             className={`px-3 py-1 rounded-md transition-all text-sm ${
               showHeikinAshi ? 'opacity-100' : 'opacity-90'
@@ -651,13 +672,15 @@ export default function CombinedChart({ data, theme = 'dark' }) {
 
       {/* Legend */}
       <div className="flex-shrink-0 flex flex-wrap gap-2 mb-2 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bullish }}></div>
-            <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bearish }}></div>
+        {showRegularCandles && (
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bullish }}></div>
+              <div className="w-3 h-2" style={{ backgroundColor: colors.candle.bearish }}></div>
+            </div>
+            <span style={{ color: colors.text.secondary }}>Regular Candles</span>
           </div>
-          <span style={{ color: colors.text.secondary }}>Regular Candles</span>
-        </div>
+        )}
         {showHeikinAshi && (
           <div className="flex items-center gap-2">
             <div className="w-3 h-2 border-2 border-yellow-400"></div>

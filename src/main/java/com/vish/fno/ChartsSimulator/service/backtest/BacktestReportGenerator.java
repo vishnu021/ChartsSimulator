@@ -112,13 +112,13 @@ public class BacktestReportGenerator {
         }
 
         log.info("-".repeat(lineLength));
-        log.info("📊 SUMMARY: Total Trades: {} | Winners: {} | Losers: {} | Win Rate: {:.2f}% | Net P/L: ₹{:.2f} ({:.2f}%)",
+        log.info("📊 SUMMARY: Total Trades: {} | Winners: {} | Losers: {} | Win Rate: {}% | Net P/L: ₹{} ({}%)",
                 result.totalTrades(),
                 result.winningTrades(),
                 result.losingTrades(),
-                result.winRate(),
-                result.netProfitLoss(),
-                result.profitLossPercent());
+                String.format("%.2f", result.winRate()),
+                String.format("%.2f", result.netProfitLoss()),
+                String.format("%.2f", result.profitLossPercent()));
         log.info("=".repeat(lineLength) + "\n");
     }
 

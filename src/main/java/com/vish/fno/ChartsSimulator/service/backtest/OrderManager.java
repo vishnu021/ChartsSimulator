@@ -146,7 +146,7 @@ public class OrderManager {
         );
 
         log.debug("[{}] ✅ Order opened: {} shares @ {} | Stop: {} | Target: {} | Phase: {}",
-                 tick.time(), quantity, currentPrice, stopLoss, takeProfit, phase);
+                 tick.time(), quantity, currentPrice, String.format("%.2f", stopLoss), String.format("%.2f", takeProfit), phase);
 
         return EntryResult.success(order, positionCost);
     }
@@ -216,7 +216,7 @@ public class OrderManager {
         log.debug("[{}] ✅ Order closed: {} | P/L: {} ({}%) | Reason: {}",
                  tick.time(),
                  closedOrder.orderNumber(),
-                 closedOrder.profitLoss().orElse(0.0),
+                String.format("%.2f", closedOrder.profitLoss().orElse(0.0)),
                  String.format("%.2f", closedOrder.profitLossPercent().orElse(0.0)),
                  reason);
 
