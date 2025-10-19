@@ -13,9 +13,13 @@ export const useChartData = () => {
     data: realTimeData,
     isConnecting: realTimeLoading,
     error: realTimeError,
+    isPaused,
+    streamSpeed,
     connectAndStream,
     disconnect,
     clearError: clearRealTimeError,
+    togglePause,
+    updateStreamSpeed,
   } = useWebSocket();
 
   // Helper function for API calls
@@ -108,9 +112,13 @@ export const useChartData = () => {
     instantLoading,
     realTimeError,
     instantError,
+    isPaused,
+    streamSpeed,
     loadData,
     toggleMode,
     clearErrors,
     disconnect,
+    togglePause,
+    updateStreamSpeed,
   };
 };

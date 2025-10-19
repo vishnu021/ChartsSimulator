@@ -9,10 +9,14 @@ export const useWebSocket = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [streamSpeed, setStreamSpeed] = useState(100); // Default 100ms
 
   const clientRef = useRef(null);
   const subscriptionsRef = useRef([]);
   const isActiveRef = useRef(false);
+  const messageBufferRef = useRef([]);
+  const isPausedRef = useRef(false);
 
   // Clean disconnect function
   const disconnect = useCallback((reason = 'Manual disconnect', force = false) => {
@@ -84,7 +88,12 @@ export const useWebSocket = () => {
             const candleSub = client.subscribe('/topic/candles', message => {
               try {
                 const parsedData = JSON.parse(message.body);
-                setData(parsedData);
+                // If paused, buffer the message; otherwise update data immediately
+                if (isPausedRef.current) {
+                  messageBufferRef.current.push(parsedData);
+                } else {
+                  setData(parsedData);
+                }
               } catch (e) {
                 setError('Failed to parse server data');
               }
@@ -97,10 +106,15 @@ export const useWebSocket = () => {
 
             subscriptionsRef.current = [candleSub, errorSub];
 
-            // Send request
+            // Send request with custom delay
             client.publish({
               destination: '/app/loadCandles',
-              body: JSON.stringify({ symbol, date, lookbackPeriod }),
+              body: JSON.stringify({
+                symbol,
+                date,
+                lookbackPeriod,
+                customDelay: streamSpeed
+              }),
             });
 
             setIsConnected(true);
@@ -178,13 +192,40 @@ export const useWebSocket = () => {
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Toggle pause/resume
+  const togglePause = useCallback(() => {
+    setIsPaused(prev => {
+      const newPaused = !prev;
+      isPausedRef.current = newPaused;
+
+      // When resuming, flush the buffer if there are messages
+      if (!newPaused && messageBufferRef.current.length > 0) {
+        // Update to the latest buffered message
+        const latestMessage = messageBufferRef.current[messageBufferRef.current.length - 1];
+        setData(latestMessage);
+        messageBufferRef.current = [];
+      }
+
+      return newPaused;
+    });
+  }, []);
+
+  // Update stream speed
+  const updateStreamSpeed = useCallback((newSpeed) => {
+    setStreamSpeed(newSpeed);
+  }, []);
+
   return {
     isConnected,
     isConnecting,
     error,
     data,
+    isPaused,
+    streamSpeed,
     connectAndStream,
     disconnect: manualDisconnect,
     clearError,
+    togglePause,
+    updateStreamSpeed,
   };
 };

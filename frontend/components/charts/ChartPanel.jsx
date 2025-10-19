@@ -47,9 +47,13 @@ export const ChartPanel = ({
     instantData,
     instantLoading,
     instantError,
+    isPaused,
+    streamSpeed,
     loadData,
     toggleMode,
     clearErrors,
+    togglePause,
+    updateStreamSpeed,
   } = useChartData();
 
   // Get current data based on mode
@@ -234,6 +238,63 @@ export const ChartPanel = ({
       {showStats && currentData && (
         <div className="mb-2">
           <StatsBar stats={generateStatsData()} theme={theme} />
+        </div>
+      )}
+
+      {/* Real-time Controls (Pause/Resume & Speed) */}
+      {isRealTime && currentData && (
+        <div className="mb-2 flex items-center gap-3 p-2 rounded-lg bg-gray-800 border border-gray-700">
+          {/* Pause/Resume Button */}
+          <button
+            onClick={togglePause}
+            className={`px-4 py-2 rounded-md font-medium transition-all ${
+              isPaused
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+            }`}
+          >
+            {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+          </button>
+
+          {/* Speed Control */}
+          <div className="flex items-center gap-2 flex-1">
+            <label className="text-sm font-medium text-gray-300">
+              Speed (ms):
+            </label>
+            <input
+              type="number"
+              value={streamSpeed}
+              onChange={(e) => updateStreamSpeed(Math.max(1, parseInt(e.target.value) || 100))}
+              min="1"
+              max="5000"
+              className="w-24 px-2 py-1.5 rounded text-sm bg-gray-700 border border-gray-600 text-white"
+            />
+            <span className="text-xs text-gray-400">
+              ({streamSpeed}ms between ticks)
+            </span>
+          </div>
+
+          {/* Quick Speed Presets */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => updateStreamSpeed(50)}
+              className="px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+            >
+              Fast (50ms)
+            </button>
+            <button
+              onClick={() => updateStreamSpeed(100)}
+              className="px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+            >
+              Normal (100ms)
+            </button>
+            <button
+              onClick={() => updateStreamSpeed(500)}
+              className="px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-gray-300"
+            >
+              Slow (500ms)
+            </button>
+          </div>
         </div>
       )}
 

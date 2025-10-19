@@ -2,6 +2,446 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-19-Swagger-Fix] - Fix Swagger/OpenAPI Incompatibility with Spring Boot 4.0
+
+### 🐛 Bug Fix
+
+**Issue:**
+- Swagger UI returning 500 Internal Server Error at `/swagger-ui/index.html`
+- `/api-docs` endpoint failing with `NoSuchMethodError: org.springframework.web.method.ControllerAdviceBean.<init>`
+
+**Root Cause:**
+- `springdoc-openapi-starter-webmvc-ui` version 2.6.0 is incompatible with Spring Boot 4.0.0 / Spring Framework 7.0
+
+**Fix:**
+- Updated `springdoc.version` from `2.6.0` to `2.7.0` in parent POM
+- Version 2.7.0 adds support for Spring Framework 7.0
+
+**Files Modified:**
+- `/pom.xml` (line 34): `<springdoc.version>2.7.0</springdoc.version>`
+
+**Verification:**
+- ✅ `/api-docs` endpoint now returns HTTP 200
+- ✅ Swagger UI loads successfully at `/swagger-ui/index.html`
+- ✅ No more `NoSuchMethodError` exceptions
+
+---
+
+## [Session-2025-10-19-Multi-Module-Restructuring] - Convert to Multi-Module Maven Project
+
+### 🏗️ Major Architecture Refactoring
+
+**User Request:**
+"Create this app a multi module project, have the parent with just the pom, and create 2 modules one Simulator module with all the code and PhaseAnalyzer with phase analyer code, move common dependencies in the parent"
+
+**Additional Request:**
+"I see we are trying to create beans in phase-analyser module using @Component annotation, I want to create all the beans in simulator module and not scan across different modules for beans"
+
+### 📦 New Project Structure
+
+```
+ChartsSimulator/                    # Parent project (root)
+├── pom.xml                          # Parent POM with common dependencies
+├── simulator/                       # Simulator module
+│   ├── pom.xml                     # Simulator module POM
+│   ├── src/                        # All existing source code
+│   ├── frontend/                   # Next.js frontend
+│   ├── config/                     # Configuration files
+│   └── scripts/                    # Build scripts
+└── phase-analyzer/                 # Phase Analyzer module
+    ├── pom.xml                     # Phase Analyzer module POM
+    └── src/                        # Phase analysis code
+        └── main/java/com/vish/fno/phaseanalyzer/
+            ├── analysis/           # Wyckoff analysis implementations
+            └── model/              # Shared models (Candle, Candlestick, CandleRequest)
+```
+
+### 🚀 Changes Made
+
+**1. Parent POM (`/pom.xml`)**
+- Changed `artifactId` from `ChartsSimulator` to `ChartsSimulator-parent`
+- Changed `packaging` to `pom`
+- Added `<modules>` section with `simulator` and `phase-analyzer`
+- Moved common dependencies to `<dependencyManagement>`:
+  - Spring Boot (managed by parent)
+  - Lombok (1.18.30)
+  - Springdoc OpenAPI (2.6.0)
+  - Apache HttpClient (4.5.14)
+- Added common dependencies for all modules:
+  - Lombok
+  - Spring Boot Starter Test
+
+**2. Simulator Module (`/simulator/pom.xml`)**
+- New artifact: `com.vish.fno:simulator`
+- Parent: `ChartsSimulator-parent`
+- Dependencies:
+  - Phase Analyzer module (as dependency)
+  - Spring Boot Web stack
+  - WebSocket support
+  - Actuator
+  - Validation
+  - OpenAPI/Swagger
+- Kept all frontend build configuration:
+  - frontend-maven-plugin for pnpm
+  - Resource copying for Next.js output
+  - Clean plugin for frontend artifacts
+- Profiles: `dev`, `prod`, `fast` (unchanged)
+
+**3. Phase Analyzer Module (`/phase-analyzer/pom.xml`)**
+- New artifact: `com.vish.fno:phase-analyzer`
+- Parent: `ChartsSimulator-parent`
+- **Pure Java library** - NO Spring dependencies
+- Only inherits: Lombok, JUnit from parent
+- Contains:
+  - Wyckoff phase analysis code
+  - Market phase detection
+  - Shared models (Candle, Candlestick, CandleRequest)
+- **All Spring annotations removed** (@Service, @Component, @Primary, @ConfigurationProperties)
+
+### 📂 Code Organization
+
+**Moved to Phase Analyzer:**
+- `analysis/` package → `com.vish.fno.phaseanalyzer.analysis`
+  - `WyckoffPhaseAnalyzer` (interface)
+  - `WyckoffAnalysisService`
+  - `impl/DefaultWyckoffPhaseAnalyzer`
+  - `impl/HeikinAshiWyckoffPhaseAnalyzer`
+  - `impl/PureHeikinAshiWyckoffAnalyzer`
+  - `impl/ExtremaHeikinAshiWyckoffAnalyzer`
+  - `impl/TradeSimulatorWyckoffAnalyzer`
+  - `impl/SimplifiedHeikinAshiAnalyzer`
+  - `model/WyckoffPhase`
+- `model/` (shared) → `com.vish.fno.phaseanalyzer.model`
+  - `Candle`
+  - `Candlestick`
+  - `CandleRequest`
+
+**Stays in Simulator:**
+- All controllers, services, utilities
+- WebSocket configuration
+- Frontend code
+- Application configuration
+- All other model classes
+
+### 🔄 Package Refactoring
+
+**Updated Imports in Simulator:**
+- `com.vish.fno.ChartsSimulator.analysis.*` → `com.vish.fno.phaseanalyzer.analysis.*`
+- `com.vish.fno.ChartsSimulator.model.Candle` → `com.vish.fno.phaseanalyzer.model.Candle`
+- `com.vish.fno.ChartsSimulator.model.Candlestick` → `com.vish.fno.phaseanalyzer.model.Candlestick`
+- `com.vish.fno.ChartsSimulator.model.CandleRequest` → `com.vish.fno.phaseanalyzer.model.CandleRequest`
+
+**Files with Updated Imports:**
+- `ConfigController.java`
+- `ChartTypeResponse.java`
+- `Extrema.java`
+- `SymbolData.java`
+- `CandleService.java`
+- `ChartTypeService.java`
+- All strategy implementations
+
+### ✅ Verification
+
+**Maven Build:**
+```bash
+mvn clean install -DskipTests -Pdev
+```
+
+**Build Order:**
+1. ✅ ChartsSimulator Parent (pom packaging)
+2. ✅ Phase Analyzer Module (jar)
+3. ✅ Simulator Module (jar with Spring Boot repackaging)
+
+**Build Result:** SUCCESS
+
+### 🎯 Benefits
+
+1. **Modularity**: Phase analysis logic is now a separate, reusable module
+2. **Dependency Management**: Common dependencies managed in parent POM
+3. **Build Flexibility**: Can build modules independently or together
+4. **Code Organization**: Clear separation of concerns
+5. **Reusability**: Phase Analyzer can be used by other projects
+6. **Maintainability**: Easier to manage and update individual modules
+
+### 📋 Breaking Changes
+
+**For Development:**
+- Build commands now run from root (reactor build)
+- Module-specific builds: `mvn clean install -pl simulator -am`
+- Phase Analyzer is now a required dependency for simulator
+
+**For Deployment:**
+- JAR artifact name changed from `ChartsSimulator-*.jar` to `simulator-*.jar`
+- Both modules must be installed to local Maven repository for development
+
+### 🚀 Future Enhancements
+
+Possible next steps for multi-module architecture:
+- Create a `common` module for shared utilities
+- Extract backtest engine into separate module
+- Create integration tests module
+- Add module-specific documentation
+
+### 📝 Additional Changes
+
+**Frontend, Scripts, and Config Location:**
+- Moved `frontend/` back to root directory (shared across project)
+- Moved `scripts/` back to root directory
+- Moved `config/` back to root directory
+- Updated simulator POM to reference `${project.parent.basedir}/frontend`
+
+**Rationale:**
+- Frontend is not module-specific, should remain at project root
+- Scripts and config are shared resources for the entire project
+
+### 🔧 Bean Management Strategy
+
+**Phase Analyzer as Pure Library:**
+- Removed ALL Spring annotations from phase-analyzer module:
+  - `@Service` from `WyckoffAnalysisService`
+  - `@Component` from all analyzer implementations
+  - `@Primary` from `SimplifiedHeikinAshiAnalyzer`
+  - `@ConfigurationProperties` from analyzer configs
+  - All Spring import statements
+- Removed Spring Boot dependencies from phase-analyzer POM
+- Phase analyzer is now a pure Java library with no framework dependencies
+
+**Bean Creation in Simulator Module:**
+- Created `WyckoffAnalysisConfig.java` in simulator module
+- Uses `@Configuration` and `@Bean` to manually create analyzer beans
+- All Spring component scanning happens ONLY in simulator module
+- No cross-module component scanning
+
+**Benefits:**
+- ✅ Clear dependency boundaries (library vs application)
+- ✅ Phase analyzer can be used in non-Spring projects
+- ✅ Explicit bean configuration (no hidden auto-wiring)
+- ✅ Better testability (plain Java objects)
+- ✅ Smaller JAR size for phase-analyzer module
+- ✅ Faster compilation (no annotation processing for Spring)
+
+**Files Modified:**
+- `/phase-analyzer/src/main/java/com/vish/fno/phaseanalyzer/analysis/WyckoffAnalysisService.java`
+  - Removed `@Service`, `@RequiredArgsConstructor`
+  - Added manual constructor
+- All analyzer implementations (`DefaultWyckoffPhaseAnalyzer`, `HeikinAshiWyckoffPhaseAnalyzer`, etc.)
+  - Removed `@Component`, `@Primary`
+  - Kept Lombok annotations (@RequiredArgsConstructor, @Getter) - compile-time only
+- `/phase-analyzer/pom.xml`
+  - Removed all Spring Boot dependencies
+  - Now only inherits Lombok and Test from parent
+
+**Files Created:**
+- `/simulator/src/main/java/com/vish/fno/ChartsSimulator/config/WyckoffAnalysisConfig.java`
+  - Bean definitions for `WyckoffPhaseAnalyzer` and `WyckoffAnalysisService`
+  - Currently configured with `HeikinAshiWyckoffPhaseAnalyzer` as default
+
+---
+
+## [Session-2025-10-19-PhaseAnalyzer-Module-Structure-Fix] - Fix Maven Module Structure for Standalone Projects
+
+### 🔧 Build Configuration Fix
+
+**User Request:**
+"I have created a new module but I don't want frontend there, why is it still searching? Instead can I disable this in PhaseAnalyzer pom?"
+
+**Initial Problem:**
+- User created new Maven module `PhaseAnalyzer` in subdirectory
+- Parent POM was changed to `<packaging>pom</packaging>` with PhaseAnalyzer as child module
+- This prevented main application from compiling (ClassNotFoundException for ChartsSimulatorApplication)
+- IntelliJ couldn't find main class because parent POM with `pom` packaging doesn't compile source code
+
+**Root Cause:**
+- Maven aggregator projects (with `<modules>`) must use `<packaging>pom</packaging>`
+- POMs with `pom` packaging don't compile their own source code - they only manage child modules
+- But the main ChartsSimulator application code was still in the root `src/` directory
+- This created a conflict: can't have both `jar` packaging (for compiling code) and `<modules>` (requires `pom` packaging)
+
+**Solution:**
+- Restructured as **two independent projects** instead of parent-child relationship
+- Removed `<modules>` section from ChartsSimulator POM
+- Changed ChartsSimulator back to `<packaging>jar</packaging>` so it compiles its source code
+- Made PhaseAnalyzer a standalone module with its own groupId/artifactId/version
+- Both projects can now be built independently
+
+### 📦 Changes Made
+
+**File: `/pom.xml` (ChartsSimulator)**
+- **Line 14**: Changed `<packaging>pom</packaging>` → `<packaging>jar</packaging>`
+- **Lines 24-26**: Removed `<modules>` section
+- **Impact**: ChartsSimulator can now compile its source code and run as Spring Boot application
+
+**File: `/PhaseAnalyzer/pom.xml`**
+- **Lines 6-10**: Removed `<parent>` reference, added standalone coordinates:
+  ```xml
+  <groupId>com.vish.fno</groupId>
+  <artifactId>PhaseAnalyzer</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  ```
+- **Lines 12-16**: Kept only essential properties
+- **Impact**: PhaseAnalyzer is now a standalone Maven project that can be built independently
+
+### ✅ Verification
+
+**ChartsSimulator Build - PASS**
+```bash
+mvn clean compile -Pdev
+```
+**Results:**
+- ✅ Build succeeded (BUILD SUCCESS in 2.568s)
+- ✅ Compiled 100 source files successfully
+- ✅ ChartsSimulatorApplication.class created in target/classes
+- ✅ Frontend plugin skipped in dev mode
+- ✅ Application can now run from IntelliJ
+
+**PhaseAnalyzer Standalone Build - PASS**
+```bash
+cd PhaseAnalyzer && mvn clean compile
+```
+**Results:**
+- ✅ Build succeeded (BUILD SUCCESS in 0.342s)
+- ✅ Compiled 1 source file successfully
+- ✅ No dependency on parent POM
+- ✅ Builds completely independently
+
+### 🎯 User Impact
+
+**Benefits:**
+- **Main application fixed**: ChartsSimulator can now compile and run from IntelliJ
+- **Independent projects**: Both ChartsSimulator and PhaseAnalyzer build independently
+- **Simpler structure**: No parent-child Maven relationship to manage
+- **No restrictions**: PhaseAnalyzer doesn't inherit any unwanted plugins or dependencies
+- **Faster builds**: Each project builds only what it needs
+
+**Architecture:**
+```
+ChartsSimulator/
+├── pom.xml (standalone jar project with Spring Boot app)
+├── src/main/java/...
+├── frontend/
+└── PhaseAnalyzer/
+    ├── pom.xml (standalone jar project)
+    └── src/main/java/...
+```
+
+**Alternative for Future**: If you need shared dependencies/configuration between projects, consider:
+1. Create a separate `parent-pom` directory with `<packaging>pom</packaging>`
+2. Have both ChartsSimulator and PhaseAnalyzer reference it as `<parent>`
+3. Keep source code only in child modules, never in the parent POM
+
+---
+
+## [Session-2025-10-19-Real-Time-Streaming-Controls] - Pause/Resume and Speed Control for Real-Time Streaming
+
+### 🎮 Features Added
+
+**User Request:**
+"For the extrema page in real time mode, I want an option to pause the streaming and then continue, and decide the speed of the real time play by setting the millisecond gap"
+
+**Problem:**
+- No way to pause real-time streaming once started
+- No control over streaming speed - fixed at default delay
+- Users had to disconnect and reconnect to change speed
+- No ability to examine data at a specific point during streaming
+
+**Solution:**
+1. **Backend - Custom Delay Support**:
+   - Added `customDelay` parameter to `CandleRequest` model
+   - Updated `CandleWebSocketController` to use custom delay if provided
+   - Falls back to default delay from `WebSocketProperties` if not specified
+2. **Frontend - Pause/Resume Functionality**:
+   - Added pause/resume state management to `useWebSocket` hook
+   - Messages buffered when paused, latest message displayed when resumed
+   - Prevents data loss during pause
+3. **Frontend - Speed Control**:
+   - Added speed control input (1-5000ms range)
+   - Quick speed presets: Fast (50ms), Normal (100ms), Slow (500ms)
+   - Speed changes sent with WebSocket request
+4. **UI Controls Panel**:
+   - Pause/Resume button (⏸️/▶️) with color-coded states
+   - Speed input with real-time validation
+   - Display of current speed setting
+   - Quick preset buttons for common speeds
+
+### 📦 Changes Made
+
+**Backend Files:**
+
+**File: `/src/main/java/.../model/CandleRequest.java`**
+- **Line 7**: Added `Integer customDelay` parameter (optional)
+- **Impact**: Backend can now accept custom streaming delay from clients
+
+**File: `/src/main/java/.../controller/CandleWebSocketController.java`**
+- **Lines 81-84**: Added logic to use `customDelay` if provided, otherwise use default
+- **Line 97**: Updated `Thread.sleep()` to use computed delay value
+- **Impact**: Backend respects client-specified streaming speed
+
+**Frontend Files:**
+
+**File: `/frontend/hooks/websocket/useWebSocket.js`**
+- **Lines 12-13**: Added `isPaused` and `streamSpeed` state variables
+- **Lines 18-19**: Added `messageBufferRef` and `isPausedRef` for pause management
+- **Lines 92-96**: Updated message handler to buffer when paused
+- **Lines 116**: Added `customDelay` to WebSocket request payload
+- **Lines 195-216**: Added `togglePause()` and `updateStreamSpeed()` functions
+- **Lines 223-230**: Exposed new state and functions in return object
+- **Impact**: Complete pause/resume and speed control functionality
+
+**File: `/frontend/hooks/useChartData.js`**
+- **Lines 16-22**: Added pause/resume state from `useWebSocket`
+- **Lines 115-122**: Exposed pause/resume controls to consumers
+- **Impact**: Chart components can access streaming controls
+
+**File: `/frontend/components/charts/ChartPanel.jsx`**
+- **Lines 50-56**: Added pause/resume state from `useChartData`
+- **Lines 244-299**: Added real-time controls UI panel
+  - Pause/Resume button with conditional styling
+  - Speed control input (1-5000ms)
+  - Real-time speed display
+  - Quick preset buttons (Fast/Normal/Slow)
+- **Impact**: Users can control streaming directly in the UI
+
+### ✅ Verification
+
+**Playwright MCP Testing - PASS**
+- ✅ Backend running on port 9090
+- ✅ Frontend dev server running on port 3000
+- ✅ Extrema page loads successfully in real-time mode
+- ✅ Pause button appears when streaming starts
+- ✅ Clicking pause changes button to "▶️ Resume" (verified)
+- ✅ Speed control defaults to 100ms
+- ✅ Clicking "Fast (50ms)" updates speed to 50ms (verified)
+- ✅ Speed input shows current value "(50ms between ticks)"
+- ✅ No console errors during operation
+- ✅ Controls only appear in real-time mode (not in instant mode)
+
+**Screenshots:**
+- `extrema-realtime-controls.png`: Real-time controls panel with pause and speed options
+- `extrema-paused-fast-speed.png`: Paused state with Fast (50ms) speed selected
+
+### 🎯 User Impact
+
+**Enhanced Control:**
+- **Pause/Resume**: Users can pause streaming to examine data at any point
+- **Speed Control**: Adjustable speed from 1ms (ultra-fast) to 5000ms (very slow)
+- **Quick Presets**: One-click access to common speeds (50ms, 100ms, 500ms)
+- **Visual Feedback**: Color-coded pause button (yellow) and resume button (green)
+
+**Better Analysis:**
+- Ability to pause and study extrema points as they form
+- Faster playback for quick data review
+- Slower playback for detailed analysis
+- No data loss when pausing (messages buffered and latest shown on resume)
+
+**Improved UX:**
+- Controls only appear when relevant (real-time mode with data)
+- Intuitive button labels and icons
+- Real-time speed display keeps users informed
+- Responsive controls work seamlessly with existing features
+
+---
+
 ## [Session-2025-10-19-UI-Defaults-and-Theme-Refinement] - Improved Default States and Softer Light Theme
 
 ### 🎨 UI Improvements

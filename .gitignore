@@ -83,3 +83,4 @@ next-env.d.ts
 /src/main/resources/static
 /node_modules
 /.playwright-mcp
+/simulator/output
