@@ -31,6 +31,7 @@ import java.util.Optional;
  * @param entryTime Entry execution timestamp
  * @param stopLoss Stop loss price level
  * @param takeProfit Take profit price level
+ * @param phase Market phase at entry (based on Wyckoff cycle)
  * @param active Whether order is currently open (true) or closed (false)
  * @param exitPrice Exit execution price (present only when closed)
  * @param exitTime Exit execution timestamp (present only when closed)
@@ -52,6 +53,7 @@ public record ActiveOrder(
     String entryTime,
     double stopLoss,
     double takeProfit,
+    MarketPhase phase,
     boolean active,
 
     // Exit details (populated only when order is closed)
@@ -74,6 +76,7 @@ public record ActiveOrder(
      * @param entryTime Entry timestamp
      * @param stopLoss Stop loss price level
      * @param takeProfit Take profit price level
+     * @param phase Market phase at entry
      * @return New active order ready for tracking
      */
     public static ActiveOrder openOrder(
@@ -84,7 +87,8 @@ public record ActiveOrder(
             double entryPrice,
             String entryTime,
             double stopLoss,
-            double takeProfit) {
+            double takeProfit,
+            MarketPhase phase) {
 
         return ActiveOrder.builder()
                 .triggerSignal(triggerSignal)
@@ -95,6 +99,7 @@ public record ActiveOrder(
                 .entryTime(entryTime)
                 .stopLoss(stopLoss)
                 .takeProfit(takeProfit)
+                .phase(phase)
                 .active(true)
                 .exitPrice(Optional.empty())
                 .exitTime(Optional.empty())
@@ -126,6 +131,7 @@ public record ActiveOrder(
                 .entryTime(this.entryTime)
                 .stopLoss(this.stopLoss)
                 .takeProfit(this.takeProfit)
+                .phase(this.phase)
                 .active(false)
                 .exitPrice(Optional.of(exitPrice))
                 .exitTime(Optional.of(exitTime))
@@ -159,7 +165,8 @@ public record ActiveOrder(
                 this.profitLoss.orElseThrow(),
                 this.profitLossPercent.orElseThrow(),
                 this.holdingDuration.orElseThrow(),
-                this.exitReason.orElseThrow()
+                this.exitReason.orElseThrow(),
+                this.phase
         );
     }
 }

@@ -208,7 +208,7 @@ public class PortfolioManager {
         double currentDrawdown = maxPortfolioValue - currentPortfolioValue;
         if (currentDrawdown > maxDrawdown) {
             maxDrawdown = currentDrawdown;
-            log.debug("New max drawdown: {} ({}%)",
+            log.trace("New max drawdown: {} ({}%)",
                     String.format("%.2f", maxDrawdown),
                      String.format("%.2f", (maxDrawdown / maxPortfolioValue) * 100));
         }

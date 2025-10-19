@@ -2,6 +2,87 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-19-Backtest-UI-Improvements] - Enhanced Trade History and Keyboard Navigation
+
+### 🎨 UI Improvements
+
+**User Requests:**
+1. "Increase padding at the bottom of trade history in backtest UI, as some entries are not visible"
+2. "After selection I should be able to use arrow keys to go up and down to the next and previous trade"
+3. "When I use the arrow keys and go to the bottom of the list, it goes to the part of chart which is not getting displayed and the scroll bar also doesn't move"
+4. "Reduce the padding a bit, as there is lot of empty space after the last trade"
+
+**Problem:**
+- Trade history table's last entries were cut off at the bottom of the scrollable area
+- No keyboard navigation support for navigating through trades after selection
+- Users had to manually click each trade to view details
+- When navigating with keyboard, selected trade rows would go out of view (no auto-scroll)
+- Too much empty space at bottom after initial padding increase
+
+**Solution:**
+1. **Optimized Bottom Padding**: Changed from `pb-20` to `pb-6` for appropriate spacing without excess
+2. **Keyboard Navigation**: Implemented arrow key navigation with React useEffect hook
+   - Arrow Down: Moves to next trade (or first if none selected)
+   - Arrow Up: Moves to previous trade (or last if none selected)
+   - Automatically updates trade details and chart view
+   - Selection resets when running new backtest
+3. **Auto-Scroll Behavior**: Added second useEffect hook to scroll selected trade into view
+   - Uses `scrollIntoView({ behavior: 'smooth', block: 'nearest' })`
+   - Keeps selected row visible during keyboard navigation
+   - Smooth scrolling animation for better UX
+
+### 📦 Changes Made
+
+**File: `/frontend/app/backtest/page.jsx`**
+- **Line 35**: Added `selectedTradeIndex` state variable to track current selection
+- **Lines 102-136**: Implemented keyboard event listener with useEffect hook
+  - Handles ArrowDown and ArrowUp key presses
+  - Prevents default scrolling behavior
+  - Updates both selected trade and index
+  - Proper cleanup on unmount
+- **Lines 138-146**: Added auto-scroll useEffect hook (NEW)
+  - Triggered whenever `selectedTradeIndex` changes
+  - Finds the selected trade row using CSS selector
+  - Scrolls row into view with smooth animation
+- **Line 503**: Changed from `pb-20` to `pb-6` for reduced bottom padding
+- **Line 503**: Removed `mb-12` margin from container (unnecessary)
+- **Lines 513-516**: Updated trade row click handler to track both trade and index
+
+### ✅ Verification
+
+- **Playwright MCP**: ✅ PASS (Round 1)
+  - Navigated to http://localhost:3000/backtest
+  - Successfully ran backtest with 23 trades
+  - Verified Phase column displays correctly (UNKNOWN, MARKDOWN, MARKUP)
+  - Tested keyboard navigation: ArrowDown moved from Trade #10 → #11
+  - Tested keyboard navigation: ArrowUp moved from Trade #11 → #10
+  - Verified last trade (23) is fully visible when scrolled to bottom
+  - Trade details and chart update correctly on navigation
+
+- **Playwright MCP**: ✅ PASS (Round 2 - After auto-scroll fix)
+  - Clicked Trade #5 to start mid-list
+  - Pressed ArrowDown 17 times to navigate from Trade #5 → #23
+  - Verified auto-scroll: trade row stayed in view during navigation
+  - Confirmed Trade #23 visible with appropriate bottom padding (pb-6)
+  - Pressed ArrowUp to navigate from Trade #23 → #22
+  - Verified smooth scrolling behavior throughout
+  - No excess empty space at bottom
+
+- **Frontend Build**: ✅ PASS (6.55 kB bundle for backtest page)
+- **Backend Server**: ✅ PASS (Started successfully on port 9090)
+- **Frontend Dev Server**: ✅ PASS (Started successfully on port 3000)
+- **Console Errors**: Only pre-existing Next.js hydration warning (non-critical)
+
+### 🎯 Impact
+- Improved user experience for analyzing trade history
+- Faster navigation through trades using keyboard shortcuts
+- All trade entries now fully visible in scrollable area
+- Auto-scroll keeps selected trade in view during keyboard navigation
+- Optimal bottom padding without excessive empty space
+- Enhanced accessibility with keyboard support
+
+---
+
 ## [Session-2025-10-15-Custom-Candle-Timestamp-Fix] - Fixed Candle Timestamp Display
 
 ### 🐛 Bug Fixed

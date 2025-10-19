@@ -93,6 +93,7 @@ public class OrderManager {
      * @param context Market context
      * @param cashBalance Available cash
      * @param completedOrdersCount Number of completed orders (for order numbering)
+     * @param phase Current market phase
      * @return EntryResult with order details or failure reason
      */
     public EntryResult tryEnterPosition(
@@ -101,7 +102,8 @@ public class OrderManager {
             Strategy strategy,
             MarketContext context,
             double cashBalance,
-            int completedOrdersCount
+            int completedOrdersCount,
+            MarketPhase phase
     ) {
         double currentPrice = tick.price();
 
@@ -139,11 +141,12 @@ public class OrderManager {
                 currentPrice,
                 tick.time(),
                 stopLoss,
-                takeProfit
+                takeProfit,
+                phase
         );
 
-        log.debug("[{}] ✅ Order opened: {} shares @ {} | Stop: {} | Target: {}",
-                 tick.time(), quantity, currentPrice, stopLoss, takeProfit);
+        log.debug("[{}] ✅ Order opened: {} shares @ {} | Stop: {} | Target: {} | Phase: {}",
+                 tick.time(), quantity, currentPrice, stopLoss, takeProfit, phase);
 
         return EntryResult.success(order, positionCost);
     }

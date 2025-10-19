@@ -36,6 +36,7 @@ public class MetricsCalculator {
      * @param initialCapital Starting capital
      * @param finalValue Final portfolio value
      * @param maxDrawdown Maximum drawdown observed
+     * @param phaseDetectionEnabled Whether phase detection was enabled
      * @return Complete BacktestResult
      */
     public static BacktestResult buildResult(
@@ -46,7 +47,8 @@ public class MetricsCalculator {
             List<PortfolioSnapshot> portfolioSnapshots,
             double initialCapital,
             double finalValue,
-            double maxDrawdown
+            double maxDrawdown,
+            boolean phaseDetectionEnabled
     ) {
         // Calculate basic P&L
         double netProfitLoss = finalValue - initialCapital;
@@ -90,6 +92,7 @@ public class MetricsCalculator {
                 stats.largestWin(),
                 stats.largestLoss(),
                 sharpeRatio,
+                phaseDetectionEnabled,
                 trades,
                 portfolioSnapshots,
                 tickers

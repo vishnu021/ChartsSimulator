@@ -45,6 +45,8 @@ public class BacktestController {
      * @param stopLossPercent Stop loss override (optional)
      * @param takeProfitPercent Take profit override (optional)
      * @param initialCapital Starting capital (optional - uses default if not provided)
+     * @param phaseFilteringEnabled Enable phase-based filtering (optional - overrides config)
+     * @param allowedPhases Comma-separated list of allowed phases (optional - overrides config)
      * @return Backtest results with P/L and performance metrics
      */
     @GetMapping("/api/backtest")
@@ -54,9 +56,20 @@ public class BacktestController {
             @RequestParam(required = false) String strategyName,
             @RequestParam(required = false) Double stopLossPercent,
             @RequestParam(required = false) Double takeProfitPercent,
-            @RequestParam(required = false) Double initialCapital
+            @RequestParam(required = false) Double initialCapital,
+            @RequestParam(required = false) Boolean phaseFilteringEnabled,
+            @RequestParam(required = false) String allowedPhases
     ) {
-        return backtestService.runBacktest(symbol, date, strategyName, stopLossPercent, takeProfitPercent, initialCapital);
+        return backtestService.runBacktest(
+                symbol,
+                date,
+                strategyName,
+                stopLossPercent,
+                takeProfitPercent,
+                initialCapital,
+                phaseFilteringEnabled,
+                allowedPhases
+        );
     }
 
 }

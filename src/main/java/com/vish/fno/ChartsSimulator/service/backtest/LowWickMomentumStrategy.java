@@ -16,22 +16,23 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Low Wick Momentum Strategy - Phase-aware strategy trading strong buying pressure candles.
+ * Low Wick Momentum Strategy - Trading strong buying pressure candles.
  *
  * <p><b>Algorithm Description:</b></p>
  * This strategy identifies candles with minimal upper wick (less than 5%), which indicates
  * strong buying pressure with no rejection at higher prices. When buyers dominate and push
  * price near the high without sellers stepping in, it signals potential continuation.
  *
- * <p><b>⚠️ PHASE FILTERING (NEW):</b></p>
- * <p>This strategy only takes trades during <b>MARKDOWN</b> or <b>DISTRIBUTION</b> phases to align
- * with bearish market conditions. Phase detection uses Wyckoff cycle methodology with 20-period EMA
- * and price action analysis.</p>
+ * <p><b>⚠️ PHASE FILTERING:</b></p>
+ * <p>Phase-based filtering (MARKDOWN, DISTRIBUTION, etc.) is now handled by BacktestEngine,
+ * not by individual strategies. Configure phase filtering in application.yml:</p>
+ * <pre>
+ * app.backtest.phaseDetectionEnabled: true
+ * app.backtest.allowedPhases: [MARKDOWN, DISTRIBUTION]
+ * </pre>
  *
  * <p><b>Signal Detection Logic:</b></p>
  * <ol>
- *   <li>Detect current market phase (Accumulation, Markup, Distribution, Markdown)</li>
- *   <li>Skip signal detection if phase is NOT Markdown or Distribution</li>
  *   <li>Convert tick data to 1-minute candlesticks (OHLC)</li>
  *   <li>When candle completes, calculate upper wick percentage</li>
  *   <li>Upper Wick % = ((High - Close) / Close) × 100</li>
@@ -41,7 +42,6 @@ import java.util.Optional;
  *
  * <p><b>Entry Rules:</b></p>
  * <ul>
- *   <li><b>Phase Check:</b> Current phase must be MARKDOWN or DISTRIBUTION</li>
  *   <li>Candle closes with upper wick less than 5% of close price</li>
  *   <li>Indicates strong buying pressure (no rejection at highs)</li>
  *   <li>Entry at candle close price</li>
@@ -115,16 +115,8 @@ public class LowWickMomentumStrategy implements Strategy {
     private static final double RISK_REWARD_RATIO = 2.0;       // Target = 2× risk (1:2)
     private static final double MIN_CANDLE_BODY_PERCENT = 0.1; // Min 0.1% body to avoid doji
 
-    // Phase detection parameters
-    private static final int PHASE_EMA_PERIOD = 20;           // EMA period for trend detection
-    private static final int PHASE_LOOKBACK = 10;             // Candles to look back for phase confirmation
-    private static final double CONSOLIDATION_THRESHOLD = 0.5; // 0.5% range for consolidation detection
-
     // Stateful caching (cleared on reset())
     private final List<Candlestick> candlesticks = new ArrayList<>();
-
-    // Track current market phase
-    private MarketPhase currentPhase = MarketPhase.UNKNOWN;
 
     // Track last signal's candle to avoid duplicate signals
     private SignalState lastSignalState = null;
@@ -154,7 +146,6 @@ public class LowWickMomentumStrategy implements Strategy {
         lastSignalState = null;
         lastCandleTimestamp = null;
         lastProcessedMinute = null;
-        currentPhase = MarketPhase.UNKNOWN;
         stopLossPercentOverride = null;
         takeProfitPercentOverride = null;
         log.debug("LowWickMomentumStrategy state reset");
@@ -211,21 +202,11 @@ public class LowWickMomentumStrategy implements Strategy {
 
     /**
      * Detects low upper wick candles and generates momentum signals.
-     * Only generates signals during MARKDOWN or DISTRIBUTION phases.
+     * Phase filtering is now handled by BacktestEngine (if enabled in config).
      */
     private Optional<Signal> detectLowWickSignals(List<Ticker> tickers) {
         // Need at least 1 completed candle to check for signals
         if (candlesticks.isEmpty()) {
-            return Optional.empty();
-        }
-
-        // Detect current market phase
-        currentPhase = detectMarketPhase(tickers);
-
-        // Only trade in MARKDOWN or DISTRIBUTION phases
-        if (currentPhase != MarketPhase.MARKDOWN && currentPhase != MarketPhase.DISTRIBUTION) {
-            log.trace("Skipping signal detection - current phase: {} (only trading in MARKDOWN or DISTRIBUTION)",
-                    currentPhase);
             return Optional.empty();
         }
 
@@ -269,9 +250,8 @@ public class LowWickMomentumStrategy implements Strategy {
             // Calculate signal expiry (1 minute after emission)
             String expiryTime = addMinutes(currentTick.time(), 1);
 
-            log.info("[{}] 🎯 LOW WICK SIGNAL [Phase: {}]: Candle closed @ {}. Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}, bullish: {} with upperWick {}%, expires: {})",
+            log.info("[{}] 🎯 LOW WICK SIGNAL: Candle closed @ {}. Entry: {}, Stop: {} ({}%), Target: {} ({}%), R:R = 1:{}, bullish: {} with upperWick {}%, expires: {})",
                 currentTick.time(),
-                currentPhase,
                 String.format("%.2f", entryPrice),
                 String.format("%.2f", entryPrice),
                 String.format("%.2f", stopPrice),
@@ -303,10 +283,7 @@ public class LowWickMomentumStrategy implements Strategy {
             "maxUpperWickPercent", MAX_UPPER_WICK_PERCENT,
             "riskRewardRatio", RISK_REWARD_RATIO,
             "minCandleBodyPercent", MIN_CANDLE_BODY_PERCENT,
-            "phaseEmaPeriod", PHASE_EMA_PERIOD,
-            "phaseLookback", PHASE_LOOKBACK,
-            "consolidationThreshold", CONSOLIDATION_THRESHOLD,
-            "allowedPhases", "MARKDOWN, DISTRIBUTION"
+            "phaseFiltering", "Configured in app.backtest.phaseDetectionEnabled and app.backtest.allowedPhases"
         );
     }
 
@@ -368,144 +345,6 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     /**
-     * Detects the current market phase based on price action and trend.
-     *
-     * <p><b>Phase Detection Logic (Wyckoff Cycle):</b></p>
-     * <ul>
-     *   <li><b>ACCUMULATION:</b> Sideways movement after downtrend (price below EMA, low volatility)</li>
-     *   <li><b>MARKUP:</b> Uptrend with higher highs and higher lows (price above EMA, rising)</li>
-     *   <li><b>DISTRIBUTION:</b> Sideways movement after uptrend (price above EMA, low volatility)</li>
-     *   <li><b>MARKDOWN:</b> Downtrend with lower highs and lower lows (price below EMA, falling)</li>
-     * </ul>
-     *
-     * @param tickers All historical ticker data up to current point
-     * @return Current market phase
-     */
-    private MarketPhase detectMarketPhase(List<Ticker> tickers) {
-        // Need enough data for phase detection
-        if (candlesticks.size() < PHASE_EMA_PERIOD + PHASE_LOOKBACK) {
-            return MarketPhase.UNKNOWN;
-        }
-
-        // Calculate EMA for trend identification
-        double[] prices = candlesticks.stream()
-                .mapToDouble(Candlestick::close)
-                .toArray();
-        double currentEMA = calculateEMA(prices, PHASE_EMA_PERIOD);
-        double currentPrice = candlesticks.get(candlesticks.size() - 1).close();
-
-        // Calculate recent highs and lows for trend direction
-        int startIdx = Math.max(0, candlesticks.size() - PHASE_LOOKBACK);
-        double recentHigh = candlesticks.subList(startIdx, candlesticks.size()).stream()
-                .mapToDouble(Candlestick::high)
-                .max()
-                .orElse(currentPrice);
-        double recentLow = candlesticks.subList(startIdx, candlesticks.size()).stream()
-                .mapToDouble(Candlestick::low)
-                .min()
-                .orElse(currentPrice);
-
-        // Calculate range percentage for consolidation detection
-        double rangePercent = ((recentHigh - recentLow) / recentLow) * 100.0;
-
-        // Determine if price is above or below EMA
-        boolean priceAboveEMA = currentPrice > currentEMA;
-
-        // Calculate price momentum (current vs EMA)
-        double momentumPercent = ((currentPrice - currentEMA) / currentEMA) * 100.0;
-
-        // Determine trend direction (compare recent high/low with older high/low)
-        boolean risingTrend = false;
-        boolean fallingTrend = false;
-        if (candlesticks.size() >= PHASE_EMA_PERIOD + (PHASE_LOOKBACK * 2)) {
-            int olderStartIdx = candlesticks.size() - (PHASE_LOOKBACK * 2);
-            int olderEndIdx = candlesticks.size() - PHASE_LOOKBACK;
-            double olderHigh = candlesticks.subList(olderStartIdx, olderEndIdx).stream()
-                    .mapToDouble(Candlestick::high)
-                    .max()
-                    .orElse(recentHigh);
-            double olderLow = candlesticks.subList(olderStartIdx, olderEndIdx).stream()
-                    .mapToDouble(Candlestick::low)
-                    .min()
-                    .orElse(recentLow);
-
-            risingTrend = recentHigh > olderHigh && recentLow > olderLow;  // Higher highs & higher lows
-            fallingTrend = recentHigh < olderHigh && recentLow < olderLow; // Lower highs & lower lows
-        }
-
-        // Determine phase based on price position, momentum, and trend
-        MarketPhase phase;
-
-        if (rangePercent < CONSOLIDATION_THRESHOLD) {
-            // Low volatility = Consolidation (Accumulation or Distribution)
-            if (priceAboveEMA) {
-                phase = MarketPhase.DISTRIBUTION; // Consolidation at top
-            } else {
-                phase = MarketPhase.ACCUMULATION; // Consolidation at bottom
-            }
-        } else {
-            // High volatility = Trending (Markup or Markdown)
-            if (risingTrend && priceAboveEMA) {
-                phase = MarketPhase.MARKUP; // Uptrend
-            } else if (fallingTrend && !priceAboveEMA) {
-                phase = MarketPhase.MARKDOWN; // Downtrend
-            } else if (priceAboveEMA && momentumPercent > 0.5) {
-                phase = MarketPhase.MARKUP; // Strong upward momentum
-            } else if (!priceAboveEMA && momentumPercent < -0.5) {
-                phase = MarketPhase.MARKDOWN; // Strong downward momentum
-            } else {
-                // Unclear phase - use previous phase or default to unknown
-                phase = currentPhase != MarketPhase.UNKNOWN ? currentPhase : MarketPhase.UNKNOWN;
-            }
-        }
-
-        // Log phase changes
-        if (phase != currentPhase && phase != MarketPhase.UNKNOWN) {
-            log.info("📊 Market phase changed: {} → {} (price: {}, EMA: {}, range: {}%, momentum: {}%)",
-                    currentPhase, phase,
-                    String.format("%.2f", currentPrice),
-                    String.format("%.2f", currentEMA),
-                    String.format("%.2f", rangePercent),
-                    String.format("%.2f", momentumPercent));
-        }
-
-        return phase;
-    }
-
-    /**
-     * Calculates Exponential Moving Average for the given prices.
-     *
-     * @param prices Array of prices
-     * @param period EMA period
-     * @return Current EMA value
-     */
-    private double calculateEMA(double[] prices, int period) {
-        if (prices.length < period) {
-            // Not enough data, return simple average
-            double sum = 0;
-            for (double price : prices) {
-                sum += price;
-            }
-            return sum / prices.length;
-        }
-
-        // Calculate initial SMA for first EMA value
-        double sum = 0;
-        for (int i = 0; i < period; i++) {
-            sum += prices[i];
-        }
-        double ema = sum / period;
-
-        // Calculate EMA for remaining prices
-        double multiplier = 2.0 / (period + 1);
-        for (int i = period; i < prices.length; i++) {
-            ema = (prices[i] - ema) * multiplier + ema;
-        }
-
-        return ema;
-    }
-
-    /**
      * Adds minutes to a timestamp string.
      *
      * @param timestamp Timestamp string in format "YYYY-MM-DD HH:mm:ss.SSS"
@@ -524,16 +363,5 @@ public class LowWickMomentumStrategy implements Strategy {
             log.error("Error adding minutes to timestamp: {}", timestamp, e);
             return timestamp; // Return original if parsing fails
         }
-    }
-
-    /**
-     * Market phases based on Wyckoff cycle.
-     */
-    private enum MarketPhase {
-        ACCUMULATION,  // Consolidation at bottom (sideways after downtrend)
-        MARKUP,        // Uptrend (higher highs and higher lows)
-        DISTRIBUTION,  // Consolidation at top (sideways after uptrend)
-        MARKDOWN,      // Downtrend (lower highs and lower lows)
-        UNKNOWN        // Not enough data or unclear phase
     }
 }

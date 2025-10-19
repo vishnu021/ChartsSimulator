@@ -104,6 +104,23 @@ app:
     takeProfitPercent: 5.0             # Take profit percentage
     lotSize: 15                        # Lot size for quantity calculation (quantity will be multiple of this)
 
+    # Phase-based configuration (Wyckoff cycle)
+    # Two separate controls:
+    # 1. phaseDetectionEnabled: Detect and report phase in trades (for analysis) - no filtering
+    # 2. phaseFilteringEnabled: Actually filter trades based on allowed phases
+    #
+    # Common use cases:
+    # - Detection ON, Filtering OFF: See all trades with phase info (analyze phase performance)
+    # - Detection ON, Filtering ON: Only trade in specific phases (restricted strategy)
+    # - Both OFF: Normal operation without phase analysis
+    #
+    phaseDetectionEnabled: true       # Enable phase detection and reporting (no filtering)
+    phaseFilteringEnabled: false       # Enable phase-based trade filtering (requires phaseDetectionEnabled=true)
+    allowedPhases:                     # List of market phases to allow when filtering is enabled
+      - "MARKDOWN"                     # Downtrend phase
+      - "DISTRIBUTION"                 # Consolidation at top phase
+    # Available phases: ACCUMULATION, MARKUP, DISTRIBUTION, MARKDOWN, UNKNOWN
+
     # Index instruments that trade with quantity=1 (expensive instruments)
     indexSymbols:
       - "NIFTY 50"

@@ -68,27 +68,50 @@ public class BacktestReportGenerator {
             return;
         }
 
-        log.info("\n" + "=".repeat(140));
+        boolean showPhase = result.phaseDetectionEnabled();
+        int lineLength = showPhase ? 157 : 140;
+
+        log.info("\n" + "=".repeat(lineLength));
         log.info("📈 BACKTEST TRADE REPORT - {} | {} | {}", result.symbol(), result.period(), result.strategyName());
-        log.info("=".repeat(140));
-        log.info(String.format("%-4s | %-19s | %-10s | %-19s | %-10s | %-8s | %-10s | %-8s | %-15s",
-                "No", "Entry Time", "Entry $", "Exit Time", "Exit $", "Qty", "P/L", "P/L %", "Exit Reason"));
-        log.info("-".repeat(140));
+        log.info("=".repeat(lineLength));
+
+        if (showPhase) {
+            log.info(String.format("%-4s | %-19s | %-10s | %-19s | %-10s | %-8s | %-10s | %-8s | %-12s | %-15s",
+                    "No", "Entry Time", "Entry $", "Exit Time", "Exit $", "Qty", "P/L", "P/L %", "Phase", "Exit Reason"));
+        } else {
+            log.info(String.format("%-4s | %-19s | %-10s | %-19s | %-10s | %-8s | %-10s | %-8s | %-15s",
+                    "No", "Entry Time", "Entry $", "Exit Time", "Exit $", "Qty", "P/L", "P/L %", "Exit Reason"));
+        }
+        log.info("-".repeat(lineLength));
 
         for (Trade trade : trades) {
-            log.info(String.format("%-4d | %-19s | %-10.2f | %-19s | %-10.2f | %-8d | %-10.2f | %-8.2f | %-15s",
-                    trade.tradeNumber(),
-                    trade.entryTime(),
-                    trade.entryPrice(),
-                    trade.exitTime(),
-                    trade.exitPrice(),
-                    trade.quantity(),
-                    trade.profitLoss(),
-                    trade.profitLossPercent(),
-                    trade.exitReason()));
+            if (showPhase) {
+                log.info(String.format("%-4d | %-19s | %-10.2f | %-19s | %-10.2f | %-8d | %-10.2f | %-8.2f | %-12s | %-15s",
+                        trade.tradeNumber(),
+                        trade.entryTime(),
+                        trade.entryPrice(),
+                        trade.exitTime(),
+                        trade.exitPrice(),
+                        trade.quantity(),
+                        trade.profitLoss(),
+                        trade.profitLossPercent(),
+                        trade.phase() != null ? trade.phase().toString() : "N/A",
+                        trade.exitReason()));
+            } else {
+                log.info(String.format("%-4d | %-19s | %-10.2f | %-19s | %-10.2f | %-8d | %-10.2f | %-8.2f | %-15s",
+                        trade.tradeNumber(),
+                        trade.entryTime(),
+                        trade.entryPrice(),
+                        trade.exitTime(),
+                        trade.exitPrice(),
+                        trade.quantity(),
+                        trade.profitLoss(),
+                        trade.profitLossPercent(),
+                        trade.exitReason()));
+            }
         }
 
-        log.info("-".repeat(140));
+        log.info("-".repeat(lineLength));
         log.info("📊 SUMMARY: Total Trades: {} | Winners: {} | Losers: {} | Win Rate: {:.2f}% | Net P/L: ₹{:.2f} ({:.2f}%)",
                 result.totalTrades(),
                 result.winningTrades(),
@@ -96,7 +119,7 @@ public class BacktestReportGenerator {
                 result.winRate(),
                 result.netProfitLoss(),
                 result.profitLossPercent());
-        log.info("=".repeat(140) + "\n");
+        log.info("=".repeat(lineLength) + "\n");
     }
 
     /**
@@ -125,22 +148,43 @@ public class BacktestReportGenerator {
 
             // Write CSV file
             try (FileWriter writer = new FileWriter(csvPath.toFile())) {
+                boolean showPhase = result.phaseDetectionEnabled();
+
                 // Write header
-                writer.append("Trade No,Entry Time,Entry Price,Exit Time,Exit Price,Quantity,P/L,P/L %,Exit Reason,Holding Period\n");
+                if (showPhase) {
+                    writer.append("Trade No,Entry Time,Entry Price,Exit Time,Exit Price,Quantity,P/L,P/L %,Phase,Exit Reason,Holding Period\n");
+                } else {
+                    writer.append("Trade No,Entry Time,Entry Price,Exit Time,Exit Price,Quantity,P/L,P/L %,Exit Reason,Holding Period\n");
+                }
 
                 // Write trade data
                 for (Trade trade : result.trades()) {
-                    writer.append(String.format("%d,%s,%.2f,%s,%.2f,%d,%.2f,%.2f,%s,%s\n",
-                            trade.tradeNumber(),
-                            trade.entryTime(),
-                            trade.entryPrice(),
-                            trade.exitTime(),
-                            trade.exitPrice(),
-                            trade.quantity(),
-                            trade.profitLoss(),
-                            trade.profitLossPercent(),
-                            trade.exitReason(),
-                            formatDuration(trade.holdingPeriod())));
+                    if (showPhase) {
+                        writer.append(String.format("%d,%s,%.2f,%s,%.2f,%d,%.2f,%.2f,%s,%s,%s\n",
+                                trade.tradeNumber(),
+                                trade.entryTime(),
+                                trade.entryPrice(),
+                                trade.exitTime(),
+                                trade.exitPrice(),
+                                trade.quantity(),
+                                trade.profitLoss(),
+                                trade.profitLossPercent(),
+                                trade.phase() != null ? trade.phase().toString() : "N/A",
+                                trade.exitReason(),
+                                formatDuration(trade.holdingPeriod())));
+                    } else {
+                        writer.append(String.format("%d,%s,%.2f,%s,%.2f,%d,%.2f,%.2f,%s,%s\n",
+                                trade.tradeNumber(),
+                                trade.entryTime(),
+                                trade.entryPrice(),
+                                trade.exitTime(),
+                                trade.exitPrice(),
+                                trade.quantity(),
+                                trade.profitLoss(),
+                                trade.profitLossPercent(),
+                                trade.exitReason(),
+                                formatDuration(trade.holdingPeriod())));
+                    }
                 }
 
                 // Write summary section

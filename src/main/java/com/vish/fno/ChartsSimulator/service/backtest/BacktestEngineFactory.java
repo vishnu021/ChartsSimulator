@@ -1,6 +1,8 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
+import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Ticker;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,14 +25,33 @@ import java.util.List;
  * @since 1.0.0
  */
 @Component
+@RequiredArgsConstructor
 public class BacktestEngineFactory {
 
+    private final BacktestProperties backtestProperties;
+
     /**
-     * Create a new BacktestEngine instance with clean state.
+     * Create a new BacktestEngine instance with clean state using default config properties.
      *
      * @return Fresh BacktestEngine instance ready for simulation
      */
     public BacktestEngine createEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double capital) {
-        return new BacktestEngine(symbol, date, strategy, tickers, capital);
+        return new BacktestEngine(symbol, date, strategy, tickers, capital, backtestProperties);
+    }
+
+    /**
+     * Create a new BacktestEngine instance with clean state using custom properties.
+     * Used when frontend provides overrides for phase filtering configuration.
+     *
+     * @param symbol Trading symbol
+     * @param date Trading date
+     * @param strategy Trading strategy
+     * @param tickers Historical ticker data
+     * @param capital Initial capital
+     * @param customProperties Custom BacktestProperties with frontend overrides
+     * @return Fresh BacktestEngine instance ready for simulation
+     */
+    public BacktestEngine createEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double capital, BacktestProperties customProperties) {
+        return new BacktestEngine(symbol, date, strategy, tickers, capital, customProperties);
     }
 }

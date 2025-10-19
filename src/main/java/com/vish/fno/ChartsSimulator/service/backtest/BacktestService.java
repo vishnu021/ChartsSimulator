@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +40,9 @@ public class BacktestService {
             final String strategyName,
             final Double stopLossPercent,
             final Double takeProfitPercent,
-            final Double initialCapital
+            final Double initialCapital,
+            final Boolean phaseFilteringEnabled,
+            final String allowedPhases
     ) {
         final String strategy = getStrategy(strategyName);
         final double capital = getCapital(initialCapital);
@@ -55,8 +58,11 @@ public class BacktestService {
         // Get ticker data
         List<Ticker> tickers = tickerService.getTickerData(symbol, date);
 
-        // Create fresh engine instance for this backtest run
-        BacktestEngine engine = backtestEngineFactory.createEngine(symbol,  date, tradingStrategy, tickers, capital);
+        // Create custom properties with frontend overrides (if provided)
+        BacktestProperties customProperties = createCustomProperties(phaseFilteringEnabled, allowedPhases);
+
+        // Create fresh engine instance for this backtest run with custom properties
+        BacktestEngine engine = backtestEngineFactory.createEngine(symbol, date, tradingStrategy, tickers, capital, customProperties);
         log.debug("🏭 Created new BacktestEngine instance for backtest run");
 
         // Run backtest
@@ -73,6 +79,65 @@ public class BacktestService {
         reportGenerator.generateReport(result);
 
         return result;
+    }
+
+    /**
+     * Creates custom BacktestProperties with frontend overrides.
+     * Frontend parameters take precedence over application.yml configuration.
+     *
+     * <p><b>Frontend Override Logic:</b></p>
+     * <ul>
+     *   <li>If phaseFilteringEnabled is provided from frontend, it overrides config</li>
+     *   <li>If allowedPhases is provided from frontend, it overrides config</li>
+     *   <li>If phaseFilteringEnabled=true from frontend, phaseDetectionEnabled is auto-enabled</li>
+     * </ul>
+     *
+     * @param phaseFilteringEnabled Frontend phase filtering setting (null = use config)
+     * @param allowedPhasesStr Comma-separated phase names from frontend (null = use config)
+     * @return Custom BacktestProperties instance with merged settings
+     */
+    private BacktestProperties createCustomProperties(Boolean phaseFilteringEnabled, String allowedPhasesStr) {
+        // Start with config values
+        boolean detectionEnabled = backtestProperties.phaseDetectionEnabled();
+        boolean filteringEnabled = backtestProperties.phaseFilteringEnabled();
+        List<String> phases = backtestProperties.allowedPhases();
+
+        // Apply frontend overrides
+        if (phaseFilteringEnabled != null) {
+            filteringEnabled = phaseFilteringEnabled;
+            // Auto-enable detection if filtering is enabled from frontend
+            if (filteringEnabled) {
+                detectionEnabled = true;
+                log.info("🎯 Phase filtering enabled from frontend - auto-enabling phase detection");
+            }
+        }
+
+        if (allowedPhasesStr != null && !allowedPhasesStr.trim().isEmpty()) {
+            phases = Arrays.asList(allowedPhasesStr.split(","));
+            log.info("🎯 Allowed phases overridden from frontend: {}", phases);
+        }
+
+        // Log final phase configuration
+        if (phaseFilteringEnabled != null || allowedPhasesStr != null) {
+            log.info("📊 Phase configuration: detection={}, filtering={}, allowedPhases={}",
+                    detectionEnabled, filteringEnabled, phases);
+        }
+
+        // Create new BacktestProperties instance with overrides
+        return new BacktestProperties(
+                backtestProperties.defaultStrategy(),
+                backtestProperties.defaultInitialCapital(),
+                backtestProperties.fixedQuantity(),
+                backtestProperties.positionSizePercent(),
+                backtestProperties.stopLossPercent(),
+                backtestProperties.takeProfitPercent(),
+                backtestProperties.lotSize(),
+                backtestProperties.indexSymbols(),
+                detectionEnabled,
+                filteringEnabled,
+                phases,
+                backtestProperties.strategies()
+        );
     }
 
     private void applyParameterOverrides(Double stopLossPercent, Double takeProfitPercent, Strategy tradingStrategy) {

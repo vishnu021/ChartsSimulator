@@ -43,12 +43,18 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTrade, setSelectedTrade] = useState(null);
+  const [selectedTradeIndex, setSelectedTradeIndex] = useState(null);
 
   // Strategy selection state
   const [availableStrategies, setAvailableStrategies] = useState([]);
   const [selectedStrategy, setSelectedStrategy] = useState(() => loadCachedParams()?.selectedStrategy || '');
   const [stopLossPercent, setStopLossPercent] = useState(() => loadCachedParams()?.stopLossPercent || '');
   const [takeProfitPercent, setTakeProfitPercent] = useState(() => loadCachedParams()?.takeProfitPercent || '');
+
+  // Phase filtering state
+  const [phaseFilteringEnabled, setPhaseFilteringEnabled] = useState(() => loadCachedParams()?.phaseFilteringEnabled || false);
+  const [selectedPhases, setSelectedPhases] = useState(() => loadCachedParams()?.selectedPhases || ['MARKDOWN', 'DISTRIBUTION']);
+  const availablePhases = ['ACCUMULATION', 'MARKUP', 'DISTRIBUTION', 'MARKDOWN', 'UNKNOWN'];
 
   // Track if we've loaded from cache to avoid overwriting with defaults
   const [hasLoadedFromCache] = useState(() => {
@@ -64,9 +70,11 @@ export default function BacktestPage() {
       initialCapital,
       selectedStrategy,
       stopLossPercent,
-      takeProfitPercent
+      takeProfitPercent,
+      phaseFilteringEnabled,
+      selectedPhases
     });
-  }, [symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent]);
+  }, [symbol, date, initialCapital, selectedStrategy, stopLossPercent, takeProfitPercent, phaseFilteringEnabled, selectedPhases]);
 
   // Fetch available strategies on mount
   useEffect(() => {
@@ -90,9 +98,58 @@ export default function BacktestPage() {
     fetchStrategies();
   }, [hasLoadedFromCache]);
 
+  // Keyboard navigation for trades
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!result || !result.trades || result.trades.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (selectedTradeIndex === null) {
+          // No selection, select first trade
+          setSelectedTrade(result.trades[0]);
+          setSelectedTradeIndex(0);
+        } else if (selectedTradeIndex < result.trades.length - 1) {
+          // Move to next trade
+          const newIndex = selectedTradeIndex + 1;
+          setSelectedTrade(result.trades[newIndex]);
+          setSelectedTradeIndex(newIndex);
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (selectedTradeIndex === null) {
+          // No selection, select last trade
+          const lastIndex = result.trades.length - 1;
+          setSelectedTrade(result.trades[lastIndex]);
+          setSelectedTradeIndex(lastIndex);
+        } else if (selectedTradeIndex > 0) {
+          // Move to previous trade
+          const newIndex = selectedTradeIndex - 1;
+          setSelectedTrade(result.trades[newIndex]);
+          setSelectedTradeIndex(newIndex);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [result, selectedTradeIndex]);
+
+  // Auto-scroll selected trade into view when using keyboard navigation
+  useEffect(() => {
+    if (selectedTradeIndex !== null && result?.trades) {
+      const tradeRow = document.querySelector(`tbody tr:nth-child(${selectedTradeIndex + 1})`);
+      if (tradeRow) {
+        tradeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedTradeIndex, result]);
+
   const runBacktest = async () => {
     setLoading(true);
     setError(null);
+    setSelectedTrade(null);
+    setSelectedTradeIndex(null);
     try {
       const apiUrl = configService.getApiUrl();
 
@@ -107,6 +164,12 @@ export default function BacktestPage() {
       if (selectedStrategy) params.append('strategyName', selectedStrategy);
       if (stopLossPercent) params.append('stopLossPercent', stopLossPercent);
       if (takeProfitPercent) params.append('takeProfitPercent', takeProfitPercent);
+
+      // Add phase filtering parameters
+      params.append('phaseFilteringEnabled', phaseFilteringEnabled.toString());
+      if (phaseFilteringEnabled && selectedPhases.length > 0) {
+        params.append('allowedPhases', selectedPhases.join(','));
+      }
 
       const response = await fetch(`${apiUrl}/api/backtest?${params}`);
 
@@ -125,11 +188,7 @@ export default function BacktestPage() {
 
   return (
     <div className="h-screen bg-background overflow-hidden flex flex-col">
-      <div className="p-6">
-        <h1 className="text-3xl font-bold text-text">📊 Backtest Dashboard</h1>
-      </div>
-
-      <div className="flex-1 flex gap-4 px-6 pb-8 overflow-hidden">
+      <div className="flex-1 flex gap-4 p-6 overflow-hidden">
         {/* Left Panel - Configuration & Results */}
         <div className="w-1/2 flex flex-col gap-4 pr-2 overflow-hidden">
           {/* Input Form - Compact Modern Design */}
@@ -267,6 +326,55 @@ export default function BacktestPage() {
             </div>
           </div>
 
+          {/* Phase Filtering - New Section */}
+          <div className="bg-background/30 backdrop-blur-sm p-2 rounded-xl mb-2 border border-border/30">
+            {/* Phase Filtering Checkbox */}
+            <div className="mb-2">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={phaseFilteringEnabled}
+                  onChange={(e) => setPhaseFilteringEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded border-2 border-gray-300 text-primary focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-text-secondary uppercase tracking-wide group-hover:text-primary transition-colors">
+                  📊 Filter by Market Phase
+                </span>
+                <span className="text-[10px] font-normal text-text-secondary/60 normal-case">(Wyckoff Cycle)</span>
+              </label>
+            </div>
+
+            {/* Phase Multi-Select - Only show when filtering is enabled */}
+            {phaseFilteringEnabled && (
+              <div className="space-y-1.5 ml-6">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                  Allowed Phases
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {availablePhases.map((phase) => (
+                    <label key={phase} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedPhases.includes(phase)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedPhases([...selectedPhases, phase]);
+                          } else {
+                            setSelectedPhases(selectedPhases.filter(p => p !== phase));
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-2 border-gray-300 text-primary focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                      />
+                      <span className="text-xs text-text font-medium group-hover:text-primary transition-colors">
+                        {phase}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Run Button - Enhanced Gradient with Glow */}
           <button
             onClick={runBacktest}
@@ -390,9 +498,9 @@ export default function BacktestPage() {
             </div>
 
             {/* Trade List - Scrollable Panel with Fixed Height */}
-            <div className="bg-surface p-3 rounded-lg shadow-lg flex flex-col max-h-[700px] mb-12">
+            <div className="bg-surface p-3 rounded-lg shadow-lg flex flex-col max-h-[700px]">
               <h2 className="text-base font-bold text-text mb-2">📋 Trade History ({result.trades.length})</h2>
-              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0">
+              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 pb-6">
                 <table className="w-full text-sm">
                   <thead className="bg-surface sticky top-0 z-10 shadow-md">
                     <tr className="text-left text-text-secondary border-b-2 border-border">
@@ -404,14 +512,18 @@ export default function BacktestPage() {
                       <th className="px-4 py-3 bg-surface">Qty</th>
                       <th className="px-4 py-3 bg-surface">P/L</th>
                       <th className="px-4 py-3 bg-surface">P/L %</th>
+                      <th className="px-4 py-3 bg-surface">Phase</th>
                       <th className="px-4 py-3 bg-surface">Exit Reason</th>
                     </tr>
                   </thead>
                   <tbody className="text-text">
-                    {result.trades.map((trade) => (
+                    {result.trades.map((trade, index) => (
                       <tr
                         key={trade.tradeNumber}
-                        onClick={() => setSelectedTrade(trade)}
+                        onClick={() => {
+                          setSelectedTrade(trade);
+                          setSelectedTradeIndex(index);
+                        }}
                         className={`border-t border-border cursor-pointer transition-all duration-200 ${
                           selectedTrade?.tradeNumber === trade.tradeNumber
                             ? 'bg-gradient-to-r from-blue-500/20 via-blue-400/15 to-blue-500/20 border-l-4 border-l-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] scale-[1.01] font-semibold'
@@ -429,6 +541,21 @@ export default function BacktestPage() {
                         </td>
                         <td className={`px-4 py-2 font-medium ${trade.profitLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                           {trade.profitLossPercent.toFixed(2)}%
+                        </td>
+                        <td className="px-4 py-2">
+                          {trade.phase ? (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              trade.phase === 'MARKDOWN' ? 'bg-red-500/20 text-red-400' :
+                              trade.phase === 'DISTRIBUTION' ? 'bg-orange-500/20 text-orange-400' :
+                              trade.phase === 'MARKUP' ? 'bg-green-500/20 text-green-400' :
+                              trade.phase === 'ACCUMULATION' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {trade.phase}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-text-secondary">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-2">
                           <span className={`px-2 py-1 rounded text-xs ${

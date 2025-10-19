@@ -1,8 +1,11 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
+import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
+import com.vish.fno.ChartsSimulator.model.Candlestick;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.ChartsSimulator.model.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.*;
+import com.vish.fno.ChartsSimulator.util.CandleUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -50,6 +53,7 @@ public class BacktestEngine {
     private final String date;
     private final Strategy strategy;
     private final List<Ticker> tickers;
+    private final BacktestProperties backtestProperties;
 
     // Specialized managers (Dependency Injection)
     private final PortfolioManager portfolioManager;
@@ -60,6 +64,11 @@ public class BacktestEngine {
     private Optional<Signal> currentSignal = Optional.empty();
     private final List<Ticker> historicalTickers = new ArrayList<>();
 
+    // Phase detection state
+    private MarketPhase currentPhase = MarketPhase.UNKNOWN;
+    private final List<Candlestick> candlesticks = new ArrayList<>();
+    private String lastProcessedMinute = null;
+
     /**
      * Creates a new backtest engine.
      *
@@ -68,12 +77,14 @@ public class BacktestEngine {
      * @param strategy Trading strategy to backtest
      * @param tickers Historical ticker data
      * @param initialCapital Starting capital
+     * @param backtestProperties Backtest configuration properties
      */
-    public BacktestEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double initialCapital) {
+    public BacktestEngine(String symbol, String date, Strategy strategy, List<Ticker> tickers, double initialCapital, BacktestProperties backtestProperties) {
         this.symbol = symbol;
         this.date = date;
         this.strategy = strategy;
         this.tickers = tickers;
+        this.backtestProperties = backtestProperties;
 
         // Initialize managers
         this.portfolioManager = new PortfolioManager(initialCapital);
@@ -93,9 +104,17 @@ public class BacktestEngine {
      */
     public BacktestResult runBacktest() {
         validateInput();
+        validatePhaseConfig();
 
-        log.info("🚀 Starting backtest: strategy={}, tickers={}, capital={}",
-                strategy.getStrategyName(), tickers.size(), portfolioManager.getInitialCapital());
+        log.info("🚀 Starting backtest: strategy={}, tickers={}, capital={}, phaseDetection={}, phaseFiltering={}",
+                strategy.getStrategyName(), tickers.size(), portfolioManager.getInitialCapital(),
+                backtestProperties.phaseDetectionEnabled(), backtestProperties.phaseFilteringEnabled());
+
+        if (backtestProperties.phaseFilteringEnabled()) {
+            log.info("📊 Phase filtering enabled - allowed phases: {}", backtestProperties.allowedPhases());
+        } else if (backtestProperties.phaseDetectionEnabled()) {
+            log.info("📊 Phase detection enabled (reporting only - no filtering)");
+        }
 
         // Process each tick sequentially
         for (int i = 0; i < tickers.size(); i++) {
@@ -122,8 +141,10 @@ public class BacktestEngine {
      *
      * <p><b>Processing Order:</b></p>
      * <ol>
+     *   <li>Update candlesticks for phase detection</li>
+     *   <li>Detect current market phase</li>
      *   <li>Check exit conditions if position is open</li>
-     *   <li>Detect new trading signals</li>
+     *   <li>Detect new trading signals (with phase filtering if enabled)</li>
      *   <li>Try to enter position if signal is present</li>
      *   <li>Record portfolio snapshot periodically</li>
      * </ol>
@@ -134,12 +155,18 @@ public class BacktestEngine {
     private void processTick(Ticker tick, int tickIndex) {
         double currentPrice = tick.price();
 
-        // 1. Check exits if position is open
+        // 1. Update candlesticks and detect phase if enabled
+        if (backtestProperties.phaseDetectionEnabled()) {
+            updateCandlesticks(tick);
+            currentPhase = PhaseDetector.detectPhase(candlesticks, currentPhase);
+        }
+
+        // 2. Check exits if position is open
         if (activeOrder.isPresent()) {
             handlePositionExit(tick, currentPrice);
         }
 
-        // 2. Detect new signals ONLY if no position is open
+        // 3. Detect new signals ONLY if no position is open
         // If position is open, skip signal detection to avoid storing stale signals
         if (activeOrder.isEmpty()) {
             detectSignal();
@@ -151,7 +178,7 @@ public class BacktestEngine {
             }
         }
 
-        // 3. Try to enter position if signal is present, valid, and no position is open
+        // 4. Try to enter position if signal is present, valid, and no position is open
         if (activeOrder.isEmpty() && currentSignal.isPresent()) {
             // Check if signal has expired
             if (isSignalExpired(currentSignal.get(), tick.time())) {
@@ -165,24 +192,66 @@ public class BacktestEngine {
             }
         }
 
-        // 4. Record portfolio snapshot periodically
+        // 5. Record portfolio snapshot periodically
         portfolioManager.recordSnapshotIfNeeded(tick, tickIndex, currentPrice, activeOrder);
+    }
+
+    /**
+     * Updates candlesticks from tick data for phase detection.
+     * Only recalculates when minute boundary changes to avoid redundant processing.
+     */
+    private void updateCandlesticks(Ticker tick) {
+        String currentMinute = CandleUtils.getMinuteKey(tick.time());
+
+        // Skip expensive recalculation if still in same minute
+        if (lastProcessedMinute != null && lastProcessedMinute.equals(currentMinute)) {
+            return;
+        }
+
+        // New minute detected → recalculate completed candlesticks
+        List<Candlestick> completed = CandleUtils.getCompletedCandlesticksFromTickers(historicalTickers);
+        candlesticks.clear();
+        candlesticks.addAll(completed);
+
+        lastProcessedMinute = currentMinute;
     }
 
     // ==================== SIGNAL DETECTION ====================
 
     /**
-     * Detects trading signals using the strategy.
+     * Detects trading signals using the strategy, with optional phase filtering.
+     *
+     * <p><b>Phase Filtering Logic:</b></p>
+     * <ul>
+     *   <li>If phaseFilteringEnabled=false, all signals are detected regardless of phase</li>
+     *   <li>If phaseFilteringEnabled=true, only detect signals when phase is in allowedPhases</li>
+     *   <li>Phase detection (for reporting) can be enabled independently of filtering</li>
+     * </ul>
      */
     private void detectSignal() {
+        // Check if current phase is allowed for trading (only if filtering is enabled)
+        if (backtestProperties.phaseFilteringEnabled() && !backtestProperties.isPhaseAllowed(currentPhase)) {
+            log.trace("Skipping signal detection - current phase {} not in allowed phases {}",
+                     currentPhase, backtestProperties.allowedPhases());
+            return;
+        }
+
         Optional<Signal> signal = strategy.detectSignal(historicalTickers);
 
         if (signal.isPresent()) {
             currentSignal = signal;
-            log.debug("[{}] 📊 New signal detected: type={}, price={}",
-                     currentSignal.get().emissionTime(),
-                     currentSignal.get().type(),
-                     currentSignal.get().price());
+            if (backtestProperties.phaseDetectionEnabled()) {
+                log.debug("[{}] 📊 New signal detected: type={}, price={}, phase={}",
+                         currentSignal.get().emissionTime(),
+                         currentSignal.get().type(),
+                         currentSignal.get().price(),
+                         currentPhase);
+            } else {
+                log.debug("[{}] 📊 New signal detected: type={}, price={}",
+                         currentSignal.get().emissionTime(),
+                         currentSignal.get().type(),
+                         currentSignal.get().price());
+            }
         }
     }
 
@@ -200,7 +269,8 @@ public class BacktestEngine {
                 strategy,
                 context,
                 portfolioManager.getCashBalance(),
-                portfolioManager.getCompletedOrders().size()
+                portfolioManager.getCompletedOrders().size(),
+                currentPhase
         );
 
         if (result.success()) {
@@ -305,7 +375,8 @@ public class BacktestEngine {
                 portfolioManager.getPortfolioSnapshots(),
                 portfolioManager.getInitialCapital(),
                 portfolioManager.getFinalValue(),
-                portfolioManager.getMaxDrawdown()
+                portfolioManager.getMaxDrawdown(),
+                backtestProperties.phaseDetectionEnabled()
         );
     }
 
@@ -317,6 +388,23 @@ public class BacktestEngine {
     private void validateInput() {
         if (tickers == null || tickers.isEmpty()) {
             throw new IllegalArgumentException("Ticker data cannot be null or empty");
+        }
+    }
+
+    /**
+     * Validates phase configuration.
+     * Logs warnings if configuration is inconsistent.
+     */
+    private void validatePhaseConfig() {
+        if (!backtestProperties.isPhaseConfigValid()) {
+            log.warn("⚠️ Invalid phase configuration: phaseFilteringEnabled=true but phaseDetectionEnabled=false. " +
+                    "Phase filtering requires phase detection to be enabled. Filtering will be skipped.");
+        }
+
+        if (backtestProperties.phaseFilteringEnabled() &&
+            (backtestProperties.allowedPhases() == null || backtestProperties.allowedPhases().isEmpty())) {
+            log.warn("⚠️ Phase filtering is enabled but no allowed phases are configured. " +
+                    "All phases will be allowed. Set allowedPhases to filter trades.");
         }
     }
 

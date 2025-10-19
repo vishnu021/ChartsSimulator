@@ -25,6 +25,7 @@ import java.util.List;
  * @param largestWin Best trade
  * @param largestLoss Worst trade
  * @param sharpeRatio Risk-adjusted return
+ * @param phaseDetectionEnabled Whether phase detection was enabled for this backtest
  * @param trades All executed trades
  * @param timeline Portfolio value over time
  * @param tickers Complete ticker data for chart visualization
@@ -52,6 +53,7 @@ public record BacktestResult(
     double largestWin,
     double largestLoss,
     double sharpeRatio,
+    boolean phaseDetectionEnabled,
     List<Trade> trades,
     List<PortfolioSnapshot> timeline,
     List<Ticker> tickers
