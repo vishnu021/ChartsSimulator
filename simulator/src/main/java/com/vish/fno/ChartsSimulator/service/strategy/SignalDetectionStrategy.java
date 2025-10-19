@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.strategy;
 
 import com.vish.fno.ChartsSimulator.model.Signal;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 
 import java.util.List;
 import java.util.Map;

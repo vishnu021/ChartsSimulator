@@ -3,7 +3,7 @@ package com.vish.fno.ChartsSimulator.config;
 import com.vish.fno.ChartsSimulator.config.properties.CorsProperties;
 import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
 import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
-import com.vish.fno.ChartsSimulator.util.ValidationUtils;
+import com.vish.fno.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

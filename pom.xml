@@ -20,8 +20,10 @@
     <description>Parent POM for ChartsSimulator multi-module project</description>
 
     <modules>
-        <module>simulator</module>
+        <module>models</module>
+        <module>utils</module>
         <module>phase-analyzer</module>
+        <module>simulator</module>
     </modules>
 
     <properties>

@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.ActiveOrder;
 import com.vish.fno.ChartsSimulator.model.backtest.PortfolioSnapshot;
 import lombok.Getter;

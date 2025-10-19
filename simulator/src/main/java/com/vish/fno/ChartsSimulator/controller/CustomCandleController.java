@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.controller;
 
-import com.vish.fno.phaseanalyzer.model.Candle;
+import com.vish.fno.models.Candle;
 import com.vish.fno.ChartsSimulator.service.CustomCandleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

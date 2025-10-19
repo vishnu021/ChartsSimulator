@@ -1,7 +1,8 @@
 package com.vish.fno.phaseanalyzer.analysis;
 
+import com.vish.fno.phaseanalyzer.analysis.impl.WyckoffPhaseAnalyzer;
 import com.vish.fno.phaseanalyzer.analysis.model.WyckoffPhase;
-import com.vish.fno.phaseanalyzer.model.Candle;
+import com.vish.fno.models.Candle;
 
 import java.util.List;
 

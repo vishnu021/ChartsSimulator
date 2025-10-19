@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.analysis;
 
 import com.vish.fno.ChartsSimulator.model.Signal;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

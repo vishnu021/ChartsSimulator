@@ -1,4 +1,4 @@
-package com.vish.fno.phaseanalyzer.model;
+package com.vish.fno.models;
 
 public record CandleRequest(
         String symbol,

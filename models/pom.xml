@@ -10,21 +10,14 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>phase-analyzer</artifactId>
+    <artifactId>models</artifactId>
     <packaging>jar</packaging>
 
-    <name>ChartsSimulator - Phase Analyzer Module</name>
-    <description>Wyckoff Phase Analysis and Market Phase Detection</description>
+    <name>ChartsSimulator - Models Module</name>
+    <description>Shared data models for all modules</description>
 
     <dependencies>
-        <!-- Models Module -->
-        <dependency>
-            <groupId>com.vish.fno</groupId>
-            <artifactId>models</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <!-- No Spring dependencies - pure Java library -->
+        <!-- No additional dependencies - pure Java models -->
         <!-- Common dependencies (Lombok, Test) inherited from parent -->
     </dependencies>
 

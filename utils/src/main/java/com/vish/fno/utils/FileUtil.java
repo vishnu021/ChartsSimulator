@@ -1,4 +1,4 @@
-package com.vish.fno.ChartsSimulator.util;
+package com.vish.fno.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

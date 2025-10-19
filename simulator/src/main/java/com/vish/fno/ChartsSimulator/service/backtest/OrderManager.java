@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.model.Signal;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.*;
 import com.vish.fno.ChartsSimulator.service.strategy.Strategy;
 import lombok.extern.slf4j.Slf4j;

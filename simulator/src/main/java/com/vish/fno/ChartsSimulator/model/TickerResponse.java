@@ -1,5 +1,7 @@
 package com.vish.fno.ChartsSimulator.model;
 
+import com.vish.fno.models.Ticker;
+
 import java.util.List;
 
 /**

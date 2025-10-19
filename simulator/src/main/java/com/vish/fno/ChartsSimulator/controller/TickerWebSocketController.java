@@ -2,7 +2,7 @@ package com.vish.fno.ChartsSimulator.controller;
 
 import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
 import com.vish.fno.ChartsSimulator.controller.base.BaseWebSocketController;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import com.vish.fno.ChartsSimulator.model.TickerRequest;
 import com.vish.fno.ChartsSimulator.service.TickerService;
 import com.vish.fno.ChartsSimulator.service.WebSocketSessionManager;

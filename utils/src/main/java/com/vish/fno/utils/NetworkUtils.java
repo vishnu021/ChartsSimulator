@@ -1,4 +1,4 @@
-package com.vish.fno.ChartsSimulator.util;
+package com.vish.fno.utils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

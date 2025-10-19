@@ -1,4 +1,4 @@
-package com.vish.fno.ChartsSimulator.model;
+package com.vish.fno.models;
 
 public record Ticker(
         String symbol,

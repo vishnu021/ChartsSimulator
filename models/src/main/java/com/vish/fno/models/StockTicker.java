@@ -1,4 +1,4 @@
-package com.vish.fno.ChartsSimulator.model;
+package com.vish.fno.models;
 
 import java.util.List;
 
@@ -37,4 +37,3 @@ record DepthItem(
         double price,
         int orders
 ) {}
-

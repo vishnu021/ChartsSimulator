@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
-import com.vish.fno.phaseanalyzer.model.Candlestick;
+import com.vish.fno.models.Candlestick;
 import com.vish.fno.ChartsSimulator.model.backtest.MarketPhase;
 import lombok.extern.slf4j.Slf4j;
 

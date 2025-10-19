@@ -1,7 +1,7 @@
-package com.vish.fno.ChartsSimulator.util;
+package com.vish.fno.utils;
 
-import com.vish.fno.phaseanalyzer.model.Candlestick;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Candlestick;
+import com.vish.fno.models.Ticker;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;

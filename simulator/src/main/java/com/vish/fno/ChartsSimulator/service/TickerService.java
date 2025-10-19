@@ -1,8 +1,8 @@
 package com.vish.fno.ChartsSimulator.service;
 
 import com.vish.fno.ChartsSimulator.config.properties.TickerProperties;
-import com.vish.fno.ChartsSimulator.model.StockTicker;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.StockTicker;
+import com.vish.fno.models.Ticker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

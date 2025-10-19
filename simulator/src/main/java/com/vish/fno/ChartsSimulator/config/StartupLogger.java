@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.config;
 
 import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
-import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import com.vish.fno.utils.NetworkUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

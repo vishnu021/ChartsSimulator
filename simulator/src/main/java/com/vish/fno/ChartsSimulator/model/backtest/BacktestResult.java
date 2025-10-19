@@ -1,6 +1,6 @@
 package com.vish.fno.ChartsSimulator.model.backtest;
 
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import java.util.List;
 
 /**

@@ -3,7 +3,7 @@ package com.vish.fno.ChartsSimulator.controller;
 import com.vish.fno.phaseanalyzer.analysis.WyckoffAnalysisService;
 import com.vish.fno.ChartsSimulator.config.properties.ValidationProperties;
 import com.vish.fno.ChartsSimulator.config.properties.WebSocketProperties;
-import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import com.vish.fno.utils.NetworkUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service;
 
-import com.vish.fno.phaseanalyzer.model.Candle;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Candle;
+import com.vish.fno.models.Ticker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

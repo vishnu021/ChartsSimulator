@@ -1,7 +1,7 @@
-package com.vish.fno.ChartsSimulator.util;
+package com.vish.fno.utils;
 
 
-import com.vish.fno.phaseanalyzer.model.Candle;
+import com.vish.fno.models.Candle;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

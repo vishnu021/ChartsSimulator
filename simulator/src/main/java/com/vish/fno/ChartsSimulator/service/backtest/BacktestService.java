@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.BacktestResult;
 import com.vish.fno.ChartsSimulator.service.TickerService;
 import com.vish.fno.ChartsSimulator.service.strategy.Strategy;

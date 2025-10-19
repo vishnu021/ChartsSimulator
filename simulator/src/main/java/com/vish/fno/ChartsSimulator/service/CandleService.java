@@ -3,7 +3,7 @@ package com.vish.fno.ChartsSimulator.service;
 import com.vish.fno.phaseanalyzer.analysis.WyckoffAnalysisService;
 import com.vish.fno.phaseanalyzer.analysis.model.WyckoffPhase;
 import com.vish.fno.ChartsSimulator.client.DataClient;
-import com.vish.fno.phaseanalyzer.model.Candle;
+import com.vish.fno.models.Candle;
 import com.vish.fno.ChartsSimulator.model.Extrema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

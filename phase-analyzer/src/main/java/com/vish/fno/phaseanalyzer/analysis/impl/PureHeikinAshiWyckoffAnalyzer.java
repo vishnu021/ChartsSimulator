@@ -1,8 +1,7 @@
 package com.vish.fno.phaseanalyzer.analysis.impl;
 
-import com.vish.fno.phaseanalyzer.analysis.WyckoffPhaseAnalyzer;
 import com.vish.fno.phaseanalyzer.analysis.model.WyckoffPhase;
-import com.vish.fno.phaseanalyzer.model.Candle;
+import com.vish.fno.models.Candle;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

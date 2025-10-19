@@ -23,6 +23,20 @@
     </properties>
 
     <dependencies>
+        <!-- Models Module -->
+        <dependency>
+            <groupId>com.vish.fno</groupId>
+            <artifactId>models</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Utils Module -->
+        <dependency>
+            <groupId>com.vish.fno</groupId>
+            <artifactId>utils</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Phase Analyzer Module -->
         <dependency>
             <groupId>com.vish.fno</groupId>

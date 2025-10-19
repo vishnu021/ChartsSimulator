@@ -1,8 +1,8 @@
 package com.vish.fno.ChartsSimulator.config;
 
 import com.vish.fno.phaseanalyzer.analysis.WyckoffAnalysisService;
-import com.vish.fno.phaseanalyzer.analysis.WyckoffPhaseAnalyzer;
-import com.vish.fno.phaseanalyzer.analysis.impl.HeikinAshiWyckoffPhaseAnalyzer;
+import com.vish.fno.phaseanalyzer.analysis.impl.WyckoffPhaseAnalyzer;
+import com.vish.fno.phaseanalyzer.analysis.impl.PureHeikinAshiWyckoffAnalyzer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -16,19 +16,19 @@ public class WyckoffAnalysisConfig {
 
     /**
      * Creates the Wyckoff Phase Analyzer implementation.
-     * Currently using HeikinAshiWyckoffPhaseAnalyzer as the default implementation.
+     * Currently using PureHeikinAshiWyckoffAnalyzer as the default implementation.
      *
      * @return WyckoffPhaseAnalyzer instance
      */
     @Bean
     public WyckoffPhaseAnalyzer wyckoffPhaseAnalyzer() {
         // Create default parameters for the analyzer
-        HeikinAshiWyckoffPhaseAnalyzer.Params params = new HeikinAshiWyckoffPhaseAnalyzer.Params();
+        PureHeikinAshiWyckoffAnalyzer.Params params = new PureHeikinAshiWyckoffAnalyzer.Params();
 
         // You can customize parameters here or load from application.yml
         // For now, using defaults
 
-        return new HeikinAshiWyckoffPhaseAnalyzer(params);
+        return new PureHeikinAshiWyckoffAnalyzer(params);
     }
 
     /**

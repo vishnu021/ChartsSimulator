@@ -2,6 +2,128 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-20-Models-Utils-Modules] - Create Models and Utils Modules
+
+### 🏗️ Module Separation for Better Dependency Management
+
+**User Request:**
+"Create Models and Utility modules as well, and move the relevant classes in those modules, for Utility modules only create Utility classes with @NoArgs constructor and final classes"
+
+### 📦 New Modules Added
+
+**1. Models Module (`/models/`)**
+- **Purpose:** Shared data models for all modules
+- **Package:** `com.vish.fno.models`
+- **Dependencies:** None (pure Java POJOs)
+- **Classes Moved:**
+  - `Candle.java` - OHLCV candle data record
+  - `Candlestick.java` - Candlestick representation
+  - `CandleRequest.java` - WebSocket request model
+  - `Ticker.java` - Simple tick data model
+  - `StockTicker.java` - Complete stock ticker with market depth
+
+**2. Utils Module (`/utils/`)**
+- **Purpose:** Shared utility classes with static helper methods
+- **Package:** `com.vish.fno.utils`
+- **Dependencies:** `models` module, slf4j-api, jackson-databind
+- **All classes made `final` with private constructors:**
+  - `CandleAggregator.java` - Tick-to-candle aggregation utilities
+  - `CandleUtils.java` - Candlestick manipulation and grouping
+  - `FileUtil.java` - File I/O operations with JSON support
+  - `HeikinAshi.java` - Heikin-Ashi candle calculations
+  - `NetworkUtils.java` - Network connectivity utilities
+  - `TimeUtils.java` - Time parsing and formatting utilities
+  - `ValidationUtils.java` - Input validation helpers
+
+### 🔄 Updated Module Dependencies
+
+**New Dependency Hierarchy:**
+```
+models (base - no dependencies)
+  ↓
+utils (depends on models)
+  ↓
+phase-analyzer (depends on models)
+  ↓
+simulator (depends on models, utils, phase-analyzer)
+```
+
+**Parent POM Updates:**
+- Added `models` and `utils` to `<modules>` section
+- Build order: Parent → Models → Utils → Phase-Analyzer → Simulator
+
+**Utils POM Dependencies Added:**
+- `slf4j-api` - For logging in NetworkUtils and FileUtil
+- `jackson-databind` - For JSON processing in FileUtil
+
+### 📝 Code Changes
+
+**1. Package Refactoring:**
+- Moved models from `com.vish.fno.ChartsSimulator.model` → `com.vish.fno.models`
+- Moved models from `com.vish.fno.phaseanalyzer.model` → `com.vish.fno.models`
+- Moved utils from `com.vish.fno.ChartsSimulator.util` → `com.vish.fno.utils`
+
+**2. Utility Classes Made Final:**
+- Removed `@NoArgsConstructor` from Lombok
+- Added explicit `private` constructors
+- All classes declared as `final`
+- Example:
+  ```java
+  public final class CandleUtils {
+      private CandleUtils() {
+          // Utility class - prevent instantiation
+      }
+      // ... static methods only
+  }
+  ```
+
+**3. Import Updates Across All Modules:**
+- Simulator: Updated 19+ files to use `com.vish.fno.models.*`
+- Simulator: Updated 80+ files to use `com.vish.fno.utils.*`
+- Phase-Analyzer: Updated all model references
+
+### ✅ Build Verification
+
+**Maven Reactor Build:**
+```
+[INFO] ChartsSimulator Parent ............................. SUCCESS [  0.089 s]
+[INFO] ChartsSimulator - Models Module .................... SUCCESS [  0.669 s]
+[INFO] ChartsSimulator - Utils Module ..................... SUCCESS [  0.346 s]
+[INFO] ChartsSimulator - Phase Analyzer Module ............ SUCCESS [  0.417 s]
+[INFO] ChartsSimulator - Simulator Module ................. SUCCESS [ 32.440 s]
+[INFO] BUILD SUCCESS
+```
+
+**Fixes Applied:**
+- Fixed duplicate constructor in `ValidationUtils` (removed @NoArgsConstructor)
+- Added missing slf4j-api dependency to utils module
+- Added missing jackson-databind dependency to utils module
+- Moved `Ticker.java` and `StockTicker.java` to models module
+- Updated all imports in simulator module for Ticker/StockTicker
+
+### 🎯 Benefits
+
+1. **Clear Separation of Concerns:**
+   - Models = Data structures only
+   - Utils = Pure functions with no state
+   - Phase-Analyzer = Domain logic
+   - Simulator = Application layer
+
+2. **Better Dependency Management:**
+   - Models have zero dependencies (pure POJOs)
+   - Utils depend only on models
+   - No circular dependencies
+
+3. **Reusability:**
+   - Models and Utils can be used by any module
+   - No need to depend on simulator or phase-analyzer for common code
+
+4. **Maintainability:**
+   - Utility classes are truly stateless (final with private constructors)
+   - Clear package structure makes code navigation easier
+
+---
+
 ## [Session-2025-10-19-Swagger-Fix] - Fix Swagger/OpenAPI Incompatibility with Spring Boot 4.0
 
 ### 🐛 Bug Fix

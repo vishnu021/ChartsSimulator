@@ -1,7 +1,7 @@
 package com.vish.fno.ChartsSimulator.config;
 
 import com.vish.fno.ChartsSimulator.config.properties.SecurityProperties;
-import com.vish.fno.ChartsSimulator.util.NetworkUtils;
+import com.vish.fno.utils.NetworkUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

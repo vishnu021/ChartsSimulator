@@ -1,12 +1,12 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
-import com.vish.fno.phaseanalyzer.model.Candlestick;
+import com.vish.fno.models.Candlestick;
 import com.vish.fno.ChartsSimulator.model.Signal;
-import com.vish.fno.ChartsSimulator.model.Ticker;
+import com.vish.fno.models.Ticker;
 import com.vish.fno.ChartsSimulator.model.backtest.*;
 import com.vish.fno.ChartsSimulator.service.strategy.Strategy;
-import com.vish.fno.ChartsSimulator.util.CandleUtils;
+import com.vish.fno.utils.CandleUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
