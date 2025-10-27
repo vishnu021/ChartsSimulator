@@ -3,6 +3,7 @@ package com.vish.fno.phaseanalyzer.analysis;
 import com.vish.fno.phaseanalyzer.analysis.impl.WyckoffPhaseAnalyzer;
 import com.vish.fno.phaseanalyzer.analysis.model.WyckoffPhase;
 import com.vish.fno.models.Candle;
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
@@ -10,13 +11,10 @@ import java.util.List;
  * Service for Wyckoff phase analysis operations.
  * This service acts as a facade for different Wyckoff analyzer implementations.
  */
+@RequiredArgsConstructor
 public class WyckoffAnalysisService {
 
     private final WyckoffPhaseAnalyzer analyzer;
-
-    public WyckoffAnalysisService(WyckoffPhaseAnalyzer analyzer) {
-        this.analyzer = analyzer;
-    }
 
     /**
      * Analyzes a series of candles to identify Wyckoff phases.
