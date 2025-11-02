@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.strategy;
 
+import com.vish.fno.ChartsSimulator.cache.TradeSimulationCache;
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.models.Ticker;
@@ -90,9 +91,16 @@ public class MovingAverageStrategy implements Strategy {
     private static final double DEFAULT_THRESHOLD = 0.5;
 
     @Override
-    public Optional<Signal> detectSignal(List<Ticker> tickers) {
-        log.debug("MovingAverageStrategy detecting signal for {} tickers", tickers.size());
-        List<Signal> signals = detectionService.detectSignificantMoves(tickers, DEFAULT_THRESHOLD);
+    public Optional<Signal> detectSignal(Ticker latestTick, String symbol, String date, TradeSimulationCache cache) {
+        // Get historical data from cache (includes all tickers up to current moment)
+        List<Ticker> historicalTickers = cache.getHistoricalTickers(symbol, date);
+
+        log.debug("MovingAverageStrategy detecting signal for {} tickers (latest: {})",
+                historicalTickers.size(), latestTick.time());
+
+        // Detect signals from historical data
+        List<Signal> signals = detectionService.detectSignificantMoves(historicalTickers, DEFAULT_THRESHOLD);
+
         // Return the most recent signal if any found
         return signals.isEmpty() ? Optional.empty() : Optional.of(signals.get(signals.size() - 1));
     }

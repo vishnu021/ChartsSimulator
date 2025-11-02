@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.strategy;
 
+import com.vish.fno.ChartsSimulator.cache.TradeSimulationCache;
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.models.Candlestick;
@@ -101,12 +102,15 @@ public class BHWTv2Strategy implements Strategy {
     }
 
     @Override
-    public Optional<Signal> detectSignal(List<Ticker> tickers) {
+    public Optional<Signal> detectSignal(Ticker latestTick, String symbol, String date, TradeSimulationCache cache) {
+        // Get historical data from cache (includes all tickers up to current moment)
+        List<Ticker> tickers = cache.getHistoricalTickers(symbol, date);
+
         if (tickers.isEmpty()) {
             return Optional.empty();
         }
 
-        Ticker currentTick = tickers.get(tickers.size() - 1);
+        Ticker currentTick = latestTick;
 
         // Convert tickers to candlesticks
         updateCandlesticks(tickers);

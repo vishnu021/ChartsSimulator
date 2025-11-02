@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.backtest;
 
+import com.vish.fno.ChartsSimulator.cache.TradeSimulationCache;
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.models.Ticker;
@@ -39,15 +40,17 @@ import java.util.Optional;
  * <ul>
  *   <li><b>2.1.0:</b> Reduced from 463 lines to ~180 lines (60% reduction)</li>
  *   <li><b>2.3.0:</b> Extracted phase logic into PhaseAnalysisManager</li>
+ *   <li><b>3.0.0:</b> Refactored to use TradeSimulationCache and pass only latest tick to strategies</li>
  *   <li>Single Responsibility: Engine only orchestrates, delegates details</li>
  *   <li>Open/Closed: Easy to extend with new managers without modifying engine</li>
  *   <li>Dependency Inversion: Engine depends on abstractions (managers), not concrete implementations</li>
  *   <li>Better testability: Each manager can be tested independently</li>
+ *   <li>Memory Efficient: Strategies receive only latest tick, access history via shared cache</li>
  * </ul>
  *
  * @author ChartsSimulator
  * @since 2.0.0
- * @version 2.3.0 - Extracted phase analysis logic into PhaseAnalysisManager
+ * @version 3.0.0 - Refactored to use TradeSimulationCache and pass only latest tick to strategies
  */
 @Slf4j
 public class BacktestEngine {
@@ -63,6 +66,9 @@ public class BacktestEngine {
     private final PortfolioManager portfolioManager;
     private final OrderManager orderManager;
     private final PhaseAnalysisManager phaseManager;
+
+    // Shared cache (singleton, shared across all simulations)
+    private final TradeSimulationCache cache = TradeSimulationCache.getInstance();
 
     // Execution state
     private Optional<ActiveOrder> activeOrder = Optional.empty();
@@ -114,9 +120,11 @@ public class BacktestEngine {
         log.info(phaseManager.getPhaseFilteringStatusMessage());
 
         // Process each tick sequentially
+        // Add tickers to cache incrementally to prevent forward bias
         for (int i = 0; i < tickers.size(); i++) {
             Ticker tick = tickers.get(i);
             historicalTickers.add(tick);
+            cache.addTicker(symbol, date, tick);  // Add to cache incrementally
             processTick(tick, i);
         }
 
@@ -201,6 +209,13 @@ public class BacktestEngine {
      *   <li>If phaseFilteringEnabled=true, only detect signals when phase is in allowedPhases</li>
      *   <li>Phase detection (for reporting) can be enabled independently of filtering</li>
      * </ul>
+     *
+     * <p><b>v3.0.0 Changes:</b></p>
+     * <ul>
+     *   <li>Passes only the latest tick to strategy (not entire history)</li>
+     *   <li>Strategy accesses historical data via TradeSimulationCache if needed</li>
+     *   <li>More memory efficient for multiple concurrent backtests</li>
+     * </ul>
      */
     private void detectSignal() {
         // Check if current phase is allowed for trading
@@ -210,7 +225,11 @@ public class BacktestEngine {
             return;
         }
 
-        Optional<Signal> signal = strategy.detectSignal(historicalTickers);
+        // Get latest tick (last one in historicalTickers)
+        Ticker latestTick = historicalTickers.get(historicalTickers.size() - 1);
+
+        // Pass only latest tick; strategy can access history via cache if needed
+        Optional<Signal> signal = strategy.detectSignal(latestTick, symbol, date, cache);
 
         if (signal.isPresent()) {
             currentSignal = signal;

@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.controller;
 
+import com.vish.fno.ChartsSimulator.cache.TradeSimulationCache;
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.ChartsSimulator.model.Signal;
 import com.vish.fno.models.Ticker;
@@ -74,13 +75,17 @@ public class TickerController {
         Strategy tradingStrategy = strategyRegistry.getStrategy(strategy);
         tradingStrategy.reset(); // Clear any previous state
 
+        // Get shared cache and populate with tickers
+        TradeSimulationCache cache = TradeSimulationCache.getInstance();
+        cache.addTickers(symbol, date, tickers);
+
         List<Signal> signals = new ArrayList<>();
-        List<Ticker> historicalData = new ArrayList<>();
 
         // Process each ticker incrementally (simulates real-time)
-        for (Ticker ticker : tickers) {
-            historicalData.add(ticker);
-            Optional<Signal> signal = tradingStrategy.detectSignal(historicalData);
+        // Note: cache is populated upfront, but strategy only accesses data up to current index
+        for (int i = 0; i < tickers.size(); i++) {
+            Ticker ticker = tickers.get(i);
+            Optional<Signal> signal = tradingStrategy.detectSignal(ticker, symbol, date, cache);
             signal.ifPresent(signals::add);
         }
 

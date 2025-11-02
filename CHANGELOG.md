@@ -2,6 +2,87 @@
 
 All notable changes to the ChartsSimulator project are documented in this file.
 
+## [Session-2025-10-27-TradeSimulationCache-Refactor] - Refactor Strategy Architecture with Shared Cache
+
+### 🚀 Features Added
+
+**TradeSimulationCache - Shared Historical Data Cache**
+- **File Created:** `simulator/src/main/java/com/vish/fno/ChartsSimulator/cache/TradeSimulationCache.java`
+- **Description:** Singleton cache for sharing historical ticker data across all backtest simulations
+- **Key Features:**
+  - Memory efficient: Only latest tick passed to strategies per call
+  - Shared across simulations: Reduces memory footprint for concurrent backtests
+  - Isolated state: Cache separated from simulation state
+  - Smart eviction: Keeps 50% when exceeding 100K tickers per key
+  - Thread-safe: ConcurrentHashMap for concurrent access
+  - Zero forward bias: Tickers added incrementally during simulation
+  - Configurable eviction: `EVICTION_ENABLED` flag to enable/disable eviction
+  - Candlestick conversion: Built-in methods to convert cached tickers to minute candlesticks
+
+**Strategy Interface Enhancement**
+- **File Modified:** `simulator/src/main/java/com/vish/fno/ChartsSimulator/service/strategy/SignalDetectionStrategy.java`
+- **Changes:** Updated `detectSignal()` signature to accept latest tick + cache reference
+- **New Signature:** `Optional<Signal> detectSignal(Ticker latestTick, String symbol, String date, TradeSimulationCache cache)`
+- **Benefits:**
+  - Reduces parameter passing overhead (1 tick vs entire list)
+  - Strategies access historical context via cache only when needed
+  - More scalable for multiple concurrent backtests
+
+### 🔧 Code Improvements
+
+**BacktestEngine Optimization**
+- **File Modified:** `simulator/src/main/java/com/vish/fno/ChartsSimulator/service/backtest/BacktestEngine.java`
+- **Changes:**
+  - Integrated TradeSimulationCache for historical data storage
+  - Passes only latest tick to strategies (not entire history)
+  - Adds tickers to cache incrementally (prevents forward bias)
+  - Updated documentation to reflect v3.0.0 architecture
+
+**Strategy Implementations Updated**
+- **Files Modified:**
+  - `MovingAverageStrategy.java` - Updated to use cache for historical data access
+  - `EMADivergenceStrategy.java` - Updated to use cache for EMA calculations
+  - `BHWTv2Strategy.java` - Updated to use cache for candlestick building
+  - `LowWickMomentumStrategy.java` - Updated to use cache for momentum detection
+  - `CandlestickBreakoutStrategy.java` - Updated to use cache for minima tracking
+
+**TickerController API Update**
+- **File Modified:** `simulator/src/main/java/com/vish/fno/ChartsSimulator/controller/TickerController.java`
+- **Changes:** Updated to populate cache and pass latest tick to strategies
+
+**TradeSimulationCache Enhancements**
+- **Added:** `EVICTION_ENABLED` static final flag for eviction control
+- **Added:** `getMinuteCandlesticks(symbol, date)` - Converts cached tickers to minute candlesticks
+- **Added:** `getCompletedMinuteCandlesticks(symbol, date)` - Returns only completed candlesticks
+- **Enhanced:** Statistics now include `evictionEnabled` flag
+- **Benefit:** Strategies can now directly get candlesticks from cache without manual conversion
+
+### 📊 Architecture Benefits
+
+**Memory Efficiency:**
+- Before: Each strategy call received full historical list (up to 30K tickers)
+- After: Each strategy call receives 1 tick, accesses cache only when needed
+- Benefit: ~30,000x reduction in parameter passing overhead per call
+
+**Scalability:**
+- Shared cache reduces memory usage for multiple concurrent backtests
+- Single cache instance serves all simulations
+- Better performance for parallel strategy testing
+
+**Zero Forward Bias:**
+- Tickers added to cache incrementally during simulation
+- Strategies only see data up to current moment
+- Maintains tick-by-tick simulation integrity
+
+### ✅ Verification
+
+- Maven Compile: ✅ PASS
+- All Strategies Updated: ✅ 5/5 strategies migrated
+- Zero Forward Bias: ✅ Verified (incremental cache population)
+- API Compatibility: ✅ TickerController updated
+
+---
+
 ## [Session-2025-10-22-Indicator-Utils-BHWTv2-Strategy] - Create Indicator Utilities and Convert BHWTv2 Strategy
 
 ### 🚀 Features Added

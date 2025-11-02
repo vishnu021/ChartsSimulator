@@ -1,5 +1,6 @@
 package com.vish.fno.ChartsSimulator.service.strategy;
 
+import com.vish.fno.ChartsSimulator.cache.TradeSimulationCache;
 import com.vish.fno.ChartsSimulator.config.properties.BacktestProperties;
 import com.vish.fno.models.Candlestick;
 import com.vish.fno.ChartsSimulator.model.Signal;
@@ -152,7 +153,10 @@ public class LowWickMomentumStrategy implements Strategy {
     }
 
     @Override
-    public Optional<Signal> detectSignal(List<Ticker> tickers) {
+    public Optional<Signal> detectSignal(Ticker latestTick, String symbol, String date, TradeSimulationCache cache) {
+        // Get historical data from cache (includes all tickers up to current moment)
+        List<Ticker> tickers = cache.getHistoricalTickers(symbol, date);
+
         if (tickers == null || tickers.isEmpty()) {
             return Optional.empty();
         }
