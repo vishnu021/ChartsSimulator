@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["playwright-mcp"],
+      "env": {}
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem"],
+      "env": {},
+      "autoload": true
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["puppeteer-mcp"],
+      "env": {}
+    },
+    "rest": {
+      "command": "npx",
+      "args": ["mcp-rest"],
+      "env": {}
+    }
+  }
+}
